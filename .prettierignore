@@ -1,0 +1,21 @@
+node_modules/
+.pnpm-store/
+.turbo/
+.next/
+.expo/
+dist/
+build/
+out/
+coverage/
+pnpm-lock.yaml
+*.min.js
+*.min.css
+
+# Human-written docs — pas de reformat automatique
+CLAUDE.md
+CONTRIBUTING.md
+README.md
+README.fr.md
+LICENSE
+SECURITY.md
+docs/**/*.md

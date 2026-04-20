@@ -1,0 +1,14 @@
+{
+  "name": "@kinhale/tsconfig",
+  "version": "0.1.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "description": "Shared TypeScript configurations for the Kinhale monorepo.",
+  "files": [
+    "*.json",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "restricted"
+  }
+}
