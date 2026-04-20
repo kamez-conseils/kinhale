@@ -90,4 +90,32 @@ export type DomainErrorCode =
    */
   | 'RM9_VERSION_MISMATCH'
   /** RM13 — tentative d'ajouter un enfant à un foyer qui a déjà atteint la limite v1.0 (1). */
-  | 'RM13_CHILD_LIMIT_REACHED';
+  | 'RM13_CHILD_LIMIT_REACHED'
+  /** RM10 — demande de suppression sur un foyer déjà en `pending_deletion` ou `deleted`. */
+  | 'RM10_HOUSEHOLD_NOT_ACTIVE'
+  /** RM10 — suppression bloquée : plus d'un Admin actif (passer par W11 transfert d'admin d'abord). */
+  | 'RM10_MULTIPLE_ADMINS_PRESENT'
+  /** RM10 — le demandeur n'est pas Admin actif du foyer. */
+  | 'RM10_NOT_AUTHORIZED'
+  /** RM10 — annulation impossible : l'état courant n'est pas `pending_deletion`. */
+  | 'RM10_CANNOT_CANCEL'
+  /** RM10 — annulation refusée : la période de grâce de 7 jours est expirée. */
+  | 'RM10_GRACE_PERIOD_EXPIRED'
+  /**
+   * RM10 — `auditSalt` invalide (vide, whitespace pur, ou inférieur au seuil
+   * minimum `RM10_MIN_AUDIT_SALT_LENGTH`). Protège contre un appel de
+   * pseudonymisation sans secret serveur effectif.
+   */
+  | 'RM10_INVALID_AUDIT_SALT'
+  /** RM11 — la requête cible un foyer différent de celui du token (anti-IDOR). */
+  | 'RM11_TENANT_MISMATCH'
+  /** RM11 — le caregiverId client diffère de celui du token (anti-usurpation). */
+  | 'RM11_CAREGIVER_MISMATCH'
+  /** RM12 — la session restreinte est expirée (au-delà du TTL 8h). */
+  | 'RM12_SESSION_EXPIRED'
+  /** RM12 — la session restreinte a été révoquée explicitement par un Admin. */
+  | 'RM12_SESSION_REVOKED'
+  /** RM12 — seuls les Admins du même foyer peuvent révoquer une session restreinte. */
+  | 'RM12_NOT_AUTHORIZED_TO_REVOKE'
+  /** RM12 — session déjà révoquée ; la révocation est idempotente mais refuse un double appel. */
+  | 'RM12_ALREADY_REVOKED';
