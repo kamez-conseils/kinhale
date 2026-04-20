@@ -89,6 +89,29 @@ export type {
   ReportContentBlock,
   ReportIntegrityFooter,
 } from './rm24-report-integrity';
+export { buildMedicalReport } from './rm8-medical-report';
+export type {
+  ConfirmedDoseSummary,
+  MedicalReport,
+  MedicalReportPeriod,
+  VoidedDoseSummary,
+  WeeklyRescueFrequency,
+} from './rm8-medical-report';
+export {
+  buildSafePushPayload,
+  ensurePushPayloadSafe,
+  FORBIDDEN_PUSH_KEYWORDS_EN,
+  FORBIDDEN_PUSH_KEYWORDS_FR,
+  PUSH_BODY_GENERIC,
+  PUSH_BODY_MAX_LENGTH,
+  PUSH_TITLE_GENERIC,
+  validatePushPayload,
+} from './rm16-push-payload';
+export type {
+  PushPayloadViolation,
+  PushPayloadViolationKind,
+  SafePushPayload,
+} from './rm16-push-payload';
 export {
   assertDisclaimerCoverage,
   DISCLAIMER_TEXT_EN,

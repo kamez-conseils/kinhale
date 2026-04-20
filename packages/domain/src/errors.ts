@@ -69,4 +69,10 @@ export type DomainErrorCode =
   /** RM22 — `consentedAtUtc` est strictement postérieur à `nowUtc` (tricherie d'horloge). */
   | 'RM22_INVALID_CONSENT_TIMESTAMP'
   /** RM24 — `generator` fourni vide ou whitespace-only lors du calcul du pied d'intégrité. */
-  | 'RM24_INVALID_GENERATOR';
+  | 'RM24_INVALID_GENERATOR'
+  /** RM8 — période invalide (ex: `fromUtc` strictement postérieur à `toUtc`). */
+  | 'RM8_INVALID_PERIOD'
+  /** RM8 — enfant invalide (prénom vide ou année de naissance aberrante). */
+  | 'RM8_INVALID_CHILD'
+  /** RM16 — payload push contient du contenu interdit (mot-clé santé / PII / titre non générique). */
+  | 'RM16_FORBIDDEN_CONTENT';
