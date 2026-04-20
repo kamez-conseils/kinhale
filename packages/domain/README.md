@@ -36,8 +36,11 @@ src/
 | **RM18**| Annulation : 30 min libres pour l'auteur ou un Admin, puis Admin + raison | §4, RM18 |
 | **RM25**| Rappels bornés : 2 relances max (push T+15 min, e-mail T+30 min)   | §4, RM25     |
 | **RM26**| Regroupement notifications peer : ≥ 3 prises/h + cap 15 notif/jour | §4, RM26     |
+| **RM21**| Limite anti-spam : max 10 invitations actives simultanées par foyer | §4, RM21     |
+| **RM22**| Consentement aidant invité : propres données uniquement, pas l'enfant | §4, RM22   |
+| **RM28**| Purge invitations : `expired > 30 j`, `consumed > 90 j`, `revoked > 30 j` | §4, RM28 |
 
-Les règles RM8-RM13, RM16, RM19-RM24, RM27, RM28 arrivent dans les PRs suivantes.
+Les règles RM8-RM13, RM16, RM19, RM20, RM23, RM24, RM27 arrivent dans les PRs suivantes.
 
 ## Usage
 
