@@ -158,3 +158,29 @@ export type {
   DisclaimerSurface,
   DisclaimerSurfaceContent,
 } from './rm27-disclaimer-presence';
+export {
+  cancelHouseholdDeletion,
+  DELETION_GRACE_PERIOD_DAYS,
+  DELETION_PORTABILITY_COVERAGE_DAYS,
+  DELETION_PURGE_MAX_DAYS,
+  evaluateDeletionState,
+  pseudonymizeHouseholdForAudit,
+  purgeDeadlineUtc,
+  requestHouseholdDeletion,
+} from './rm10-household-deletion';
+export type {
+  HouseholdDeletionState,
+  HouseholdDeletionStatus,
+  PortabilityArchiveManifest,
+} from './rm10-household-deletion';
+export { ensureSameTenant, isSameTenant } from './rm11-multitenant-isolation';
+export type { TenantContext, TenantTargetRequest } from './rm11-multitenant-isolation';
+export {
+  createRestrictedSession,
+  ensureSessionValid,
+  evaluateSessionValidity,
+  isSessionValid,
+  RESTRICTED_SESSION_TTL_HOURS,
+  revokeSession,
+} from './rm12-restricted-session';
+export type { RestrictedSession, SessionValidity } from './rm12-restricted-session';
