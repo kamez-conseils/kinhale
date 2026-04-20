@@ -23,3 +23,24 @@ export {
   isPumpLow,
 } from './rm7-pump-dose-countdown';
 export type { PumpCountdownEvent, PumpCountdownUpdate } from './rm7-pump-dose-countdown';
+export { assignAuthoritativeTimestamp, LATE_SYNC_THRESHOLD_MS } from './rm14-recorded-timestamp';
+export type { DoseTimestampingResult, RecordTimestampOptions } from './rm14-recorded-timestamp';
+export {
+  createEmptyIdempotencyRegistry,
+  decideIdempotency,
+  recordProcessedEvent,
+} from './rm15-idempotency';
+export type { IdempotencyDecision, IdempotencyRegistry, ProcessedEvent } from './rm15-idempotency';
+export {
+  BACKFILL_MAX_WINDOW_HOURS,
+  ensureBackfillAllowed,
+  validateBackfillTiming,
+} from './rm17-backfill-window';
+export type { BackfillOptions, BackfillValidation, BackfillValidity } from './rm17-backfill-window';
+export {
+  canVoidDose,
+  ensureCanVoidDose,
+  VOID_FREE_WINDOW_MINUTES,
+  voidDose,
+} from './rm18-void-dose';
+export type { VoidDoseOptions, VoidRequester } from './rm18-void-dose';

@@ -1,6 +1,6 @@
 # @kinhale/domain
 
-Entités métier et règles RM1-RM9 du projet Kinhale. **Pure TypeScript, aucun I/O** : ni réseau, ni base, ni fichier, ni date du système en argument implicite. Chaque règle est une fonction pure ou presque (horloge injectée quand nécessaire).
+Entités métier et règles RMx du projet Kinhale. **Pure TypeScript, aucun I/O** : ni réseau, ni base, ni fichier, ni date du système en argument implicite. Chaque règle est une fonction pure ou presque (horloge injectée quand nécessaire).
 
 ## Principes
 
@@ -14,7 +14,7 @@ Entités métier et règles RM1-RM9 du projet Kinhale. **Pure TypeScript, aucun 
 ```text
 src/
 ├── entities/         Types purs : Household, Caregiver, Child, Pump, Role…
-├── rules/            Règles RM1-RM9 (fonctions pures)
+├── rules/            Règles RMx (fonctions pures)
 ├── errors.ts         DomainError + codes d'erreur
 └── index.ts          Barrel export
 ```
@@ -29,8 +29,12 @@ src/
 | **RM4** | Prise `rescue` exige symptôme, circonstance ou tag libre           | §4, RM4      |
 | **RM6** | Détection double saisie : même pompe + type à moins de 2 min       | §4, RM6      |
 | **RM7** | Décompte doses pompe + alertes `pump_low` / `pump_emptied`         | §4, RM7      |
+| **RM14**| Horodatage serveur autoritaire (`recordedAtUtc`) + flag sync tardive | §4, RM14     |
+| **RM15**| Idempotence des saisies via `clientEventId` (UUID v4)              | §4, RM15     |
+| **RM17**| Rattrapage borné : backfill ≤ 24 h, futur refusé, confirmation au-delà | §4, RM17 |
+| **RM18**| Annulation : 30 min libres pour l'auteur ou un Admin, puis Admin + raison | §4, RM18 |
 
-Les règles RM5, RM8, RM9 arrivent dans les PRs suivantes.
+Les règles RM5, RM8-RM13, RM16, RM19-RM28 arrivent dans les PRs suivantes.
 
 ## Usage
 

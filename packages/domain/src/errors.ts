@@ -39,4 +39,16 @@ export type DomainErrorCode =
   /** RM7 — tentative de décrémenter une pompe déjà `empty`. */
   | 'RM7_PUMP_ALREADY_EMPTY'
   /** RM7 — tentative de décrémenter une pompe inutilisable (expired / archived). */
-  | 'RM7_PUMP_NOT_USABLE';
+  | 'RM7_PUMP_NOT_USABLE'
+  /** RM15 — `clientEventId` absent, vide ou non conforme au format UUID v4. */
+  | 'RM15_INVALID_CLIENT_EVENT_ID'
+  /** RM17 — prise datée dans le futur (strictement après `recordedAtUtc`). */
+  | 'RM17_FUTURE_ADMINISTRATION_REFUSED'
+  /** RM17 — prise au-delà de 24 h dans le passé, exige une confirmation explicite. */
+  | 'RM17_TOO_OLD_REQUIRES_CONFIRMATION'
+  /** RM18 — prise déjà en statut `voided` ; annulation idempotente refusée. */
+  | 'RM18_ALREADY_VOIDED'
+  /** RM18 — le demandeur n'est ni l'auteur dans la fenêtre libre, ni admin. */
+  | 'RM18_NOT_AUTHORIZED'
+  /** RM18 — hors fenêtre libre : `voidedReason` non vide obligatoire. */
+  | 'RM18_VOIDED_REASON_REQUIRED';
