@@ -6,6 +6,7 @@ import {
   decideOfflineWriteAccess,
   filterDosesAvailableOffline,
   OFFLINE_READ_WINDOW_DAYS,
+  type OfflineWriteDecision,
 } from './rm20-offline-access';
 
 const NOW = new Date('2026-04-19T12:00:00Z');
@@ -240,12 +241,22 @@ describe('RM20 — decideOfflineWriteAccess', () => {
     expect(pump).toEqual(snapshot);
   });
 
-  it('cases exhaustifs : chaque PumpStatus produit une décision', () => {
-    const statuses: PumpStatus[] = ['active', 'low', 'empty', 'expired', 'archived'];
-    for (const status of statuses) {
+  it('décision par statut de pompe (matrice explicite)', () => {
+    // Couverture stricte par Record : toute modification silencieuse
+    // d'un mapping statut→décision casse le test, contrairement à une
+    // assertion "∈ {allowed, refused}" qui laisserait passer une
+    // régression (ex: active → refused par erreur).
+    const expected: Record<PumpStatus, OfflineWriteDecision['kind']> = {
+      active: 'allowed',
+      low: 'allowed',
+      empty: 'refused',
+      expired: 'refused',
+      archived: 'refused',
+    };
+    for (const status of Object.keys(expected) as PumpStatus[]) {
       const pump = makePump({ status });
       const decision = decideOfflineWriteAccess({ pump, nowUtc: NOW });
-      expect(['allowed', 'refused']).toContain(decision.kind);
+      expect(decision.kind).toBe(expected[status]);
     }
   });
 });

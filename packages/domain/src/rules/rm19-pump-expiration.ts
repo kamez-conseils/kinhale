@@ -58,11 +58,17 @@ export function daysUntilExpiration(pump: Pump, nowUtc: Date): number | null {
 }
 
 /**
- * Statuts « terminaux » du cycle de vie pompe : `empty` et `archived` ne
- * doivent pas être réconciliés en `expired` par RM19. Une pompe vidée ou
- * archivée l'est définitivement ; la péremption devient sans objet.
+ * Statuts dont l'état ne doit pas être modifié par RM19 : `empty` et
+ * `archived` sont des fins de vie (la péremption devient sans objet) ;
+ * `expired` est l'état cible lui-même (idempotence — pas de ré-émission
+ * de `pump_expired` sur une pompe déjà marquée). RM19 ne traite donc que
+ * les pompes en statut `active` ou `low`.
  */
-const TERMINAL_STATUSES = new Set<Pump['status']>(['empty', 'archived', 'expired']);
+const PUMP_STATUSES_NOT_RECONCILED_BY_RM19 = new Set<Pump['status']>([
+  'empty',
+  'archived',
+  'expired',
+]);
 
 /**
  * RM19 — évalue l'état d'expiration d'une pompe à un instant donné et émet
@@ -99,7 +105,7 @@ export function evaluatePumpExpiration(options: {
   // Pompes en statut terminal (empty / archived / déjà expired) : pas de
   // réconciliation. La péremption devient sans objet dès qu'une pompe est
   // sortie du cycle normal.
-  if (TERMINAL_STATUSES.has(pump.status)) {
+  if (PUMP_STATUSES_NOT_RECONCILED_BY_RM19.has(pump.status)) {
     return { pump, events: [] };
   }
 

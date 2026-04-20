@@ -156,7 +156,9 @@ describe('RM19 — evaluatePumpExpiration — expiration effective', () => {
     expect(update.pump.status).toBe('expired');
   });
 
-  it('pompe à J-1 avec previousRemainingDays=2 : franchissement seulement si > 30, donc rien pour le seuil — mais expire dans 1 j donc pas expired', () => {
+  it('pas de franchissement de seuil si previous déjà ≤ 30', () => {
+    // previousRemainingDays=2 et nouveau=1 : déjà bien en dessous de 30,
+    // donc aucun événement `pump_expiring_threshold_crossed` n'est émis.
     const pump = makePump({ expiresAt: offsetDays(NOW, 1), status: 'active' });
     const update = evaluatePumpExpiration({
       pump,
@@ -164,6 +166,17 @@ describe('RM19 — evaluatePumpExpiration — expiration effective', () => {
       nowUtc: NOW,
     });
     expect(update.events).toEqual([]);
+  });
+
+  it('pas de transition vers expired tant que J-0 n’est pas atteint', () => {
+    // À J-1 la pompe reste `active` — seule la bascule à J-0 la passe en
+    // `expired`.
+    const pump = makePump({ expiresAt: offsetDays(NOW, 1), status: 'active' });
+    const update = evaluatePumpExpiration({
+      pump,
+      previousRemainingDays: 2,
+      nowUtc: NOW,
+    });
     expect(update.pump.status).toBe('active');
   });
 
