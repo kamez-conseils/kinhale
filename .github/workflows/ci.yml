@@ -47,3 +47,30 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+  docker-alpine-verify:
+    name: Docker · node:20-alpine (musl)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: lint-typecheck-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify scaffold on Alpine (musl libc)
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/ws:ro" \
+            node:20-alpine sh -c '
+              set -eu
+              cp -r /ws /tmp/work
+              cd /tmp/work
+              corepack enable
+              corepack prepare pnpm@10.33.0 --activate
+              pnpm install --frozen-lockfile
+              pnpm format:check
+              pnpm lint:root
+              pnpm typecheck
+              pnpm lint
+              pnpm test
+            '
