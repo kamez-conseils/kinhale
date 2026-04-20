@@ -28,8 +28,9 @@ src/
 | **RM3** | Pas de plan de traitement sur une pompe `rescue`                   | §4, RM3      |
 | **RM4** | Prise `rescue` exige symptôme, circonstance ou tag libre           | §4, RM4      |
 | **RM6** | Détection double saisie : même pompe + type à moins de 2 min       | §4, RM6      |
+| **RM7** | Décompte doses pompe + alertes `pump_low` / `pump_emptied`         | §4, RM7      |
 
-Les règles RM5, RM7-RM9 arrivent dans les PRs suivantes.
+Les règles RM5, RM8, RM9 arrivent dans les PRs suivantes.
 
 ## Usage
 
