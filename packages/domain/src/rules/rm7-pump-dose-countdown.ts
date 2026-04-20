@@ -130,7 +130,10 @@ export function applyConfirmedDoseToPump(options: {
  * Les statuts non utilisables (`expired`, `archived`) renvoient `false` : ils
  * ne participent plus au cycle de vie des alertes.
  */
-export function isPumpLow(pump: Pump, threshold: number = DEFAULT_PUMP_ALERT_THRESHOLD_DOSES): boolean {
+export function isPumpLow(
+  pump: Pump,
+  threshold: number = DEFAULT_PUMP_ALERT_THRESHOLD_DOSES,
+): boolean {
   if (pump.status === 'low') {
     return true;
   }
