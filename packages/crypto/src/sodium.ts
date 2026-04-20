@@ -1,11 +1,8 @@
 import _sodium from 'libsodium-wrappers-sumo'
 
-let _ready = false
+let _instance: Promise<typeof _sodium> | null = null
 
 export async function getSodium(): Promise<typeof _sodium> {
-  if (!_ready) {
-    await _sodium.ready
-    _ready = true
-  }
-  return _sodium
+  _instance ??= _sodium.ready.then(() => _sodium)
+  return _instance
 }

@@ -12,4 +12,10 @@ describe('getSodium', () => {
     const b = await getSodium()
     expect(a).toBe(b)
   })
+
+  it('retourne la même instance avec appels parallèles simultanés', async () => {
+    const [a, b, c] = await Promise.all([getSodium(), getSodium(), getSodium()])
+    expect(a).toBe(b)
+    expect(b).toBe(c)
+  })
 })
