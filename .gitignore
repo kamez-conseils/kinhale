@@ -1,0 +1,98 @@
+# ============================================================
+# Kamez Conseils internal workspace — NEVER publish
+# Contains commercial proposals, budget data, internal estimates
+# ============================================================
+.agents/
+
+# Node / pnpm
+node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Turborepo / Nx caches
+.turbo/
+.nx/
+
+# Builds
+dist/
+build/
+out/
+lib/
+.next/
+.expo/
+.expo-shared/
+expo-env.d.ts
+
+# Native builds
+apps/mobile/ios/Pods/
+apps/mobile/ios/build/
+apps/mobile/android/.gradle/
+apps/mobile/android/build/
+apps/mobile/android/app/build/
+apps/mobile/android/captures/
+apps/mobile/android/gradle/
+apps/mobile/android/local.properties
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+
+# TypeScript
+*.tsbuildinfo
+
+# Coverage
+coverage/
+.nyc_output/
+lcov.info
+
+# Environment variables — NEVER commit
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# IDEs
+.idea/
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.recommended.json
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Secrets & certificates
+*.pem
+*.key
+*.p12
+*.keystore
+*.jks
+!google-services.json.example
+!GoogleService-Info.plist.example
+google-services.json
+GoogleService-Info.plist
+
+# AWS
+.aws-sam/
+cdk.out/
+cdk.context.json
+
+# Test artifacts
+playwright-report/
+test-results/
+.maestro/
+
+# Misc
+tmp/
+temp/
+*.swp
+*.swo
+*~
