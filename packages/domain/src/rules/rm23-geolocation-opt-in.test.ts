@@ -370,6 +370,27 @@ describe('RM23 — ensureGeolocationAllowed', () => {
     }
   });
 
+  it('PREFERENCE_MISMATCH prime sur RESTRICTED_CAREGIVER (ordre des refus formalisé)', () => {
+    // Si la préférence ne correspond pas au caregiver auteur ET que le
+    // rôle fourni est restricted_contributor, on remonte MISMATCH d'abord
+    // (la cohérence du flux est le premier invariant — si l'input est
+    // incohérent, les autres checks n'ont pas de base fiable pour se
+    // prononcer).
+    const dose = makeDose({ caregiverId: 'c1', geolocation: { lat: 45.5, lon: -73.5 } });
+    const pref = makePreference({
+      caregiverId: 'c2',
+      role: 'restricted_contributor',
+      geolocationOptIn: true,
+    });
+
+    try {
+      ensureGeolocationAllowed({ dose, authorPreference: pref });
+      expect.fail('should have thrown');
+    } catch (err) {
+      expect((err as DomainError).code).toBe('RM23_PREFERENCE_MISMATCH');
+    }
+  });
+
   it('ne fuite pas de coordonnées dans le context des erreurs', () => {
     const dose = makeDose({ caregiverId: 'c1', geolocation: { lat: 45.5012, lon: -73.5678 } });
     const pref = makePreference({
