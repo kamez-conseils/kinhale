@@ -1,0 +1,42 @@
+{
+  "name": "kinhale",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Kinhale — journal, rappels et partage E2EE pour aidants d'enfant asthmatique. AGPL v3.",
+  "license": "AGPL-3.0-only",
+  "homepage": "https://github.com/kamez-conseils/kinhale",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kamez-conseils/kinhale.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kamez-conseils/kinhale/issues"
+  },
+  "author": "Kamez Conseils <security@kinhale.health>",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "lint:root": "eslint --max-warnings=0 .",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:watch": "turbo run test:watch",
+    "dev": "turbo run dev --parallel",
+    "clean": "turbo run clean && rm -rf .turbo node_modules/.cache",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@kinhale/eslint-config": "workspace:*",
+    "@kinhale/tsconfig": "workspace:*",
+    "eslint": "^9.18.0",
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.3"
+  }
+}
