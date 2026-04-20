@@ -98,8 +98,11 @@ describe('RM22 — ensureInviteeConsentValid (cas de refus)', () => {
       expect((err as DomainError).code).toBe('RM22_INVITATION_NOT_ACTIVE');
       expect((err as DomainError).context).toMatchObject({
         invitationId: 'inv-1',
-        invitationStatus: 'consumed',
       });
+      // Ne doit PAS fuiter le statut exact : un attaquant connaissant
+      // seulement un invitationId ne peut pas distinguer consumed / expired
+      // / revoked via le context.
+      expect((err as DomainError).context).not.toHaveProperty('invitationStatus');
     }
   });
 
@@ -149,8 +152,8 @@ describe('RM22 — ensureInviteeConsentValid (cas de refus)', () => {
       expect((err as DomainError).code).toBe('RM22_INVITATION_EXPIRED');
       expect((err as DomainError).context).toMatchObject({
         invitationId: 'inv-1',
-        invitationStatus: 'active',
       });
+      expect((err as DomainError).context).not.toHaveProperty('invitationStatus');
     }
   });
 
@@ -166,11 +169,12 @@ describe('RM22 — ensureInviteeConsentValid (cas de refus)', () => {
     }
   });
 
-  it("refuse si consentedAtUtc > nowUtc (RM22_INVALID_CONSENT_TIMESTAMP, tricherie d'horloge)", () => {
+  it('refuse si consentedAtUtc > nowUtc + tolérance (RM22_INVALID_CONSENT_TIMESTAMP)', () => {
     const invitation = makeInvitation({ id: 'inv-1' });
+    // NOW = 12:00:00Z ; tolérance = 1 s ; consent à 12:00:02Z → refus
     const consent = makeConsent({
       invitationId: 'inv-1',
-      consentedAtUtc: new Date('2026-04-19T13:00:00Z'),
+      consentedAtUtc: new Date('2026-04-19T12:00:02Z'),
     });
 
     try {
@@ -179,6 +183,44 @@ describe('RM22 — ensureInviteeConsentValid (cas de refus)', () => {
     } catch (err) {
       expect((err as DomainError).code).toBe('RM22_INVALID_CONSENT_TIMESTAMP');
     }
+  });
+
+  it('accepte consentedAtUtc légèrement dans le futur (< tolérance NTP RM14)', () => {
+    const invitation = makeInvitation({ id: 'inv-1' });
+    // NOW = 12:00:00Z ; tolérance = 1 s ; consent à 12:00:00.500Z → OK
+    const consent = makeConsent({
+      invitationId: 'inv-1',
+      consentedAtUtc: new Date('2026-04-19T12:00:00.500Z'),
+    });
+
+    expect(() => ensureInviteeConsentValid({ consent, invitation, nowUtc: NOW })).not.toThrow();
+  });
+
+  it('accepte consentedAtUtc exactement à la borne de tolérance (nowUtc + 1000 ms)', () => {
+    const invitation = makeInvitation({ id: 'inv-1' });
+    const consent = makeConsent({
+      invitationId: 'inv-1',
+      consentedAtUtc: new Date('2026-04-19T12:00:01.000Z'),
+    });
+
+    expect(() => ensureInviteeConsentValid({ consent, invitation, nowUtc: NOW })).not.toThrow();
+  });
+
+  it('accepte expiresAtUtc égal pile à consentedAtUtc (borne inclusive)', () => {
+    // La spec ne tranche pas, la règle autorise l'égalité : un consentement
+    // arrivé à la milliseconde pile de l'expiration reste valide.
+    const consentedAt = new Date('2026-04-19T11:45:00Z');
+    const invitation = makeInvitation({
+      id: 'inv-1',
+      status: 'active',
+      expiresAtUtc: consentedAt,
+    });
+    const consent = makeConsent({
+      invitationId: 'inv-1',
+      consentedAtUtc: consentedAt,
+    });
+
+    expect(() => ensureInviteeConsentValid({ consent, invitation, nowUtc: NOW })).not.toThrow();
   });
 });
 
@@ -200,7 +242,7 @@ describe("RM22 — ensureInviteeConsentValid (confidentialité du context d'erre
     }
   });
 
-  it('inclut invitationId, invitationStatus et expiresAtUtc dans le context', () => {
+  it('inclut invitationId et expiresAtUtc mais PAS invitationStatus dans le context', () => {
     const invitation = makeInvitation({ id: 'inv-1', status: 'expired' });
     const consent = makeConsent({ invitationId: 'inv-1' });
 
@@ -208,11 +250,12 @@ describe("RM22 — ensureInviteeConsentValid (confidentialité du context d'erre
       ensureInviteeConsentValid({ consent, invitation, nowUtc: NOW });
       expect.fail('should have thrown');
     } catch (err) {
-      expect((err as DomainError).context).toMatchObject({
+      const ctx = (err as DomainError).context ?? {};
+      expect(ctx).toMatchObject({
         invitationId: 'inv-1',
-        invitationStatus: 'expired',
         expiresAtUtc: invitation.expiresAtUtc.toISOString(),
       });
+      expect(ctx).not.toHaveProperty('invitationStatus');
     }
   });
 });

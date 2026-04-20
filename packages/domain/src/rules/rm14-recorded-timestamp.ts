@@ -14,8 +14,12 @@ export const LATE_SYNC_THRESHOLD_MS = 60_000;
  * NTP ou à la latence réseau (le client marque `now` puis envoie la requête,
  * le serveur la reçoit quelques ms plus tard avec une horloge légèrement en
  * arrière). En dessous de 1 s vers le futur, aucun `clockSkewWarning`.
+ *
+ * Exposé pour être réutilisé par les autres règles qui comparent un horodatage
+ * client à l'horloge serveur (RM22 `consentedAtUtc` vs `nowUtc`). Garantit un
+ * traitement homogène du bruit NTP dans le domaine.
  */
-const CLOCK_SKEW_TOLERANCE_MS = 1_000;
+export const CLOCK_SKEW_TOLERANCE_MS = 1_000;
 
 /** Options d'application de la règle RM14. */
 export interface RecordTimestampOptions {

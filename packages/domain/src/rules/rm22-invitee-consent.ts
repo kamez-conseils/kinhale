@@ -1,5 +1,6 @@
 import type { Invitation } from '../entities/invitation';
 import { DomainError } from '../errors';
+import { CLOCK_SKEW_TOLERANCE_MS } from './rm14-recorded-timestamp';
 
 /**
  * Consentement exprimé par un aidant invité au moment de l'acceptation
@@ -75,15 +76,19 @@ export function isInviteeConsentValid(options: InviteeConsentOptions): boolean {
  * - `RM22_CONSENT_INVITATION_MISMATCH` : `consent.invitationId !==
  *   invitation.id` — incohérence de flux, signe probable d'un bug
  *   d'intégration UI.
- * - `RM22_INVALID_CONSENT_TIMESTAMP` : `consentedAtUtc > nowUtc` —
- *   consentement daté dans le futur, refus strict pour fermer la porte
- *   à une tricherie d'horloge. Le serveur doit re-horodater
- *   l'acceptation côté infra (`acceptedAtUtc`), ce champ n'est utilisé
- *   qu'à titre déclaratif.
+ * - `RM22_INVALID_CONSENT_TIMESTAMP` : `consentedAtUtc` dépasse `nowUtc`
+ *   au-delà de la tolérance NTP partagée ({@link CLOCK_SKEW_TOLERANCE_MS},
+ *   1 s). Un écart inférieur est accepté silencieusement — bruit NTP
+ *   normal. Le serveur re-horodate l'acceptation côté infra
+ *   (`acceptedAtUtc`) ; `consentedAtUtc` est déclaratif. Cohérent avec
+ *   RM14.
  *
- * Le `context` d'erreur ne contient **jamais** `inviteeUserId` ni aucune
- * donnée personnelle : uniquement `invitationId`, `invitationStatus` et
- * `expiresAtUtc` (ISO string).
+ * Le `context` d'erreur ne contient **jamais** `inviteeUserId`, email, ou
+ * aucune donnée personnelle. Il n'expose pas non plus `invitationStatus`
+ * (qui révélerait à un attaquant connaissant seulement un `invitationId`
+ * si l'invitation est `active`, `consumed`, `expired` ou `revoked`).
+ * Seuls `invitationId` et `expiresAtUtc` (ISO string) sont émis — les
+ * deux sont déjà connus de l'appelant légitime.
  */
 export function ensureInviteeConsentValid(options: InviteeConsentOptions): void {
   const decision = evaluateInviteeConsent(options);
@@ -93,7 +98,6 @@ export function ensureInviteeConsentValid(options: InviteeConsentOptions): void 
 
   throw new DomainError(decision.code, decision.detail, {
     invitationId: options.invitation.id,
-    invitationStatus: options.invitation.status,
     expiresAtUtc: options.invitation.expiresAtUtc.toISOString(),
   });
 }
@@ -110,12 +114,13 @@ function evaluateInviteeConsent(options: InviteeConsentOptions): ConsentDecision
     };
   }
 
-  // 2. Tricherie d'horloge : consentement ne peut pas être dans le futur.
-  if (consent.consentedAtUtc.getTime() > nowUtc.getTime()) {
+  // 2. Tricherie d'horloge : consentement ne peut pas être dans le futur
+  //    au-delà de la tolérance NTP partagée avec RM14.
+  if (consent.consentedAtUtc.getTime() > nowUtc.getTime() + CLOCK_SKEW_TOLERANCE_MS) {
     return {
       ok: false,
       code: 'RM22_INVALID_CONSENT_TIMESTAMP',
-      detail: 'consentedAtUtc is in the future relative to server nowUtc.',
+      detail: 'consentedAtUtc is in the future beyond the accepted clock-skew tolerance.',
     };
   }
 
