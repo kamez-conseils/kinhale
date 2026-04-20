@@ -1,5 +1,23 @@
 export { ensureAtLeastOneAdmin } from './rm1-admin-guarantee';
 export {
+  ensureAcceptanceValid,
+  evaluateConsentStatus,
+  isAcceptanceValid,
+  parseMajorVersion,
+} from './rm9-consent-acceptance';
+export type {
+  ConsentStatus,
+  DocumentAcceptance,
+  DocumentKind,
+  DocumentVersion,
+} from './rm9-consent-acceptance';
+export {
+  canAddChild,
+  CHILDREN_PER_HOUSEHOLD_LIMIT_V1,
+  countChildrenInHousehold,
+  ensureCanAddChild,
+} from './rm13-single-child-per-household';
+export {
   BACKFILL_HORIZON_MINUTES,
   classifyDoseTiming,
   ensureDoseTimingAcceptable,
