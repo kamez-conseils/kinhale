@@ -70,6 +70,21 @@ export type DomainErrorCode =
   | 'RM22_CONSENT_INVITATION_MISMATCH'
   /** RM22 — `consentedAtUtc` est strictement postérieur à `nowUtc` (tricherie d'horloge). */
   | 'RM22_INVALID_CONSENT_TIMESTAMP'
+  /** RM23 — géoloc fournie alors que l'aidant n'a pas opt-in. */
+  | 'RM23_OPT_IN_MISSING'
+  /**
+   * RM23 — géoloc fournie par un `restricted_contributor` : refus strict du
+   * domaine, quelle que soit la préférence prétendue (règle souveraine).
+   */
+  | 'RM23_RESTRICTED_CAREGIVER_CANNOT_GEOLOCATE'
+  /** RM23 — coordonnées hors bornes (`lat ∉ [-90,90]` ou `lon ∉ [-180,180]`, ou non finies). */
+  | 'RM23_INVALID_COORDINATES'
+  /**
+   * RM23 — la préférence fournie ne concerne pas l'auteur de la prise
+   * (`authorPreference.caregiverId !== dose.caregiverId`). Vérification
+   * défensive contre un bug d'intégration API.
+   */
+  | 'RM23_PREFERENCE_MISMATCH'
   /** RM24 — `generator` fourni vide ou whitespace-only lors du calcul du pied d'intégrité. */
   | 'RM24_INVALID_GENERATOR'
   /** RM8 — période invalide (ex: `fromUtc` strictement postérieur à `toUtc`). */

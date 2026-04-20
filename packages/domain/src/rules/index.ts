@@ -106,6 +106,17 @@ export {
 export { ensureInviteeConsentValid, isInviteeConsentValid } from './rm22-invitee-consent';
 export type { InviteeConsent } from './rm22-invitee-consent';
 export {
+  ensureGeolocationAllowed,
+  isGeolocationAllowed,
+  isValidGeolocation,
+  sanitizeDoseGeolocation,
+} from './rm23-geolocation-opt-in';
+export type {
+  CaregiverGeolocationPreference,
+  DoseWithOptionalGeolocation,
+  Geolocation,
+} from './rm23-geolocation-opt-in';
+export {
   findInvitationsToPurge,
   PURGE_CONSUMED_AFTER_DAYS,
   PURGE_EXPIRED_AFTER_DAYS,
