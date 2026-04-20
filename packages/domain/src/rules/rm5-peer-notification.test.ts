@@ -321,7 +321,7 @@ describe('RM5 — planPeerNotification (syncOffsetMs)', () => {
 });
 
 describe('RM5 — planPeerNotification (défensif / pureté)', () => {
-  it('auteur absent du foyer : null (défensif, pas de lever)', () => {
+  it('auteur absent du foyer : event émis avec tous les actifs non-restricted (défensif, pas de lever)', () => {
     const household = makeHousehold([
       makeCaregiver({ id: 'admin-1', role: 'admin' }),
       makeCaregiver({ id: 'contrib-1', role: 'contributor' }),

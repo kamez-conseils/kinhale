@@ -6,8 +6,9 @@ import type { Role } from '../entities/role';
 /**
  * Seuil au-delà duquel le décalage entre `administeredAtUtc` et l'horodatage
  * serveur doit être exposé aux destinataires (UI affichera « synchronisée à
- * HH:MM »). La borne est **inclusive** : à 5 min 00 s pile, le champ
- * `syncOffsetMs` reste absent.
+ * HH:MM »). Comparaison **strictement supérieure** (`> 5 min`) — à 5 min 00 s
+ * pile le champ `syncOffsetMs` reste absent. Même convention que RM2
+ * (confirmation window) et RM6 (duplicate detection).
  *
  * Référence : SPECS §W8, RM14/RM5 — alignement avec le flux de sync.
  */
