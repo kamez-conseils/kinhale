@@ -114,8 +114,7 @@ describe('RM27 — assertDisclaimerCoverage (chemin nominal)', () => {
 
   it('ignore une surface supplémentaire non requise (ex: "email_footer")', () => {
     const extra: DisclaimerSurfaceContent = {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      surface: 'email_footer' as any,
+      surface: 'email_footer' as unknown as DisclaimerSurface,
       locale: 'fr',
       text: DISCLAIMER_TEXT_FR,
     };

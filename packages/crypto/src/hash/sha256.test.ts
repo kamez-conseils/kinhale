@@ -36,6 +36,20 @@ describe('sha256Hex — vecteurs officiels FIPS 180-4', () => {
     const digest = await sha256Hex(buffer);
     expect(digest).toBe('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
   });
+
+  it('hache correctement une sous-view Uint8Array (subarray)', async () => {
+    // Garde-fou : un Uint8Array qui ne couvre PAS la totalité de son
+    // ArrayBuffer sous-jacent doit être haché sur ses bornes effectives
+    // (byteOffset + byteLength), pas sur le buffer entier. Sinon une
+    // simplification de l'implémentation casserait silencieusement le
+    // comportement attendu.
+    const full = new Uint8Array([0x00, 0xff, 0x00]);
+    const view = full.subarray(1, 2); // un seul octet : 0xff
+    expect(view.byteOffset).toBe(1);
+    expect(view.byteLength).toBe(1);
+    const digest = await sha256Hex(view);
+    expect(digest).toBe('a8100ae6aa1940d0b663bb31cd466142ebbdbd5187131b92d93818987832eb89');
+  });
 });
 
 describe('sha256Hex — format et déterminisme', () => {

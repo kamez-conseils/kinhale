@@ -46,6 +46,27 @@ import { DomainError } from '../errors';
  * pied de page en clair, signés implicitement par la stack de signature
  * de l'API (hors périmètre RM24).
  *
+ * ## Modèle de menace
+ *
+ * RM24 protège contre la **falsification non détectée** : un tiers qui
+ * modifie le contenu du PDF (ex: changer une dose) sans recalculer le
+ * hash est immédiatement détectable en re-hashant le contenu. Le hash
+ * n'est **pas signé cryptographiquement** : un attaquant qui maîtrise
+ * le pipeline de génération peut produire un rapport arbitraire avec
+ * un hash cohérent. Une signature Ed25519 par clé de foyer viendra en
+ * v1.1+ (hors périmètre v1.0).
+ *
+ * ## Normalisation Unicode
+ *
+ * La chaîne canonique est hachée **telle quelle en UTF-8**, sans
+ * normalisation NFC/NFD préalable. Conséquence : `"é"` composé (U+00E9)
+ * et `"é"` décomposé (U+0065 + U+0301) produisent deux hashs distincts
+ * même s'ils s'affichent identiquement. Choix délibéré : injectivité
+ * stricte + simplicité, pas de sur-normalisation qui pourrait cacher
+ * une modification. Les producteurs de rapports (Kinhale API, futurs
+ * clients) doivent émettre en NFC par défaut via
+ * `String.prototype.normalize('NFC')` avant d'appeler cette règle.
+ *
  * ## Règle monorepo
  *
  * Le hash transite par `@kinhale/crypto` (SubtleCrypto) — AUCUN import
@@ -97,7 +118,7 @@ function canonicalize(content: ReadonlyArray<ReportContentBlock>): string {
   let out = '';
   for (const block of content) {
     const byteLength = encoder.encode(block.text).byteLength;
-    out += `[${block.kind}:${String(byteLength)}]\n${block.text}\n`;
+    out += `[${block.kind}:${byteLength}]\n${block.text}\n`;
   }
   return out;
 }
