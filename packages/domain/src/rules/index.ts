@@ -16,3 +16,10 @@ export {
   mustFlagAsPendingReview,
 } from './rm6-duplicate-detection';
 export type { DoseSignature } from './rm6-duplicate-detection';
+export {
+  applyConfirmedDoseToPump,
+  DEFAULT_PUMP_ALERT_THRESHOLD_DOSES,
+  isPumpEmpty,
+  isPumpLow,
+} from './rm7-pump-dose-countdown';
+export type { PumpCountdownEvent, PumpCountdownUpdate } from './rm7-pump-dose-countdown';

@@ -31,4 +31,12 @@ export type DomainErrorCode =
   /** RM4 — prise `rescue` sans symptôme, circonstance ou tag libre. */
   | 'RM4_RESCUE_NOT_DOCUMENTED'
   /** RM6 — double saisie détectée : deux prises mêmes type + pompe à < 2 min. */
-  | 'RM6_DUPLICATE_DETECTED';
+  | 'RM6_DUPLICATE_DETECTED'
+  /** RM7 — `dosesAdministered` nul ou négatif (décrément absurde). */
+  | 'RM7_INVALID_DOSES_AMOUNT'
+  /** RM7 — seuil d'alerte non strictement positif. */
+  | 'RM7_INVALID_THRESHOLD'
+  /** RM7 — tentative de décrémenter une pompe déjà `empty`. */
+  | 'RM7_PUMP_ALREADY_EMPTY'
+  /** RM7 — tentative de décrémenter une pompe inutilisable (expired / archived). */
+  | 'RM7_PUMP_NOT_USABLE';
