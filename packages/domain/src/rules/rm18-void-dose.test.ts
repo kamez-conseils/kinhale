@@ -455,3 +455,69 @@ describe('RM18 — voidDose (transition)', () => {
     ).toThrowError(DomainError);
   });
 });
+
+// Cas local-first : une prise saisie hors-ligne n'a pas encore été horodatée
+// par le serveur (`recordedAtUtc = null`). La fenêtre libre doit alors se
+// calculer depuis `administeredAtUtc` pour ne pas bloquer un void légitime.
+describe('RM18 — fallback recordedAtUtc=null (dose hors-ligne non synchronisée)', () => {
+  it("autorise le void par l'auteur dans la fenêtre libre calculée sur administeredAtUtc", () => {
+    const dose = makeDose({
+      id: 'd1',
+      caregiverId: 'author-1',
+      recordedAtUtc: null,
+    });
+    expect(
+      canVoidDose({
+        dose,
+        requester: requester('author-1', 'contributor'),
+        nowUtc: minutesAfter(RECORDED, 10),
+      }),
+    ).toBe(true);
+  });
+
+  it('refuse le void par un contributor non-auteur hors fenêtre même sans recordedAtUtc', () => {
+    const dose = makeDose({
+      id: 'd1',
+      caregiverId: 'author-1',
+      recordedAtUtc: null,
+    });
+    expect(
+      canVoidDose({
+        dose,
+        requester: requester('other-1', 'contributor'),
+        nowUtc: minutesAfter(RECORDED, 45),
+      }),
+    ).toBe(false);
+  });
+
+  it('exige voidedReason pour un admin hors fenêtre calculée depuis administeredAtUtc', () => {
+    const dose = makeDose({
+      id: 'd1',
+      caregiverId: 'author-1',
+      recordedAtUtc: null,
+    });
+    expect(() =>
+      voidDose({
+        dose,
+        requester: requester('admin-1', 'admin'),
+        nowUtc: minutesAfter(RECORDED, 45),
+      }),
+    ).toThrowError(DomainError);
+  });
+
+  it('accepte le void admin hors fenêtre avec raison, dose non synchronisée', () => {
+    const dose = makeDose({
+      id: 'd1',
+      caregiverId: 'author-1',
+      recordedAtUtc: null,
+    });
+    const result = voidDose({
+      dose,
+      requester: requester('admin-1', 'admin'),
+      nowUtc: minutesAfter(RECORDED, 45),
+      voidedReason: 'correction post-sync',
+    });
+    expect(result.status).toBe('voided');
+    expect(result.voidedReason).toBe('correction post-sync');
+  });
+});
