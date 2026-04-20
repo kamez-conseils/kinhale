@@ -154,15 +154,22 @@ export function buildMedicalReport(options: {
   if (childFirstName.trim().length === 0) {
     throw new DomainError('RM8_INVALID_CHILD', 'childFirstName must be a non-empty string.');
   }
-  const periodEndYear = period.toUtc.getUTCFullYear();
+  // Borne haute : année de fin de période + 1 an de tolérance, pour
+  // couvrir les cas limites (enfant prématuré né juste après la fin
+  // d'une période rétrospective, cf. revue kz-securite MIN-3). La borne
+  // basse (1900) reste l'anti-valeur aberrante. La valeur invalide
+  // elle-même reste hors du message d'erreur — pseudonymisation cohérente
+  // avec la règle CLAUDE.md « aucune donnée nominative dans les logs ».
+  const maxBirthYear = period.toUtc.getUTCFullYear() + 1;
   if (
     !Number.isInteger(childYearOfBirth) ||
     childYearOfBirth < MIN_BIRTH_YEAR ||
-    childYearOfBirth > periodEndYear
+    childYearOfBirth > maxBirthYear
   ) {
     throw new DomainError(
       'RM8_INVALID_CHILD',
-      `childYearOfBirth must be an integer in [${MIN_BIRTH_YEAR}, ${periodEndYear}], got ${childYearOfBirth}.`,
+      'childYearOfBirth must be an integer within the allowed range.',
+      { minYear: MIN_BIRTH_YEAR, maxYear: maxBirthYear },
     );
   }
 

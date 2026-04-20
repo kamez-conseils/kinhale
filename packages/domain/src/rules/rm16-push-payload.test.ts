@@ -28,26 +28,6 @@ describe('RM16 — buildSafePushPayload', () => {
     expect(payload.notificationId).toBe(NOTIFICATION_ID);
   });
 
-  it('accepte un override body pour locale (ex: EN)', () => {
-    const payload = buildSafePushPayload({
-      householdId: HOUSEHOLD_ID,
-      notificationId: NOTIFICATION_ID,
-      bodyOverride: 'New activity',
-    });
-
-    expect(payload.body).toBe('New activity');
-  });
-
-  it("accepte un titleOverride tant qu'il matche le titre générique localisé", () => {
-    const payload = buildSafePushPayload({
-      householdId: HOUSEHOLD_ID,
-      notificationId: NOTIFICATION_ID,
-      titleOverride: 'Kinhale',
-    });
-
-    expect(payload.title).toBe('Kinhale');
-  });
-
   it('rejette un householdId non-UUIDv4', () => {
     expect(() =>
       buildSafePushPayload({
@@ -244,9 +224,9 @@ describe('RM16 — validatePushPayload (longueur excessive)', () => {
     };
 
     const violations = validatePushPayload(payload);
-    expect(
-      violations.some((v) => v.field === 'body' && v.kind === 'non_ascii_length_exceeded'),
-    ).toBe(true);
+    expect(violations.some((v) => v.field === 'body' && v.kind === 'body_length_exceeded')).toBe(
+      true,
+    );
   });
 
   it('accepte un body pile à PUSH_BODY_MAX_LENGTH', () => {
@@ -258,7 +238,7 @@ describe('RM16 — validatePushPayload (longueur excessive)', () => {
     };
 
     const violations = validatePushPayload(payload);
-    expect(violations.some((v) => v.kind === 'non_ascii_length_exceeded')).toBe(false);
+    expect(violations.some((v) => v.kind === 'body_length_exceeded')).toBe(false);
   });
 });
 
@@ -331,6 +311,40 @@ describe('RM16 — ensurePushPayloadSafe', () => {
       const domainErr = err as DomainError;
       expect(domainErr.context).toBeDefined();
       expect(domainErr.context?.['violations']).toBeDefined();
+    }
+  });
+
+  it("NE FUIT PAS le body, keyword, PII ni les IDs dans le context ou le message d'erreur", () => {
+    // Ironie à éviter : une règle anti-fuite push qui fuiterait elle-même
+    // dans les logs structurés. Le detail des violations et le message
+    // d'erreur doivent être non-révélateurs.
+    const childName = 'Mia';
+    const pumpLabel = 'Pompe bleue';
+    const unsafePayload: SafePushPayload = {
+      title: 'Alerte médicale',
+      body: `${childName} a pris sa dose avec la ${pumpLabel}`,
+      householdId: 'not-a-uuid',
+      notificationId: 'not-a-uuid-either',
+    };
+
+    try {
+      ensurePushPayloadSafe(unsafePayload, [childName, pumpLabel]);
+      expect.fail('should have thrown RM16_FORBIDDEN_CONTENT');
+    } catch (err) {
+      expect(err).toBeInstanceOf(DomainError);
+      const payload = JSON.stringify({
+        message: (err as DomainError).message,
+        context: (err as DomainError).context,
+      });
+      // Aucune valeur offensante ne doit figurer dans une sérialisation
+      // du message + context : pas le prénom, pas le label de pompe, pas
+      // le mot-clé, pas le body complet, pas l'ID non-UUID.
+      expect(payload).not.toContain(childName);
+      expect(payload).not.toContain(pumpLabel);
+      expect(payload).not.toContain('dose');
+      expect(payload).not.toContain('Alerte médicale');
+      expect(payload).not.toContain('not-a-uuid');
+      expect(payload).not.toContain('a pris sa');
     }
   });
 });

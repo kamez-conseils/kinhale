@@ -92,16 +92,30 @@ export const FORBIDDEN_PUSH_KEYWORDS_FR: ReadonlyArray<string> = [
   'prescription',
   'posologie',
   'administr', // administré, administrée, administration
-  // Symptômes / crise
+  'ventoline',
+  'salbutamol',
+  'salbu',
+  'médicament',
+  'medicament',
+  'antibio',
+  // Symptômes / crise / contexte médical
+  'asthme',
   'symptôme',
-  'symptome', // tolérance variante sans accent
+  'symptome',
   'crise',
+  'oppression',
   'respiration',
   'toux',
   'sifflement',
   'essoufflement',
   'allergène',
   'allergene',
+  // Contexte soignant
+  'médecin',
+  'medecin',
+  'hôpital',
+  'hopital',
+  'urgences',
 ];
 
 /**
@@ -114,15 +128,27 @@ export const FORBIDDEN_PUSH_KEYWORDS_EN: ReadonlyArray<string> = [
   'inhaler',
   'rescue',
   'prescription',
-  'administer', // administered, administration
-  // Symptômes / crise
+  'administer',
+  'ventolin',
+  'albuterol',
+  'salbutamol',
+  'medication',
+  'medicine',
+  // Symptômes / crise / contexte médical
+  'asthma',
   'symptom',
   'attack',
+  'tightness',
   'breathing',
   'cough',
   'wheezing',
   'shortness',
   'allergen',
+  // Contexte soignant
+  'doctor',
+  'physician',
+  'hospital',
+  'emergency',
 ];
 
 /** Kinds de violations détectables par {@link validatePushPayload}. */
@@ -130,10 +156,18 @@ export type PushPayloadViolationKind =
   | 'forbidden_keyword'
   | 'suspected_pii'
   | 'title_not_generic'
-  | 'non_ascii_length_exceeded'
+  | 'body_length_exceeded'
   | 'invalid_household_id'
   | 'invalid_notification_id';
 
+/**
+ * Violation détectée sur un payload push. Le champ `detail` est
+ * **délibérément non révélateur** : il ne contient jamais la valeur
+ * offensante (keyword, PII, title/body) pour éviter qu'un logger qui
+ * sérialiserait ce contexte en JSON structuré fuite la donnée même que
+ * RM16 protège. Le `kind` + `field` suffisent au dev pour reproduire
+ * l'erreur localement avec des fixtures synthétiques.
+ */
 export interface PushPayloadViolation {
   readonly field: 'title' | 'body' | 'householdId' | 'notificationId';
   readonly kind: PushPayloadViolationKind;
@@ -155,25 +189,24 @@ export interface SafePushPayload {
 
 /**
  * Construit un payload push sûr pour un événement donné. Ne prend en
- * entrée que des identifiants opaques + un contexte générique — il est
- * impossible d'y injecter une donnée santé par construction. Valide les
- * IDs en UUID v4 et lève `RM16_FORBIDDEN_CONTENT` si les overrides
- * fournis contiennent déjà une violation (défense en profondeur contre
- * un appelant qui passerait un `bodyOverride` avec une donnée santé).
+ * entrée que des identifiants opaques — il est impossible d'y injecter
+ * une donnée santé par construction. Le title et le body sont toujours
+ * les constantes génériques `PUSH_TITLE_GENERIC` / `PUSH_BODY_GENERIC`
+ * (pas d'override en v1.0 : un override strict serait un no-op, un
+ * override libre ouvrirait une porte à l'injection). Si une localisation
+ * du body est nécessaire en v1.1+, ajouter une API dédiée validée en
+ * conformité.
  *
- * @throws {DomainError} `RM16_FORBIDDEN_CONTENT` si `householdId` /
- *   `notificationId` ne sont pas des UUID v4, ou si les overrides
- *   produisent un payload non safe.
+ * @throws {DomainError} `RM16_FORBIDDEN_CONTENT` si `householdId` ou
+ *   `notificationId` ne sont pas des UUID v4.
  */
 export function buildSafePushPayload(options: {
   readonly householdId: string;
   readonly notificationId: string;
-  readonly titleOverride?: string;
-  readonly bodyOverride?: string;
 }): SafePushPayload {
   const payload: SafePushPayload = {
-    title: options.titleOverride ?? PUSH_TITLE_GENERIC,
-    body: options.bodyOverride ?? PUSH_BODY_GENERIC,
+    title: PUSH_TITLE_GENERIC,
+    body: PUSH_BODY_GENERIC,
     householdId: options.householdId,
     notificationId: options.notificationId,
   };
@@ -199,25 +232,28 @@ export function validatePushPayload(
   const violations: PushPayloadViolation[] = [];
 
   // --- Title : doit être strictement générique ---
+  // Les `detail` ci-dessous ne contiennent JAMAIS la valeur offensante
+  // (title, body, keyword, PII, ID) pour éviter qu'un logger structuré
+  // ne fuite, via context d'erreur, la donnée même que RM16 protège.
   if (payload.title !== PUSH_TITLE_GENERIC) {
     violations.push({
       field: 'title',
       kind: 'title_not_generic',
-      detail: `title must be exactly "${PUSH_TITLE_GENERIC}", got "${payload.title}"`,
+      detail: 'title differs from the generic title',
     });
   }
 
-  // --- Body : longueur ---
+  // --- Body : longueur (garde-fou anti-payload structuré, pas limite APNs) ---
   if (payload.body.length > PUSH_BODY_MAX_LENGTH) {
     violations.push({
       field: 'body',
-      kind: 'non_ascii_length_exceeded',
-      detail: `body length ${payload.body.length} exceeds max ${PUSH_BODY_MAX_LENGTH}`,
+      kind: 'body_length_exceeded',
+      detail: `body exceeds max length ${PUSH_BODY_MAX_LENGTH}`,
     });
   }
 
   // --- Body : mots-clés interdits (FR + EN) ---
-  const lowerBody = payload.body.toLowerCase();
+  const lowerBody = payload.body.normalize('NFC').toLowerCase();
   const allKeywords = [...FORBIDDEN_PUSH_KEYWORDS_FR, ...FORBIDDEN_PUSH_KEYWORDS_EN];
   const seenKeywords = new Set<string>();
   for (const keyword of allKeywords) {
@@ -230,7 +266,7 @@ export function validatePushPayload(
       violations.push({
         field: 'body',
         kind: 'forbidden_keyword',
-        detail: `body contains forbidden keyword "${keyword}"`,
+        detail: 'body contains a forbidden medical keyword',
       });
     }
   }
@@ -242,11 +278,11 @@ export function validatePushPayload(
       if (normalized.length === 0) {
         continue;
       }
-      if (lowerBody.includes(normalized.toLowerCase())) {
+      if (lowerBody.includes(normalized.normalize('NFC').toLowerCase())) {
         violations.push({
           field: 'body',
           kind: 'suspected_pii',
-          detail: `body contains suspected PII "${normalized}"`,
+          detail: 'body contains a known sensitive string',
         });
       }
     }
@@ -257,14 +293,14 @@ export function validatePushPayload(
     violations.push({
       field: 'householdId',
       kind: 'invalid_household_id',
-      detail: `householdId is not a UUID v4: "${payload.householdId}"`,
+      detail: 'householdId is not a UUID v4',
     });
   }
   if (!UUID_V4_REGEX.test(payload.notificationId)) {
     violations.push({
       field: 'notificationId',
       kind: 'invalid_notification_id',
-      detail: `notificationId is not a UUID v4: "${payload.notificationId}"`,
+      detail: 'notificationId is not a UUID v4',
     });
   }
 
@@ -284,11 +320,12 @@ export function ensurePushPayloadSafe(
 ): void {
   const violations = validatePushPayload(payload, knownForbiddenStrings);
   if (violations.length > 0) {
+    // Le message et le context ne contiennent QUE des kinds/fields
+    // génériques — jamais la valeur offensante. Un reviewer peut
+    // reproduire l'erreur localement avec des fixtures synthétiques.
     throw new DomainError(
       'RM16_FORBIDDEN_CONTENT',
-      `push payload contains ${violations.length} violation(s): ${violations
-        .map((v) => `${v.field}/${v.kind}`)
-        .join(', ')}`,
+      `push payload has ${violations.length} safety violation(s)`,
       { violations },
     );
   }
