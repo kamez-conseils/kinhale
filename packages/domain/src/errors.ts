@@ -75,4 +75,17 @@ export type DomainErrorCode =
   /** RM8 — enfant invalide (prénom vide ou année de naissance aberrante). */
   | 'RM8_INVALID_CHILD'
   /** RM16 — payload push contient du contenu interdit (mot-clé santé / PII / titre non générique). */
-  | 'RM16_FORBIDDEN_CONTENT';
+  | 'RM16_FORBIDDEN_CONTENT'
+  /** RM9 — version semver invalide (format `MAJOR.MINOR.PATCH` requis, sans préfixe). */
+  | 'RM9_INVALID_VERSION_FORMAT'
+  /** RM9 — `acceptedAtUtc` strictement postérieur à `nowUtc` au-delà de la tolérance NTP. */
+  | 'RM9_INVALID_ACCEPTANCE_TIMESTAMP'
+  /**
+   * RM9 — incohérence de flux entre acceptance et version courante :
+   * mismatch de `kind` (TOS vs PP), major accepté supérieur à major
+   * courant (suspicieux), ou major accepté inférieur (ré-acceptation
+   * requise avant de ré-écrire une acceptance du même major).
+   */
+  | 'RM9_VERSION_MISMATCH'
+  /** RM13 — tentative d'ajouter un enfant à un foyer qui a déjà atteint la limite v1.0 (1). */
+  | 'RM13_CHILD_LIMIT_REACHED';
