@@ -38,9 +38,11 @@ src/
 | **RM26**| Regroupement notifications peer : ≥ 3 prises/h + cap 15 notif/jour | §4, RM26     |
 | **RM21**| Limite anti-spam : max 10 invitations actives simultanées par foyer | §4, RM21     |
 | **RM22**| Consentement aidant invité : propres données uniquement, pas l'enfant | §4, RM22   |
+| **RM24**| Intégrité rapport : SHA-256 du contenu + timestamp + générateur (pied PDF) | §4, RM24 |
+| **RM27**| Disclaimer omniprésent aux 4 surfaces (onboarding, CGU, rapport, À propos) | §4, RM27 |
 | **RM28**| Purge invitations : `expired > 30 j`, `consumed > 90 j`, `revoked > 30 j` | §4, RM28 |
 
-Les règles RM8-RM13, RM16, RM19, RM20, RM23, RM24, RM27 arrivent dans les PRs suivantes.
+Les règles RM8-RM13, RM16, RM19, RM20, RM23 arrivent dans les PRs suivantes.
 
 ## Usage
 

@@ -79,3 +79,26 @@ export {
   PURGE_REVOKED_AFTER_DAYS,
 } from './rm28-invitation-purge';
 export type { PurgeEligibility, PurgeReason } from './rm28-invitation-purge';
+export {
+  computeReportIntegrityFooter,
+  REPORT_INTEGRITY_FOOTER_VERSION,
+  verifyReportIntegrityFooter,
+} from './rm24-report-integrity';
+export type {
+  ReportBlockKind,
+  ReportContentBlock,
+  ReportIntegrityFooter,
+} from './rm24-report-integrity';
+export {
+  assertDisclaimerCoverage,
+  DISCLAIMER_TEXT_EN,
+  DISCLAIMER_TEXT_FR,
+  getDisclaimerText,
+  REQUIRED_SURFACES,
+} from './rm27-disclaimer-presence';
+export type {
+  DisclaimerCoverageResult,
+  DisclaimerLocale,
+  DisclaimerSurface,
+  DisclaimerSurfaceContent,
+} from './rm27-disclaimer-presence';

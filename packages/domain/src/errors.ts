@@ -67,4 +67,6 @@ export type DomainErrorCode =
   /** RM22 — le consentement référence une autre invitation (incohérence de flux). */
   | 'RM22_CONSENT_INVITATION_MISMATCH'
   /** RM22 — `consentedAtUtc` est strictement postérieur à `nowUtc` (tricherie d'horloge). */
-  | 'RM22_INVALID_CONSENT_TIMESTAMP';
+  | 'RM22_INVALID_CONSENT_TIMESTAMP'
+  /** RM24 — `generator` fourni vide ou whitespace-only lors du calcul du pied d'intégrité. */
+  | 'RM24_INVALID_GENERATOR';

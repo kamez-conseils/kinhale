@@ -60,6 +60,39 @@ export default tseslint.config(
               name: 'crypto-js',
               message: 'crypto-js est interdit. Utilise @kinhale/crypto (libsodium).',
             },
+            {
+              name: 'node:crypto',
+              message:
+                'node:crypto est Node-only et casse la portabilité web/mobile. Utilise @kinhale/crypto.',
+            },
+            {
+              name: 'crypto',
+              message:
+                'node:crypto est Node-only et casse la portabilité web/mobile. Utilise @kinhale/crypto.',
+            },
+            {
+              name: 'js-sha256',
+              message:
+                'Implémentation JS interdite. Utilise @kinhale/crypto (Web Crypto API native).',
+            },
+            {
+              name: 'sha.js',
+              message:
+                'Implémentation JS interdite. Utilise @kinhale/crypto (Web Crypto API native).',
+            },
+            {
+              name: 'hash.js',
+              message:
+                'Implémentation JS interdite. Utilise @kinhale/crypto (Web Crypto API native).',
+            },
+            {
+              name: 'crypto-browserify',
+              message: 'Polyfill interdit. Utilise @kinhale/crypto (Web Crypto API native).',
+            },
+            {
+              name: 'tweetnacl',
+              message: 'Import direct interdit. Utilise @kinhale/crypto.',
+            },
           ],
         },
       ],
