@@ -92,7 +92,9 @@ describe('RM24 — sensibilité aux modifications (anti-falsification)', () => {
     // Swap des deux premières doses — ordre différent, contenu équivalent.
     const idx1 = 1;
     const idx2 = 2;
-    [reordered[idx1], reordered[idx2]] = [reordered[idx2]!, reordered[idx1]!];
+    const tmp = reordered[idx1] as ReportContentBlock;
+    reordered[idx1] = reordered[idx2] as ReportContentBlock;
+    reordered[idx2] = tmp;
 
     const after = await computeReportIntegrityFooter({
       content: reordered,
@@ -249,7 +251,9 @@ describe('RM24 — verifyReportIntegrityFooter', () => {
     const reordered: ReportContentBlock[] = [...original];
     const idx1 = 1;
     const idx2 = 3;
-    [reordered[idx1], reordered[idx2]] = [reordered[idx2]!, reordered[idx1]!];
+    const tmp = reordered[idx1] as ReportContentBlock;
+    reordered[idx1] = reordered[idx2] as ReportContentBlock;
+    reordered[idx2] = tmp;
 
     const ok = await verifyReportIntegrityFooter({ content: reordered, footer });
     expect(ok).toBe(false);
