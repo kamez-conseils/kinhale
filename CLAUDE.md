@@ -117,7 +117,7 @@ Chaque commit comporte **obligatoirement** une ligne de description (sujet) **et
 
 Une seule ligne, **≤ 72 caractères**, à l'impératif présent, sans point final, structure :
 
-```
+```text
 <type>(<scope>): <description>
 ```
 
@@ -127,7 +127,7 @@ Une seule ligne, **≤ 72 caractères**, à l'impératif présent, sans point fi
 
 Exemples de sujets valides :
 
-```
+```text
 fix(sync): corrige la perte d'événements lors d'une reconnexion WS
 feat(auth): ajoute la connexion via passkey WebAuthn
 docs(compliance): met à jour la matrice Loi 25 / RGPD
@@ -147,7 +147,7 @@ Le corps explique **pourquoi** le changement est fait, pas quoi (le diff le mont
 
 ### Exemple complet
 
-```
+```text
 fix(sync): corrige la perte d'événements lors d'une reconnexion WS
 
 Lorsque le client se reconnecte après une perte réseau, le serveur
