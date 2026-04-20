@@ -109,6 +109,19 @@ Résumé — détails complets dans `docs/contributing/GITFLOW.md`.
 - Pas de commit direct sur `main` ou `develop`.
 - Un ADR (`docs/architecture/adr/`) pour toute décision architecturale structurante.
 
+### Workflow de revue assistée (obligatoire avant toute PR)
+
+Avant d'ouvrir une PR vers `develop`, le workflow suivant est obligatoire :
+
+1. **Implémentation TDD** — tests rouges d'abord, puis code minimal, puis refactor.
+2. **Passage `kz-review` systématique** — revue automatisée du diff : fit fonctionnel, qualité TypeScript strict, pureté, couverture et granularité des tests, conventions, gestion d'erreurs, risques de régression, anti-patterns. Le rapport est intégré au corps de la PR ou mentionné dans un commentaire.
+3. **Passage `kz-securite` systématique** dès que la zone touchée est sensible : `packages/crypto`, `packages/sync`, authentification, I/O, secrets, données santé, payloads push/email, dépendances. En cas de doute, invoquer plutôt que d'omettre.
+4. **Correction** des points MAJEURS relevés avant ouverture de PR. Les points MINEURS sont traités soit dans la même PR, soit dans un ticket de suivi explicite.
+5. **Push + PR** vers `develop` : la revue humaine ne voit que du code déjà auto-filtré.
+6. **Revue humaine + squash-merge** (seul mode autorisé par les settings repo).
+
+Ce workflow n'est pas optionnel. Il a été adopté le 2026-04-20 après constat que les 3 premières PRs du domaine (KIN-005, KIN-007, KIN-008) s'étaient reposées uniquement sur la revue humaine GitHub.
+
 ## Format des messages de commit
 
 Chaque commit comporte **obligatoirement** une ligne de description (sujet) **et** un corps (body). Conforme à [Conventional Commits 1.0](https://www.conventionalcommits.org/fr/v1.0.0/).

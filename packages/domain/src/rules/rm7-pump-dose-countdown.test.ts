@@ -217,10 +217,11 @@ describe('RM7 — applyConfirmedDoseToPump — erreurs', () => {
 
   it('refuse un décrément sur une pompe archived (RM7_PUMP_NOT_USABLE)', () => {
     const pump = makePump({ status: 'archived' });
-    expect(() => applyConfirmedDoseToPump({ pump, dosesAdministered: 1 })).toThrow(DomainError);
     try {
       applyConfirmedDoseToPump({ pump, dosesAdministered: 1 });
+      expect.fail('attendu: DomainError RM7_PUMP_NOT_USABLE');
     } catch (err) {
+      expect(err).toBeInstanceOf(DomainError);
       expect((err as DomainError).code).toBe('RM7_PUMP_NOT_USABLE');
     }
   });

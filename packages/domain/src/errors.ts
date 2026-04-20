@@ -38,5 +38,5 @@ export type DomainErrorCode =
   | 'RM7_INVALID_THRESHOLD'
   /** RM7 — tentative de décrémenter une pompe déjà `empty`. */
   | 'RM7_PUMP_ALREADY_EMPTY'
-  /** RM7 — tentative de décrémenter une pompe inutilisable (expired / replaced / archived). */
+  /** RM7 — tentative de décrémenter une pompe inutilisable (expired / archived). */
   | 'RM7_PUMP_NOT_USABLE';
