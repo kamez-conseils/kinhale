@@ -53,4 +53,18 @@ export type DomainErrorCode =
   /** RM18 — hors fenêtre libre : `voidedReason` non vide obligatoire. */
   | 'RM18_VOIDED_REASON_REQUIRED'
   /** RM25 — `alreadySentSteps` contient une valeur hors {1, 2}. */
-  | 'RM25_INVALID_STEP';
+  | 'RM25_INVALID_STEP'
+  /** RM21 — le foyer a déjà atteint la limite d'invitations actives simultanées. */
+  | 'RM21_TOO_MANY_ACTIVE_INVITATIONS'
+  /** RM22 — l'aidant invité n'a pas consenti au traitement de ses propres données. */
+  | 'RM22_MISSING_INVITEE_CONSENT'
+  /** RM22 — tentative de consentir au nom de l'enfant : refus conceptuel (mandat du parent). */
+  | 'RM22_INVITEE_CANNOT_CONSENT_FOR_CHILD'
+  /** RM22 — l'invitation n'est plus `active` (consumed / expired / revoked). */
+  | 'RM22_INVITATION_NOT_ACTIVE'
+  /** RM22 — l'invitation est encore `active` mais `expiresAtUtc` est déjà passé. */
+  | 'RM22_INVITATION_EXPIRED'
+  /** RM22 — le consentement référence une autre invitation (incohérence de flux). */
+  | 'RM22_CONSENT_INVITATION_MISMATCH'
+  /** RM22 — `consentedAtUtc` est strictement postérieur à `nowUtc` (tricherie d'horloge). */
+  | 'RM22_INVALID_CONSENT_TIMESTAMP';
