@@ -21,11 +21,14 @@ src/
 
 ## Règles implémentées
 
-| Règle   | Description                                | Source specs |
-| ------- | ------------------------------------------ | ------------ |
-| **RM1** | Un foyer a au moins un Admin en permanence | §4, RM1      |
+| Règle   | Description                                                        | Source specs |
+| ------- | ------------------------------------------------------------------ | ------------ |
+| **RM1** | Un foyer a au moins un Admin en permanence                         | §4, RM1      |
+| **RM2** | Fenêtre de confirmation \[10-120 min\] + rattrapage borné à 24 h    | §4, RM2      |
+| **RM3** | Pas de plan de traitement sur une pompe `rescue`                   | §4, RM3      |
+| **RM4** | Prise `rescue` exige symptôme, circonstance ou tag libre           | §4, RM4      |
 
-Les règles RM2-RM9 arrivent dans les PRs suivantes (`KIN-005`+).
+Les règles RM5-RM9 arrivent dans les PRs suivantes.
 
 ## Usage
 
