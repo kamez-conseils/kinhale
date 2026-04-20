@@ -9,6 +9,8 @@ export {
 export type { DoseTiming } from './rm2-confirmation-window';
 export { ensureCanAttachPlanToPump } from './rm3-no-plan-for-rescue';
 export { ensureRescueDocumented } from './rm4-rescue-documented';
+export { PEER_SYNC_OFFSET_THRESHOLD_MS, planPeerNotification } from './rm5-peer-notification';
+export type { PeerNotificationEvent, PeerNotificationRecipient } from './rm5-peer-notification';
 export {
   DUPLICATE_DETECTION_WINDOW_MINUTES,
   findDuplicateCandidates,
@@ -44,3 +46,21 @@ export {
   voidDose,
 } from './rm18-void-dose';
 export type { VoidDoseOptions, VoidRequester } from './rm18-void-dose';
+export {
+  nextReminderRetry,
+  planReminderRetries,
+  REMINDER_RETRY_DELAYS_MS,
+} from './rm25-reminder-retries';
+export type {
+  ReminderRetryChannel,
+  ReminderRetryPlan,
+  ReminderRetryStep,
+  ReminderRetryStepIndex,
+} from './rm25-reminder-retries';
+export {
+  DAILY_NOTIFICATION_HARD_CAP,
+  decidePeerNotification,
+  PEER_GROUPING_THRESHOLD_COUNT,
+  PEER_GROUPING_WINDOW_MS,
+} from './rm26-peer-grouping';
+export type { PeerNotificationDecision, RecentPeerEvent } from './rm26-peer-grouping';

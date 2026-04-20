@@ -27,14 +27,17 @@ src/
 | **RM2** | Fenêtre de confirmation \[10-120 min\] + rattrapage borné à 24 h    | §4, RM2      |
 | **RM3** | Pas de plan de traitement sur une pompe `rescue`                   | §4, RM3      |
 | **RM4** | Prise `rescue` exige symptôme, circonstance ou tag libre           | §4, RM4      |
+| **RM5** | Notification croisée aux autres aidants actifs non-restricted      | §4, RM5      |
 | **RM6** | Détection double saisie : même pompe + type à moins de 2 min       | §4, RM6      |
 | **RM7** | Décompte doses pompe + alertes `pump_low` / `pump_emptied`         | §4, RM7      |
 | **RM14**| Horodatage serveur autoritaire (`recordedAtUtc`) + flag sync tardive | §4, RM14     |
 | **RM15**| Idempotence des saisies via `clientEventId` (UUID v4)              | §4, RM15     |
 | **RM17**| Rattrapage borné : backfill ≤ 24 h, futur refusé, confirmation au-delà | §4, RM17 |
 | **RM18**| Annulation : 30 min libres pour l'auteur ou un Admin, puis Admin + raison | §4, RM18 |
+| **RM25**| Rappels bornés : 2 relances max (push T+15 min, e-mail T+30 min)   | §4, RM25     |
+| **RM26**| Regroupement notifications peer : ≥ 3 prises/h + cap 15 notif/jour | §4, RM26     |
 
-Les règles RM5, RM8-RM13, RM16, RM19-RM28 arrivent dans les PRs suivantes.
+Les règles RM8-RM13, RM16, RM19-RM24, RM27, RM28 arrivent dans les PRs suivantes.
 
 ## Usage
 

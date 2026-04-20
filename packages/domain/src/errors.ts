@@ -51,4 +51,6 @@ export type DomainErrorCode =
   /** RM18 — le demandeur n'est ni l'auteur dans la fenêtre libre, ni admin. */
   | 'RM18_NOT_AUTHORIZED'
   /** RM18 — hors fenêtre libre : `voidedReason` non vide obligatoire. */
-  | 'RM18_VOIDED_REASON_REQUIRED';
+  | 'RM18_VOIDED_REASON_REQUIRED'
+  /** RM25 — `alreadySentSteps` contient une valeur hors {1, 2}. */
+  | 'RM25_INVALID_STEP';
