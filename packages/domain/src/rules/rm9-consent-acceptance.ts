@@ -10,7 +10,13 @@ import { CLOCK_SKEW_TOLERANCE_MS } from './rm14-recorded-timestamp';
  */
 export type DocumentKind = 'terms_of_service' | 'privacy_policy';
 
-const DOCUMENT_KINDS_CANONICAL_ORDER: ReadonlyArray<DocumentKind> = [
+/**
+ * Ordre canonique d'apparition des kinds de documents dans les tableaux
+ * `missing` / `outdated`. Exposé pour que les tests et les consommateurs
+ * puissent verrouiller l'invariant d'ordre stable (sinon un ajout futur
+ * pourrait briser les assertions `toEqual` côté UI sans test en filet).
+ */
+export const DOCUMENT_KINDS_CANONICAL_ORDER: ReadonlyArray<DocumentKind> = [
   'terms_of_service',
   'privacy_policy',
 ];
@@ -95,7 +101,8 @@ interface ParsedSemver {
   readonly patch: number;
 }
 
-const SEMVER_STRICT_REGEX = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/;
+const SEMVER_STRICT_REGEX =
+  /^(?<major>0|[1-9][0-9]*)\.(?<minor>0|[1-9][0-9]*)\.(?<patch>0|[1-9][0-9]*)$/;
 
 function parseSemverOrThrow(version: string): ParsedSemver {
   if (typeof version !== 'string' || version.length === 0) {
@@ -105,7 +112,7 @@ function parseSemverOrThrow(version: string): ParsedSemver {
   }
 
   const match = SEMVER_STRICT_REGEX.exec(version);
-  if (match === null) {
+  if (match === null || match.groups === undefined) {
     throw new DomainError(
       'RM9_INVALID_VERSION_FORMAT',
       `Version "${version}" is not in strict MAJOR.MINOR.PATCH format.`,
@@ -113,12 +120,13 @@ function parseSemverOrThrow(version: string): ParsedSemver {
     );
   }
 
-  // Les trois groupes sont garantis par le regex ; on convertit sans risque.
-  const [, majorStr, minorStr, patchStr] = match;
+  // Les groupes nommés sont garantis non-undefined par la regex (tous
+  // obligatoires) ; on coalesce en '' par sécurité type stricte.
+  const { major = '', minor = '', patch = '' } = match.groups;
   return {
-    major: Number.parseInt(majorStr as string, 10),
-    minor: Number.parseInt(minorStr as string, 10),
-    patch: Number.parseInt(patchStr as string, 10),
+    major: Number.parseInt(major, 10),
+    minor: Number.parseInt(minor, 10),
+    patch: Number.parseInt(patch, 10),
   };
 }
 

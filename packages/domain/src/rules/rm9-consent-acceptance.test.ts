@@ -3,6 +3,7 @@ import { DomainError } from '../errors';
 import {
   type ConsentStatus,
   type DocumentAcceptance,
+  DOCUMENT_KINDS_CANONICAL_ORDER,
   type DocumentVersion,
   ensureAcceptanceValid,
   evaluateConsentStatus,
@@ -45,6 +46,15 @@ function makePpAcceptance(acceptedVersion: string): DocumentAcceptance {
     userId: 'user-1',
   };
 }
+
+describe('RM9 — DOCUMENT_KINDS_CANONICAL_ORDER invariant', () => {
+  it('expose exactement TOS puis PP, dans cet ordre', () => {
+    // Invariant d'ordre stable : les tableaux `missing` et `outdated` de
+    // ConsentStatus reposent sur ce tri. Toute modification silencieuse
+    // casserait les assertions UI consommatrices.
+    expect(DOCUMENT_KINDS_CANONICAL_ORDER).toEqual(['terms_of_service', 'privacy_policy']);
+  });
+});
 
 describe('RM9 — parseMajorVersion', () => {
   it('extrait le major de `1.2.3`', () => {
@@ -221,6 +231,17 @@ describe('RM9 — evaluateConsentStatus (priorité never_accepted sur major_bump
     expect(status).toEqual<ConsentStatus>({
       kind: 'never_accepted',
       missing: ['privacy_policy'],
+    });
+  });
+
+  it('cas symétrique : PP major bumpé + TOS jamais acceptée → never_accepted', () => {
+    const status = evaluateConsentStatus({
+      currentVersions: [makeTosVersion('1.0.0'), makePpVersion('2.0.0')],
+      acceptances: [makePpAcceptance('1.0.0')],
+    });
+    expect(status).toEqual<ConsentStatus>({
+      kind: 'never_accepted',
+      missing: ['terms_of_service'],
     });
   });
 });
