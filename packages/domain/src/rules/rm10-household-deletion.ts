@@ -111,15 +111,11 @@ export interface PortabilityArchiveManifest {
 /**
  * Demande de suppression d'un foyer.
  *
- * @throws {DomainError} `RM10_HOUSEHOLD_NOT_ACTIVE` — le foyer transmis
- *   est déjà considéré comme en suppression. La détection se fait
- *   implicitement : l'appelant doit construire un `Household` et la
- *   règle refuse si > 1 admin. La vraie détection `active` est côté
- *   infra (champ persisté). Ici on valide surtout la **topologie** du
- *   foyer. NOTE : ce code n'est PAS levé par la règle elle-même (le
- *   domaine ne connaît pas le champ `status` sur `Household`) — il est
- *   exposé via l'enum pour que `apps/api` l'utilise lors de l'appel
- *   préliminaire.
+ * @throws {DomainError} `RM10_HOUSEHOLD_NOT_ACTIVE` — si
+ *   `currentDeletionState` est fourni avec un `status !== 'active'` (le
+ *   foyer est déjà en `pending_deletion` ou `deleted`). La règle lève
+ *   elle-même pour fermer l'invariant côté domaine, plutôt que de
+ *   dépendre d'un check préliminaire côté `apps/api`.
  * @throws {DomainError} `RM10_MULTIPLE_ADMINS_PRESENT` — doit passer par
  *   W11 d'abord.
  * @throws {DomainError} `RM10_NOT_AUTHORIZED` — le requester n'est pas
@@ -129,11 +125,25 @@ export function requestHouseholdDeletion(options: {
   readonly household: Household;
   readonly requesterCaregiverId: string;
   readonly nowUtc: Date;
+  /**
+   * État de suppression courant du foyer, si connu. Si omis, on suppose
+   * que le foyer est en `active` (premier appel). Si fourni, la règle
+   * refuse les doubles demandes sur un foyer `pending_deletion` / `deleted`.
+   */
+  readonly currentDeletionState?: HouseholdDeletionState;
 }): {
   readonly nextState: HouseholdDeletionState;
   readonly archiveManifest: PortabilityArchiveManifest;
 } {
-  const { household, requesterCaregiverId, nowUtc } = options;
+  const { household, requesterCaregiverId, nowUtc, currentDeletionState } = options;
+
+  if (currentDeletionState !== undefined && currentDeletionState.status !== 'active') {
+    throw new DomainError(
+      'RM10_HOUSEHOLD_NOT_ACTIVE',
+      'Household is not in an active state; a deletion request is already in progress or completed.',
+      { householdId: household.id, currentStatus: currentDeletionState.status },
+    );
+  }
 
   const admins = activeAdmins(household);
   const requesterIsActiveAdmin = admins.some((c) => c.id === requesterCaregiverId);
@@ -284,11 +294,31 @@ export function purgeDeadlineUtc(deletedState: HouseholdDeletionState): Date | n
 }
 
 /**
+ * Longueur minimale du `auditSalt` exigée pour la pseudonymisation RM10.
+ * 16 caractères = ~128 bits d'entropie en base64url, seuil défensif
+ * contre un appelant qui fournirait une chaîne vide ou triviale (ce qui
+ * rendrait le hash inversible par force brute sur l'espace des UUIDs).
+ */
+export const RM10_MIN_AUDIT_SALT_LENGTH = 16;
+
+/**
+ * Préfixe de domain-separation pour la pseudonymisation RM10. Garantit
+ * qu'un hash RM10 ne collide jamais avec un hash d'un autre usage
+ * `@kinhale/crypto` (RM24, futurs modules), même à `householdId` /
+ * `salt` identiques. Bump de version si le format change (alors les
+ * hashs v1 et v2 restent distinguables).
+ */
+const RM10_PSEUDONYMIZATION_DST = 'kinhale:rm10:audit:v1';
+
+/**
  * Pseudonymisation stable et déterministe d'un `householdId` pour
  * l'historique d'audit conservé après purge (RM10).
  *
  * Contrat :
- * - `SHA-256(householdId + '|' + auditSalt)` en hex minuscule, 64 car.
+ * - `SHA-256(DST + '|' + byteLen(id) + ':' + id + '|' + byteLen(salt) + ':' + salt)`
+ *   en hex minuscule, 64 car. Encodage **injectif** (cf. RM24) : le préfixe
+ *   de longueur UTF-8 empêche toute collision par concaténation ambiguë,
+ *   indépendamment du contenu de `householdId` ou `auditSalt`.
  * - **Déterministe** : même couple → même sortie (utile pour corréler
  *   plusieurs entrées d'audit d'un même foyer purgé).
  * - **Irréversible** : la préimage nécessite la connaissance du
@@ -297,19 +327,29 @@ export function purgeDeadlineUtc(deletedState: HouseholdDeletionState): Date | n
  * - **Sensibilité au salt** : une rotation du salt brise la corrélation
  *   pour les nouvelles entrées (choix d'exploitation, à documenter).
  *
- * Le séparateur `|` est ajouté pour éviter une collision théorique du
- * type `concat('AB', 'C') === concat('A', 'BC')` — les UUID et les salt
- * n'en contiennent pas, mais la règle reste robuste même si un jour un
- * salt libre est introduit.
- *
  * Appelle `sha256HexFromString` depuis `@kinhale/crypto` — seul point
  * d'accès autorisé à la crypto dans le domaine (règle CLAUDE.md).
+ *
+ * @throws {DomainError} `RM10_INVALID_AUDIT_SALT` — salt vide, whitespace
+ *   pur, ou plus court que `RM10_MIN_AUDIT_SALT_LENGTH`.
  */
 export async function pseudonymizeHouseholdForAudit(options: {
   readonly householdId: string;
   readonly auditSalt: string;
 }): Promise<string> {
-  const preimage = `${options.householdId}|${options.auditSalt}`;
+  const saltTrimmed = options.auditSalt.trim();
+  if (saltTrimmed.length < RM10_MIN_AUDIT_SALT_LENGTH) {
+    throw new DomainError(
+      'RM10_INVALID_AUDIT_SALT',
+      `auditSalt must be a server-managed secret of at least ${RM10_MIN_AUDIT_SALT_LENGTH} non-whitespace characters.`,
+      { minLength: RM10_MIN_AUDIT_SALT_LENGTH },
+    );
+  }
+
+  const encoder = new TextEncoder();
+  const idBytes = encoder.encode(options.householdId).byteLength;
+  const saltBytes = encoder.encode(options.auditSalt).byteLength;
+  const preimage = `${RM10_PSEUDONYMIZATION_DST}|${idBytes}:${options.householdId}|${saltBytes}:${options.auditSalt}`;
   return sha256HexFromString(preimage);
 }
 

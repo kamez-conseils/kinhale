@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Caregiver } from '../entities/caregiver';
 import type { Household } from '../entities/household';
 import type { Role } from '../entities/role';
-import type { DomainError } from '../errors';
+import { DomainError } from '../errors';
 import {
   cancelHouseholdDeletion,
   DELETION_GRACE_PERIOD_DAYS,
@@ -438,6 +438,130 @@ describe('RM10 — pseudonymizeHouseholdForAudit', () => {
       auditSalt: SALT,
     });
     expect(pseudo.includes(HOUSEHOLD_ID)).toBe(false);
+  });
+
+  it('refuse un auditSalt vide (RM10_INVALID_AUDIT_SALT)', async () => {
+    await expect(
+      pseudonymizeHouseholdForAudit({ householdId: HOUSEHOLD_ID, auditSalt: '' }),
+    ).rejects.toThrow(DomainError);
+    try {
+      await pseudonymizeHouseholdForAudit({ householdId: HOUSEHOLD_ID, auditSalt: '' });
+      expect.fail('should have thrown RM10_INVALID_AUDIT_SALT');
+    } catch (err) {
+      expect((err as DomainError).code).toBe('RM10_INVALID_AUDIT_SALT');
+    }
+  });
+
+  it('refuse un auditSalt whitespace-only', async () => {
+    await expect(
+      pseudonymizeHouseholdForAudit({ householdId: HOUSEHOLD_ID, auditSalt: '   \t\n  ' }),
+    ).rejects.toThrow(DomainError);
+  });
+
+  it('refuse un auditSalt sous le seuil minimum (< 16 chars)', async () => {
+    await expect(
+      pseudonymizeHouseholdForAudit({ householdId: HOUSEHOLD_ID, auditSalt: 'short' }),
+    ).rejects.toThrow(DomainError);
+  });
+
+  it('accepte un salt à la longueur minimale exacte', async () => {
+    const exactLenSalt = 'a'.repeat(16);
+    const pseudo = await pseudonymizeHouseholdForAudit({
+      householdId: HOUSEHOLD_ID,
+      auditSalt: exactLenSalt,
+    });
+    expect(pseudo).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('produit des hashs distincts pour deux couples concaténés mais distincts (injectivité)', async () => {
+    // Pattern RM24 : préfixe de longueur UTF-8 protège contre les
+    // collisions par concaténation ambiguë. Un couple `(AB, C-long-salt)`
+    // ne peut pas produire la même préimage que `(A, BC-long-salt)`.
+    const a = await pseudonymizeHouseholdForAudit({
+      householdId: 'AB',
+      auditSalt: 'C-kinhale-audit-salt',
+    });
+    const b = await pseudonymizeHouseholdForAudit({
+      householdId: 'A',
+      auditSalt: 'BC-kinhale-audit-salt',
+    });
+    expect(a).not.toBe(b);
+  });
+});
+
+describe('RM10 — requestHouseholdDeletion avec currentDeletionState (RM10_HOUSEHOLD_NOT_ACTIVE)', () => {
+  const NOW = new Date('2026-04-19T12:00:00Z');
+
+  it('refuse une demande si un état pending_deletion est déjà en cours', () => {
+    const household = makeHousehold([ADMIN]);
+    const pending: HouseholdDeletionState = {
+      status: 'pending_deletion',
+      requestedAtUtc: NOW,
+      graceExpiresAtUtc: new Date(NOW.getTime() + DELETION_GRACE_PERIOD_DAYS * DAY_MS),
+      deletedAtUtc: null,
+      requestedByCaregiverId: 'admin-1',
+    };
+
+    try {
+      requestHouseholdDeletion({
+        household,
+        requesterCaregiverId: 'admin-1',
+        nowUtc: NOW,
+        currentDeletionState: pending,
+      });
+      expect.fail('should have thrown RM10_HOUSEHOLD_NOT_ACTIVE');
+    } catch (err) {
+      expect((err as DomainError).code).toBe('RM10_HOUSEHOLD_NOT_ACTIVE');
+    }
+  });
+
+  it('refuse une demande si le foyer est déjà deleted', () => {
+    const household = makeHousehold([ADMIN]);
+    const deleted: HouseholdDeletionState = {
+      status: 'deleted',
+      requestedAtUtc: NOW,
+      graceExpiresAtUtc: new Date(NOW.getTime() + DELETION_GRACE_PERIOD_DAYS * DAY_MS),
+      deletedAtUtc: new Date(NOW.getTime() + 8 * DAY_MS),
+      requestedByCaregiverId: 'admin-1',
+    };
+
+    expect(() =>
+      requestHouseholdDeletion({
+        household,
+        requesterCaregiverId: 'admin-1',
+        nowUtc: NOW,
+        currentDeletionState: deleted,
+      }),
+    ).toThrow(DomainError);
+  });
+
+  it('accepte une demande si currentDeletionState.status === active', () => {
+    const household = makeHousehold([ADMIN]);
+    const activeState: HouseholdDeletionState = {
+      status: 'active',
+      requestedAtUtc: null,
+      graceExpiresAtUtc: null,
+      deletedAtUtc: null,
+      requestedByCaregiverId: null,
+    };
+
+    const { nextState } = requestHouseholdDeletion({
+      household,
+      requesterCaregiverId: 'admin-1',
+      nowUtc: NOW,
+      currentDeletionState: activeState,
+    });
+    expect(nextState.status).toBe('pending_deletion');
+  });
+
+  it('accepte une demande sans currentDeletionState (chemin nominal conservé)', () => {
+    const household = makeHousehold([ADMIN]);
+    const { nextState } = requestHouseholdDeletion({
+      household,
+      requesterCaregiverId: 'admin-1',
+      nowUtc: NOW,
+    });
+    expect(nextState.status).toBe('pending_deletion');
   });
 });
 
