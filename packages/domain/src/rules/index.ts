@@ -65,6 +65,21 @@ export {
 } from './rm18-void-dose';
 export type { VoidDoseOptions, VoidRequester } from './rm18-void-dose';
 export {
+  canUsePumpForDose,
+  daysUntilExpiration,
+  ensurePumpUsableForDose,
+  evaluatePumpExpiration,
+  PUMP_EXPIRING_WARNING_WINDOW_DAYS,
+} from './rm19-pump-expiration';
+export type { PumpLifecycleEvent, PumpLifecycleUpdate } from './rm19-pump-expiration';
+export {
+  decideOfflineReadAccess,
+  decideOfflineWriteAccess,
+  filterDosesAvailableOffline,
+  OFFLINE_READ_WINDOW_DAYS,
+} from './rm20-offline-access';
+export type { OfflineReadDecision, OfflineWriteDecision } from './rm20-offline-access';
+export {
   nextReminderRetry,
   planReminderRetries,
   REMINDER_RETRY_DELAYS_MS,

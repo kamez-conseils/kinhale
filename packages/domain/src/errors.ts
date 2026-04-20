@@ -52,6 +52,8 @@ export type DomainErrorCode =
   | 'RM18_NOT_AUTHORIZED'
   /** RM18 — hors fenêtre libre : `voidedReason` non vide obligatoire. */
   | 'RM18_VOIDED_REASON_REQUIRED'
+  /** RM19 — tentative d'usage d'une pompe expirée sans justification Admin. */
+  | 'RM19_PUMP_EXPIRED'
   /** RM25 — `alreadySentSteps` contient une valeur hors {1, 2}. */
   | 'RM25_INVALID_STEP'
   /** RM21 — le foyer a déjà atteint la limite d'invitations actives simultanées. */
