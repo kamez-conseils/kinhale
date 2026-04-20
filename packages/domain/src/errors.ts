@@ -29,4 +29,6 @@ export type DomainErrorCode =
   /** RM3 — tentative d'attacher un plan à une pompe de type `rescue`. */
   | 'RM3_PLAN_ON_RESCUE_PUMP'
   /** RM4 — prise `rescue` sans symptôme, circonstance ou tag libre. */
-  | 'RM4_RESCUE_NOT_DOCUMENTED';
+  | 'RM4_RESCUE_NOT_DOCUMENTED'
+  /** RM6 — double saisie détectée : deux prises mêmes type + pompe à < 2 min. */
+  | 'RM6_DUPLICATE_DETECTED';

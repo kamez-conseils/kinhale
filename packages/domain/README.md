@@ -27,8 +27,9 @@ src/
 | **RM2** | Fenêtre de confirmation \[10-120 min\] + rattrapage borné à 24 h    | §4, RM2      |
 | **RM3** | Pas de plan de traitement sur une pompe `rescue`                   | §4, RM3      |
 | **RM4** | Prise `rescue` exige symptôme, circonstance ou tag libre           | §4, RM4      |
+| **RM6** | Détection double saisie : même pompe + type à moins de 2 min       | §4, RM6      |
 
-Les règles RM5-RM9 arrivent dans les PRs suivantes.
+Les règles RM5, RM7-RM9 arrivent dans les PRs suivantes.
 
 ## Usage
 
