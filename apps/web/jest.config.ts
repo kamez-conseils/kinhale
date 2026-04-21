@@ -16,4 +16,5 @@ const customConfig: Config = {
   ],
 }
 
-export default createJestConfig(customConfig)
+const jestConfig: () => Promise<Config> = createJestConfig(customConfig)
+export default jestConfig
