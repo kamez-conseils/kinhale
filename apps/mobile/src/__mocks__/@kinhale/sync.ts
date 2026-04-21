@@ -1,0 +1,9 @@
+export const createDoc = jest.fn().mockReturnValue({ householdId: 'hh-1', events: [] });
+export const loadDoc = jest.fn().mockReturnValue({ householdId: 'hh-1', events: [] });
+export const saveDoc = jest.fn().mockReturnValue(new Uint8Array(10));
+export const getDocChanges = jest.fn().mockReturnValue([new Uint8Array(5)]);
+export const mergeChanges = jest.fn().mockReturnValue({ householdId: 'hh-1', events: [] });
+export const signEvent = jest.fn().mockResolvedValue({ id: 'ev-1', deviceId: 'dev-1', occurredAtMs: 0, signature: 'sig', event: {} });
+export const appendEvent = jest.fn().mockReturnValue({ householdId: 'hh-1', events: [] });
+export const encryptChanges = jest.fn().mockResolvedValue('encrypted-blob');
+export const decryptChanges = jest.fn().mockResolvedValue([new Uint8Array(5)]);
