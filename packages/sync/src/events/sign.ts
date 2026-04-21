@@ -1,6 +1,6 @@
-import { sign, verify } from '@kinhale/crypto'
-import type { SignedEventRecord } from '../doc/schema.js'
-import type { UnsignedEvent } from './types.js'
+import { sign, verify } from '@kinhale/crypto';
+import type { SignedEventRecord } from '../doc/schema.js';
+import type { UnsignedEvent } from './types.js';
 
 /**
  * Retourne les bytes canoniques à signer pour un UnsignedEvent.
@@ -13,8 +13,8 @@ export function canonicalBytes(unsigned: UnsignedEvent): Uint8Array {
     payloadJson: JSON.stringify(unsigned.event.payload),
     deviceId: unsigned.deviceId,
     occurredAtMs: unsigned.occurredAtMs,
-  })
-  return new TextEncoder().encode(canonical)
+  });
+  return new TextEncoder().encode(canonical);
 }
 
 /**
@@ -25,10 +25,10 @@ export async function signEvent(
   unsigned: UnsignedEvent,
   secretKey: Uint8Array,
 ): Promise<SignedEventRecord> {
-  const signerPublicKey = secretKey.slice(32, 64)
-  const payloadJson = JSON.stringify(unsigned.event.payload)
-  const bytes = canonicalBytes(unsigned)
-  const signature = await sign(bytes, secretKey)
+  const signerPublicKey = secretKey.slice(32, 64);
+  const payloadJson = JSON.stringify(unsigned.event.payload);
+  const bytes = canonicalBytes(unsigned);
+  const signature = await sign(bytes, secretKey);
 
   return {
     id: unsigned.id,
@@ -38,7 +38,7 @@ export async function signEvent(
     signatureHex: Buffer.from(signature).toString('hex'),
     deviceId: unsigned.deviceId,
     occurredAtMs: unsigned.occurredAtMs,
-  }
+  };
 }
 
 /**
@@ -47,7 +47,7 @@ export async function signEvent(
  */
 export async function verifySignedEvent(record: SignedEventRecord): Promise<boolean> {
   try {
-    const parsedPayload = JSON.parse(record.payloadJson) as UnsignedEvent['event']['payload']
+    const parsedPayload = JSON.parse(record.payloadJson) as UnsignedEvent['event']['payload'];
     const unsigned: UnsignedEvent = {
       id: record.id,
       deviceId: record.deviceId,
@@ -56,12 +56,12 @@ export async function verifySignedEvent(record: SignedEventRecord): Promise<bool
         type: record.type as UnsignedEvent['event']['type'],
         payload: parsedPayload,
       } as UnsignedEvent['event'],
-    }
-    const bytes = canonicalBytes(unsigned)
-    const signature = Buffer.from(record.signatureHex, 'hex')
-    const publicKey = Buffer.from(record.signerPublicKeyHex, 'hex')
-    return await verify(bytes, signature, publicKey)
+    };
+    const bytes = canonicalBytes(unsigned);
+    const signature = Buffer.from(record.signatureHex, 'hex');
+    const publicKey = Buffer.from(record.signerPublicKeyHex, 'hex');
+    return await verify(bytes, signature, publicKey);
   } catch {
-    return false
+    return false;
   }
 }

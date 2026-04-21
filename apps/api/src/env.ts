@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from 'zod';
 
 export const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -7,12 +7,12 @@ export const EnvSchema = z.object({
   JWT_SECRET: z.string().min(32),
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('14d'),
-})
+});
 
-export type Env = z.infer<typeof EnvSchema>
+export type Env = z.infer<typeof EnvSchema>;
 
 export function parseEnv(raw: NodeJS.ProcessEnv = process.env): Env {
-  return EnvSchema.parse(raw)
+  return EnvSchema.parse(raw);
 }
 
 /** Env de test — toutes les valeurs minimales valides */
@@ -25,5 +25,5 @@ export function testEnv(overrides: Partial<Env> = {}): Env {
     JWT_ACCESS_TTL: '15m',
     JWT_REFRESH_TTL: '14d',
     ...overrides,
-  }
+  };
 }

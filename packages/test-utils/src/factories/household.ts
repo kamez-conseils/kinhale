@@ -1,9 +1,9 @@
-import type { Household } from '@kinhale/domain'
+import type { Household } from '@kinhale/domain';
 
-let _counter = 0
+let _counter = 0;
 
 export function createTestHousehold(overrides: Partial<Household> = {}): Household {
-  const id = `household-test-${++_counter}`
+  const id = `household-test-${++_counter}`;
   return {
     id,
     createdAt: new Date('2026-01-01T00:00:00Z'),
@@ -11,5 +11,5 @@ export function createTestHousehold(overrides: Partial<Household> = {}): Househo
     locale: 'fr',
     caregivers: [],
     ...overrides,
-  }
+  };
 }

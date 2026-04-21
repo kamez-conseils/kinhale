@@ -1,9 +1,9 @@
-import type { Dose } from '@kinhale/domain'
+import type { Dose } from '@kinhale/domain';
 
-let _counter = 0
+let _counter = 0;
 
 export function createTestDose(overrides: Partial<Dose> = {}): Dose {
-  const id = `dose-test-${++_counter}`
+  const id = `dose-test-${++_counter}`;
   return {
     id,
     householdId: 'household-test-1',
@@ -21,5 +21,5 @@ export function createTestDose(overrides: Partial<Dose> = {}): Dose {
     freeFormTag: null,
     voidedReason: null,
     ...overrides,
-  }
+  };
 }

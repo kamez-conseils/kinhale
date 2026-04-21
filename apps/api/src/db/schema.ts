@@ -1,10 +1,4 @@
-import {
-  pgTable,
-  uuid,
-  text,
-  timestamp,
-  bigint,
-} from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, timestamp, bigint } from 'drizzle-orm/pg-core';
 
 /**
  * Comptes utilisateurs. L'email n'est jamais stocké en clair —
@@ -14,7 +8,7 @@ export const accounts = pgTable('accounts', {
   id: uuid('id').defaultRandom().primaryKey(),
   emailHash: text('email_hash').notNull().unique(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-})
+});
 
 /**
  * Devices enregistrés. Chaque device porte une clé publique Ed25519
@@ -29,7 +23,7 @@ export const devices = pgTable('devices', {
   publicKeyHex: text('public_key_hex').notNull(),
   householdId: uuid('household_id').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-})
+});
 
 /**
  * Magic links d'authentification. Le token n'est stocké que sous forme
@@ -43,7 +37,7 @@ export const magicLinks = pgTable('magic_links', {
   expiresAt: timestamp('expires_at').notNull(),
   usedAt: timestamp('used_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-})
+});
 
 /**
  * Messages de la mailbox E2EE. Le blob est le JSON de EncryptedBlob
@@ -59,4 +53,4 @@ export const mailboxMessages = pgTable('mailbox_messages', {
   sentAtMs: bigint('sent_at_ms', { mode: 'number' }).notNull(),
   expiresAt: timestamp('expires_at').notNull(),
   ackedAt: timestamp('acked_at'),
-})
+});

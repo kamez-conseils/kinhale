@@ -1,4 +1,4 @@
-import kinhale from '@kinhale/eslint-config'
+import kinhale from '@kinhale/eslint-config';
 
 export default [
   ...kinhale,
@@ -14,4 +14,4 @@ export default [
       '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
-]
+];

@@ -1,2 +1,2 @@
-import config from '@kinhale/eslint-config'
-export default config
+import config from '@kinhale/eslint-config';
+export default config;

@@ -1,9 +1,9 @@
-import type { FastifyPluginAsync } from 'fastify'
+import type { FastifyPluginAsync } from 'fastify';
 
 interface HealthResponse {
-  status: 'ok'
-  version: string
-  timestamp: string
+  status: 'ok';
+  version: string;
+  timestamp: string;
 }
 
 const healthRoute: FastifyPluginAsync = async (app) => {
@@ -11,6 +11,6 @@ const healthRoute: FastifyPluginAsync = async (app) => {
     status: 'ok',
     version: '0.1.0',
     timestamp: new Date().toISOString(),
-  }))
-}
-export default healthRoute
+  }));
+};
+export default healthRoute;

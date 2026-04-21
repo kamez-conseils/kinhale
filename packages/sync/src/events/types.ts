@@ -4,58 +4,58 @@ export type DomainEventType =
   | 'PumpReplaced'
   | 'PlanUpdated'
   | 'CaregiverInvited'
-  | 'CaregiverRevoked'
+  | 'CaregiverRevoked';
 
 /** Payload pour DoseAdministered */
 export interface DoseAdministeredPayload {
-  doseId: string
-  pumpId: string
-  childId: string
-  caregiverId: string
+  doseId: string;
+  pumpId: string;
+  childId: string;
+  caregiverId: string;
   /** UTC ms */
-  administeredAtMs: number
+  administeredAtMs: number;
   /** 'maintenance' | 'rescue' */
-  doseType: string
-  dosesAdministered: number
-  symptoms: string[]
-  circumstances: string[]
-  freeFormTag: string | null
+  doseType: string;
+  dosesAdministered: number;
+  symptoms: string[];
+  circumstances: string[];
+  freeFormTag: string | null;
 }
 
 /** Payload pour PumpReplaced */
 export interface PumpReplacedPayload {
-  pumpId: string
-  name: string
+  pumpId: string;
+  name: string;
   /** 'maintenance' | 'rescue' */
-  pumpType: string
-  totalDoses: number
+  pumpType: string;
+  totalDoses: number;
   /** UTC ms, null si pas de date d'expiration connue */
-  expiresAtMs: number | null
+  expiresAtMs: number | null;
 }
 
 /** Payload pour PlanUpdated */
 export interface PlanUpdatedPayload {
-  planId: string
-  pumpId: string
+  planId: string;
+  pumpId: string;
   /** Heures cibles en UTC (ex : [8, 20]) */
-  scheduledHoursUtc: number[]
+  scheduledHoursUtc: number[];
   /** UTC ms */
-  startAtMs: number
+  startAtMs: number;
   /** UTC ms, null si durée indéfinie */
-  endAtMs: number | null
+  endAtMs: number | null;
 }
 
 /** Payload pour CaregiverInvited */
 export interface CaregiverInvitedPayload {
-  caregiverId: string
+  caregiverId: string;
   /** 'admin' | 'contributor' | 'restricted_contributor' */
-  role: string
-  displayName: string
+  role: string;
+  displayName: string;
 }
 
 /** Payload pour CaregiverRevoked */
 export interface CaregiverRevokedPayload {
-  caregiverId: string
+  caregiverId: string;
 }
 
 /** Union discriminée des payloads */
@@ -64,14 +64,14 @@ export type DomainEventPayload =
   | { type: 'PumpReplaced'; payload: PumpReplacedPayload }
   | { type: 'PlanUpdated'; payload: PlanUpdatedPayload }
   | { type: 'CaregiverInvited'; payload: CaregiverInvitedPayload }
-  | { type: 'CaregiverRevoked'; payload: CaregiverRevokedPayload }
+  | { type: 'CaregiverRevoked'; payload: CaregiverRevokedPayload };
 
 /**
  * Événement non signé : données à signer avant insertion dans le document.
  */
 export interface UnsignedEvent {
-  id: string
-  deviceId: string
-  occurredAtMs: number
-  event: DomainEventPayload
+  id: string;
+  deviceId: string;
+  occurredAtMs: number;
+  event: DomainEventPayload;
 }
