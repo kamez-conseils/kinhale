@@ -7,7 +7,6 @@ export default [
     plugins: { i18next: i18nextPlugin },
     files: ['src/**/*.{ts,tsx}'],
     rules: {
-      'no-console': 'off',
       'i18next/no-literal-string': [
         'error',
         {
