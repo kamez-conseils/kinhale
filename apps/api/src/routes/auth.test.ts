@@ -117,7 +117,10 @@ describe('POST /auth/register-device', () => {
     const app = buildApp(env, { db: makeMockDb() });
     await app.ready();
     const token = app.jwt.sign({
-      sub: 'account-001', deviceId: 'dev-001', householdId: 'hh-001', type: 'access',
+      sub: 'account-001',
+      deviceId: 'dev-001',
+      householdId: 'hh-001',
+      type: 'access',
     });
     const res = await app.inject({
       method: 'POST',
@@ -134,7 +137,10 @@ describe('POST /auth/register-device', () => {
     const app = buildApp(env, { db: makeMockDb() });
     await app.ready();
     const token = app.jwt.sign({
-      sub: 'account-001', deviceId: 'dev-001', householdId: 'hh-001', type: 'access',
+      sub: 'account-001',
+      deviceId: 'dev-001',
+      householdId: 'hh-001',
+      type: 'access',
     });
     const res = await app.inject({
       method: 'POST',
@@ -170,7 +176,10 @@ describe('POST /auth/register-device', () => {
     const app = buildApp(env, { db });
     await app.ready();
     const token = app.jwt.sign({
-      sub: 'account-001', deviceId: 'dev-001', householdId: 'hh-001', type: 'access',
+      sub: 'account-001',
+      deviceId: 'dev-001',
+      householdId: 'hh-001',
+      type: 'access',
     });
     const res = await app.inject({
       method: 'POST',
