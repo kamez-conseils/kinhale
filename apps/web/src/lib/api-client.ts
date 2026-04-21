@@ -10,14 +10,19 @@ export class ApiError extends Error {
   }
 }
 
+type ApiFetchOptions = Omit<RequestInit, 'headers'> & {
+  token?: string;
+  headers?: Record<string, string>;
+};
+
 export async function apiFetch<T>(
   path: string,
-  options: RequestInit & { token?: string } = {},
+  options: ApiFetchOptions = {},
 ): Promise<T> {
   const { token, headers: extraHeaders, ...rest } = options;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(extraHeaders as Record<string, string> | undefined),
+    ...extraHeaders,
   };
   if (token !== undefined) {
     headers['Authorization'] = `Bearer ${token}`;
