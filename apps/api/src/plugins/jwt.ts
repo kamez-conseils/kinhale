@@ -31,7 +31,7 @@ export default fp(async function jwtPlugin(app) {
     try {
       await request.jwtVerify();
     } catch {
-      return reply.status(401).send({ error: 'Non authentifié' });
+      return reply.status(401).send({ code: 'UNAUTHENTICATED' });
     }
   });
 });

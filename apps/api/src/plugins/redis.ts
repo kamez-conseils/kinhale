@@ -16,10 +16,13 @@ export default fp(async function redisPlugin(app) {
   const pub = new Redis(app.env.REDIS_URL);
   const sub = new Redis(app.env.REDIS_URL);
 
+  pub.on('error', (err) => { app.log.error({ err }, 'Redis pub connection error'); });
+  sub.on('error', (err) => { app.log.error({ err }, 'Redis sub connection error'); });
+
   app.decorate('redis', { pub, sub });
 
   app.addHook('onClose', async () => {
-    await pub.quit();
-    await sub.quit();
+    try { await pub.quit(); } catch { pub.disconnect(); }
+    try { await sub.quit(); } catch { sub.disconnect(); }
   });
 });
