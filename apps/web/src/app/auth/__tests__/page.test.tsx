@@ -6,7 +6,12 @@ import { renderWithProviders } from '../../../test-utils/render';
 jest.mock('../../../lib/api-client', () => ({
   apiFetch: jest.fn(),
   ApiError: class ApiError extends Error {
-    constructor(public status: number, message: string) { super(message); }
+    constructor(
+      public status: number,
+      message: string,
+    ) {
+      super(message);
+    }
   },
 }));
 

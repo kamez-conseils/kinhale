@@ -22,9 +22,13 @@ const FAKE_DOC = { householdId: 'hh-1', events: [] };
 const FAKE_CHANGED_DOC = { householdId: 'hh-1', events: [{ id: 'e1' }] };
 const FAKE_CHANGES = [new Uint8Array([10, 20])];
 const FAKE_RECORD = {
-  id: 'e1', type: 'DoseAdministered', payloadJson: '{}',
-  signerPublicKeyHex: 'aa'.repeat(32), signatureHex: 'bb'.repeat(32),
-  deviceId: 'dev-1', occurredAtMs: 1000,
+  id: 'e1',
+  type: 'DoseAdministered',
+  payloadJson: '{}',
+  signerPublicKeyHex: 'aa'.repeat(32),
+  signatureHex: 'bb'.repeat(32),
+  deviceId: 'dev-1',
+  occurredAtMs: 1000,
 };
 
 describe('doc-store', () => {
@@ -57,7 +61,9 @@ describe('doc-store', () => {
 
     it('crée un nouveau doc si loadDoc lève une erreur', () => {
       localStorage.setItem('kinhale-doc', Buffer.from([1, 2, 3]).toString('base64'));
-      mockLoadDoc.mockImplementation(() => { throw new Error('corrupt'); });
+      mockLoadDoc.mockImplementation(() => {
+        throw new Error('corrupt');
+      });
       useDocStore.getState().initDoc('hh-1');
       expect(mockCreateDoc).toHaveBeenCalledWith('hh-1');
       expect(useDocStore.getState().doc).toEqual(FAKE_DOC);
@@ -68,13 +74,23 @@ describe('doc-store', () => {
     it('signe, ajoute au doc, sauvegarde, retourne les changes', async () => {
       useDocStore.setState({ doc: FAKE_DOC as ReturnType<typeof mockCreateDoc> });
       const payload = {
-        doseId: 'dose-1', pumpId: 'pump-1', childId: 'child-1', caregiverId: 'dev-1',
-        administeredAtMs: 1000, doseType: 'maintenance', dosesAdministered: 1,
-        symptoms: [], circumstances: [], freeFormTag: null,
+        doseId: 'dose-1',
+        pumpId: 'pump-1',
+        childId: 'child-1',
+        caregiverId: 'dev-1',
+        administeredAtMs: 1000,
+        doseType: 'maintenance',
+        dosesAdministered: 1,
+        symptoms: [],
+        circumstances: [],
+        freeFormTag: null,
       };
       const changes = await useDocStore.getState().appendDose(payload, 'dev-1', new Uint8Array(64));
       expect(mockSignEvent).toHaveBeenCalledWith(
-        expect.objectContaining({ deviceId: 'dev-1', event: expect.objectContaining({ type: 'DoseAdministered' }) }),
+        expect.objectContaining({
+          deviceId: 'dev-1',
+          event: expect.objectContaining({ type: 'DoseAdministered' }),
+        }),
         expect.any(Uint8Array),
       );
       expect(mockAppendEvent).toHaveBeenCalledWith(FAKE_DOC, FAKE_RECORD);

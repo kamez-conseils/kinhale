@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { YStack, H1, Button, Text, XStack } from 'tamagui';
@@ -19,8 +19,19 @@ export default function AddDosePage(): React.JSX.Element {
   const [doseType, setDoseType] = useState<'maintenance' | 'rescue'>('maintenance');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [groupKey, setGroupKey] = useState<Uint8Array | null>(null);
 
-  const { sendChanges } = useRelay(accessToken, null);
+  useEffect(() => {
+    if (householdId !== '') {
+      getGroupKey(householdId)
+        .then(setGroupKey)
+        .catch(() => {
+          // silent — relay just won't connect
+        });
+    }
+  }, [householdId]);
+
+  const { sendChanges } = useRelay(accessToken, groupKey);
 
   const handleSave = async (): Promise<void> => {
     setLoading(true);
@@ -40,9 +51,8 @@ export default function AddDosePage(): React.JSX.Element {
         freeFormTag: null,
       };
       const changes = await appendDose(payload, deviceId, kp.secretKey);
-      if (accessToken !== null && householdId !== '') {
-        const gk = await getGroupKey(householdId);
-        await sendChanges(changes, gk);
+      if (groupKey !== null) {
+        await sendChanges(changes, groupKey);
       }
       router.push('/journal');
     } catch {
@@ -72,7 +82,11 @@ export default function AddDosePage(): React.JSX.Element {
           {t('journal.rescue')}
         </Button>
       </XStack>
-      {error !== null && <Text color="$red10">{error}</Text>}
+      {error !== null && (
+        <Text role="alert" color="$red10">
+          {error}
+        </Text>
+      )}
       <Button onPress={() => void handleSave()} disabled={loading} marginTop="$2">
         {loading ? t('journal.saving') : t('journal.save')}
       </Button>

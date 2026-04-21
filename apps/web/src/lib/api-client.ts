@@ -15,10 +15,7 @@ type ApiFetchOptions = Omit<RequestInit, 'headers'> & {
   headers?: Record<string, string>;
 };
 
-export async function apiFetch<T>(
-  path: string,
-  options: ApiFetchOptions = {},
-): Promise<T> {
+export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
   const { token, headers: extraHeaders, ...rest } = options;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',

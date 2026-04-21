@@ -18,7 +18,8 @@ export async function getOrCreateDevice(): Promise<DeviceKeypair> {
     try {
       const raw = JSON.parse(stored) as unknown;
       if (
-        typeof raw === 'object' && raw !== null &&
+        typeof raw === 'object' &&
+        raw !== null &&
         typeof (raw as Record<string, unknown>)['publicKeyHex'] === 'string' &&
         typeof (raw as Record<string, unknown>)['secretKeyBase64'] === 'string'
       ) {
@@ -38,6 +39,8 @@ export async function getOrCreateDevice(): Promise<DeviceKeypair> {
     publicKeyHex: Buffer.from(kp.publicKey).toString('hex'),
     secretKeyBase64: Buffer.from(kp.secretKey).toString('base64'),
   };
+  // TODO KIN-024 : secretKey stockée en clair dans localStorage — à chiffrer via WebCrypto AES-GCM
+  // (analogue iOS Keychain / Android Keystore) avant v1.0 de production.
   localStorage.setItem(DEVICE_KEY_STORAGE, JSON.stringify(data));
   return { ...kp, publicKeyHex: data.publicKeyHex };
 }

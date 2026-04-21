@@ -51,7 +51,7 @@ describe('createRelayClient', () => {
     expect(mockWs.url).toContain('/relay?token=tok-abc');
   });
 
-  it('remplace http par ws dans l\'URL', () => {
+  it("remplace http par ws dans l'URL", () => {
     createRelayClient('tok-abc', jest.fn());
     expect(mockWs.url).toMatch(/^ws:/);
   });
@@ -65,7 +65,7 @@ describe('createRelayClient', () => {
     expect(typeof parsed.sentAtMs).toBe('number');
   });
 
-  it('n\'envoie pas si socket fermé', () => {
+  it("n'envoie pas si socket fermé", () => {
     const client = createRelayClient('tok', jest.fn());
     mockWs.readyState = 3; // CLOSED
     client.send('test');

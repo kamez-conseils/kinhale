@@ -7,8 +7,9 @@ jest.mock('next/navigation', () => ({
 }));
 
 jest.mock('../../../stores/auth-store', () => ({
-  useAuthStore: jest.fn((selector: (s: { accessToken: string | null; householdId: string | null }) => unknown) =>
-    selector({ accessToken: 'tok-1', householdId: 'hh-1' }),
+  useAuthStore: jest.fn(
+    (selector: (s: { accessToken: string | null; householdId: string | null }) => unknown) =>
+      selector({ accessToken: 'tok-1', householdId: 'hh-1' }),
   ),
 }));
 
@@ -39,12 +40,15 @@ describe('JournalPage', () => {
       useDocStore: jest.Mock;
     };
     useDocStore.mockImplementation(
-      (selector: (s: { doc: { events: { id: string; type: string; occurredAtMs: number }[] }; initDoc: jest.Mock }) => unknown) =>
+      (
+        selector: (s: {
+          doc: { events: { id: string; type: string; occurredAtMs: number }[] };
+          initDoc: jest.Mock;
+        }) => unknown,
+      ) =>
         selector({
           doc: {
-            events: [
-              { id: 'e1', type: 'DoseAdministered', occurredAtMs: 1_700_000_000_000 },
-            ],
+            events: [{ id: 'e1', type: 'DoseAdministered', occurredAtMs: 1_700_000_000_000 }],
           },
           initDoc: jest.fn(),
         }),

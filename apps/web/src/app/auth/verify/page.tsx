@@ -61,7 +61,7 @@ function VerifyInner(): React.JSX.Element {
         setError(t('auth.verifyError'));
       }
     })();
-  // params, router, setAuth, t sont des refs stables — l'effet ne doit s'exécuter qu'une fois au montage
+    // params, router, setAuth, t sont des refs stables — l'effet ne doit s'exécuter qu'une fois au montage
   }, []);
 
   if (error !== null) {

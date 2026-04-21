@@ -10,8 +10,14 @@ jest.mock('next/navigation', () => ({
 }));
 
 jest.mock('../../../../stores/auth-store', () => ({
-  useAuthStore: jest.fn((selector: (s: { accessToken: string | null; deviceId: string | null; householdId: string | null }) => unknown) =>
-    selector({ accessToken: 'tok-1', deviceId: 'dev-1', householdId: 'hh-1' }),
+  useAuthStore: jest.fn(
+    (
+      selector: (s: {
+        accessToken: string | null;
+        deviceId: string | null;
+        householdId: string | null;
+      }) => unknown,
+    ) => selector({ accessToken: 'tok-1', deviceId: 'dev-1', householdId: 'hh-1' }),
   ),
 }));
 
@@ -51,8 +57,10 @@ describe('AddDosePage', () => {
     mockSendChanges.mockResolvedValue(undefined);
   });
 
-  it('affiche le formulaire avec les deux boutons de type', () => {
+  it('affiche le formulaire avec les deux boutons de type', async () => {
     renderWithProviders(<AddDosePage />);
+    // Attendre la résolution du useEffect getGroupKey pour éviter l'avertissement act()
+    await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalledWith('hh-1'));
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
     expect(screen.getAllByRole('button').length).toBeGreaterThanOrEqual(3); // maintenance + rescue + save
   });
@@ -61,9 +69,12 @@ describe('AddDosePage', () => {
     const user = userEvent.setup();
     renderWithProviders(<AddDosePage />);
     const saveButton = screen.getByRole('button', { name: /enregistrer|save/i });
+    // Attendre que le useEffect ait résolu getGroupKey avant de cliquer
+    await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalledWith('hh-1'));
     await user.click(saveButton);
     await waitFor(() => {
       expect(mockAppendDose).toHaveBeenCalled();
+      expect(mockSendChanges).toHaveBeenCalled();
       expect(mockPush).toHaveBeenCalledWith('/journal');
     });
   });
