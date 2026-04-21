@@ -16,7 +16,11 @@ declare module 'fastify' {
 }
 
 export interface BuildAppOverrides {
-  /** Injecter un db mocké pour les tests (évite une vraie connexion Postgres) */
+  /**
+   * DB mocké pour les tests unitaires. Si fourni, skip le plugin dbPlugin
+   * (pas de connexion Postgres réelle). Utiliser `{} as DrizzleDb` si les
+   * routes testées n'accèdent pas à la DB.
+   */
   db?: DrizzleDb
 }
 
@@ -25,14 +29,12 @@ export function buildApp(env: Env, overrides: BuildAppOverrides = {}): FastifyIn
     logger: env.NODE_ENV !== 'test',
   })
 
-  // Env accessible via app.env dans toute l'application
   app.decorate('env', env)
 
   // Plugins transversaux
   void app.register(fastifyCors, { origin: true })
   void app.register(fastifyWebsocket)
 
-  // DB : injecter le mock si fourni, sinon le vrai plugin
   if (overrides.db !== undefined) {
     app.decorate('db', overrides.db)
   } else {
