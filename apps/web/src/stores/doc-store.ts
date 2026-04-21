@@ -54,9 +54,7 @@ export const useDocStore = create<DocState>()((set, get) => ({
     const doc = currentDoc ?? createDoc(hid);
 
     const unsigned: UnsignedEvent = {
-      id: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.floor(Math.random() * 1e9)}`,
+      id: crypto.randomUUID(),
       deviceId,
       occurredAtMs: Date.now(),
       event: { type: 'DoseAdministered', payload },

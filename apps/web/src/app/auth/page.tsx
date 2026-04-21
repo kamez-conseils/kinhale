@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { YStack, H1, Input, Button, Text } from 'tamagui';
 import { apiFetch } from '../../lib/api-client';
 
-export default function AuthPage(): JSX.Element {
+export default function AuthPage(): React.JSX.Element {
   const { t } = useTranslation('common');
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);

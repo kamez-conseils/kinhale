@@ -54,6 +54,14 @@ describe('doc-store', () => {
       expect(mockLoadDoc).toHaveBeenCalled();
       expect(useDocStore.getState().doc).toEqual(FAKE_DOC);
     });
+
+    it('crée un nouveau doc si loadDoc lève une erreur', () => {
+      localStorage.setItem('kinhale-doc', Buffer.from([1, 2, 3]).toString('base64'));
+      mockLoadDoc.mockImplementation(() => { throw new Error('corrupt'); });
+      useDocStore.getState().initDoc('hh-1');
+      expect(mockCreateDoc).toHaveBeenCalledWith('hh-1');
+      expect(useDocStore.getState().doc).toEqual(FAKE_DOC);
+    });
   });
 
   describe('appendDose', () => {

@@ -44,6 +44,20 @@ describe('device', () => {
       expect(mockGenerateSigningKeypair).toHaveBeenCalledTimes(1);
       expect(first.publicKeyHex).toBe(second.publicKeyHex);
     });
+
+    it('régénère si localStorage corrompu', async () => {
+      localStorage.setItem('kinhale-device-key', 'not-valid-json');
+      const result = await getOrCreateDevice();
+      expect(mockGenerateSigningKeypair).toHaveBeenCalledTimes(1);
+      expect(result.publicKeyHex).toHaveLength(64);
+    });
+
+    it('régénère si localStorage contient un objet invalide', async () => {
+      localStorage.setItem('kinhale-device-key', JSON.stringify({ bad: true }));
+      const result = await getOrCreateDevice();
+      expect(mockGenerateSigningKeypair).toHaveBeenCalledTimes(1);
+      expect(result.publicKeyHex).toHaveLength(64);
+    });
   });
 
   describe('getGroupKey', () => {

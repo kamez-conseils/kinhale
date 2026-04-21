@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { YStack, Text } from 'tamagui';
@@ -23,7 +23,7 @@ function decodeJwtPayload(token: string): { sub: string; deviceId: string; house
   return { sub: claims['sub'], deviceId: claims['deviceId'], householdId: claims['householdId'] };
 }
 
-function VerifyInner(): JSX.Element {
+function VerifyInner(): React.JSX.Element {
   const { t } = useTranslation('common');
   const params = useSearchParams();
   const router = useRouter();
@@ -82,7 +82,7 @@ function VerifyInner(): JSX.Element {
   );
 }
 
-export default function VerifyPage(): JSX.Element {
+export default function VerifyPage(): React.JSX.Element {
   return (
     <Suspense fallback={null}>
       <VerifyInner />

@@ -15,12 +15,23 @@ export interface DeviceKeypair extends SigningKeypair {
 export async function getOrCreateDevice(): Promise<DeviceKeypair> {
   const stored = localStorage.getItem(DEVICE_KEY_STORAGE);
   if (stored !== null) {
-    const parsed = JSON.parse(stored) as StoredKeypair;
-    return {
-      publicKey: new Uint8Array(Buffer.from(parsed.publicKeyHex, 'hex')),
-      secretKey: new Uint8Array(Buffer.from(parsed.secretKeyBase64, 'base64')),
-      publicKeyHex: parsed.publicKeyHex,
-    };
+    try {
+      const raw = JSON.parse(stored) as unknown;
+      if (
+        typeof raw === 'object' && raw !== null &&
+        typeof (raw as Record<string, unknown>)['publicKeyHex'] === 'string' &&
+        typeof (raw as Record<string, unknown>)['secretKeyBase64'] === 'string'
+      ) {
+        const parsed = raw as StoredKeypair;
+        return {
+          publicKey: new Uint8Array(Buffer.from(parsed.publicKeyHex, 'hex')),
+          secretKey: new Uint8Array(Buffer.from(parsed.secretKeyBase64, 'base64')),
+          publicKeyHex: parsed.publicKeyHex,
+        };
+      }
+    } catch {
+      // corrupted JSON — fall through to regenerate
+    }
   }
   const kp = await generateSigningKeypair();
   const data: StoredKeypair = {

@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { YStack, H1, Text, Button } from 'tamagui';
 import { useAuthStore } from '../stores/auth-store';
 
-export default function HomePage(): JSX.Element {
+export default function HomePage(): React.JSX.Element {
   const { t } = useTranslation('common');
   const router = useRouter();
   const accessToken = useAuthStore((s) => s.accessToken);
