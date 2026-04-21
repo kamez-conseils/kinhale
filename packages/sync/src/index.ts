@@ -28,3 +28,11 @@ export type { EncryptedBlob } from './mailbox/encrypt.js';
 export { encryptChanges, decryptChanges } from './mailbox/encrypt.js';
 export type { SyncMessage } from './mailbox/message.js';
 export { encodeSyncMessage, decodeSyncMessage } from './mailbox/message.js';
+
+// Pipeline haut-niveau
+export type { SyncMeta } from './mailbox/pipeline.js';
+export { buildSyncMessage, consumeSyncMessage } from './mailbox/pipeline.js';
+
+// Cursor de synchronisation
+export type { SyncCursor } from './sync/cursor.js';
+export { createCursor, recordSent, recordReceived, pendingChanges } from './sync/cursor.js';

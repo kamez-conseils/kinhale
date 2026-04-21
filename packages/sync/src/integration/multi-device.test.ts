@@ -1,10 +1,6 @@
 // packages/sync/src/integration/multi-device.test.ts
 import { describe, it, expect } from 'vitest';
-import {
-  deriveDeviceKeypair,
-  generateSeedPhrase,
-  secretboxKeygen,
-} from '@kinhale/crypto';
+import { deriveDeviceKeypair, generateSeedPhrase, secretboxKeygen } from '@kinhale/crypto';
 import * as A from '@automerge/automerge';
 import { createDoc, loadDoc, saveDoc } from '../doc/lifecycle.js';
 import { signEvent } from '../events/sign.js';
