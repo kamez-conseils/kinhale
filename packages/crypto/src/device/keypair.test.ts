@@ -60,4 +60,33 @@ describe('deriveDeviceKeypair', () => {
   it('lève sur une phrase BIP39 invalide', async () => {
     await expect(deriveDeviceKeypair('mots invalides bip39')).rejects.toThrow();
   }, 5_000);
+
+  it('sel de domaine = SHA-256("kinhale:device-keypair:v1")[0:16] (valeur fixe)', async () => {
+    // Calculé indépendamment via Node.js crypto.createHash
+    // Si ce test échoue, TOUTES les clés device dérivées sont invalidées — ne pas modifier sans ADR
+    const { sha256HexFromString } = await import('../hash/sha256.js');
+    const { getSodium } = await import('../sodium.js');
+    const hashHex = await sha256HexFromString('kinhale:device-keypair:v1');
+    const sodium = await getSodium();
+    const saltBytes = sodium.from_hex(hashHex).slice(0, sodium.crypto_pwhash_SALTBYTES);
+    const saltHex = Buffer.from(saltBytes).toString('hex');
+    expect(saltHex).toBe('2c520690617ac0702ef50d038eb0329f');
+  }, 5_000);
+
+  it('vecteur connu : abandon×23+art → clés déterministes (ADR anchor)', async () => {
+    // Vecteur de régression — NE PAS MODIFIER sans ADR + review lead crypto
+    // Phrase BIP39 officielle (entropie 0x00×32)
+    const phrase =
+      'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
+    const kp = await deriveDeviceKeypair(phrase);
+    // Ces valeurs ont été calculées via la pipeline Argon2id+Ed25519 — toute modification
+    // de la pipeline (params Argon2id, encodage de l'entropie, sel de domaine) DOIT
+    // invalider ce test et déclencher une review du lead crypto
+    expect(Buffer.from(kp.signing.publicKey).toString('hex')).toBe(
+      '070316adcc9f75f8a3884f056536bfa1d54a156baa9840aa8f94080597af5886',
+    );
+    expect(Buffer.from(kp.exchange.publicKey).toString('hex')).toBe(
+      'dcd40151e219f78fb9bdb2740e654e16e8a9eb7a419c19a64aab17b0b18fad0e',
+    );
+  }, 30_000);
 });

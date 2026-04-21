@@ -14,13 +14,16 @@ export interface DeviceKeypair {
 /**
  * Sel de séparation de domaine pour la dérivation Argon2id du keypair device.
  * = SHA-256("kinhale:device-keypair:v1")[0:16]
- * Calculé à la volée pour être auditable et ne pas dépendre de constantes magiques.
+ * Calculé une seule fois puis mémoïsé : c'est une constante de domaine.
  */
+let _deviceDerivationSalt: Uint8Array | undefined;
+
 async function getDeviceDerivationSalt(): Promise<Uint8Array> {
+  if (_deviceDerivationSalt !== undefined) return _deviceDerivationSalt;
   const sodium = await getSodium();
   const hashHex = await sha256HexFromString('kinhale:device-keypair:v1');
-  const hashBytes = sodium.from_hex(hashHex);
-  return hashBytes.slice(0, sodium.crypto_pwhash_SALTBYTES);
+  _deviceDerivationSalt = sodium.from_hex(hashHex).slice(0, sodium.crypto_pwhash_SALTBYTES);
+  return _deviceDerivationSalt;
 }
 
 /**
