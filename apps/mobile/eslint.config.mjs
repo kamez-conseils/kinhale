@@ -6,7 +6,7 @@ export default [
   ...kinhale,
   {
     plugins: { i18next: i18nextPlugin },
-    files: ['src/**/*.{ts,tsx}', 'App.tsx'],
+    files: ['src/**/*.{ts,tsx}', 'App.tsx', 'app/**/*.{ts,tsx}'],
     rules: {
       'i18next/no-literal-string': [
         'error',
