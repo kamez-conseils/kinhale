@@ -6,9 +6,10 @@ export default [
   },
   ...kinhale,
   {
-    files: ['*.{js,mjs,cjs}', '*.config.{js,mjs,cjs,ts}'],
+    files: ['*.{js,mjs,cjs}', '*.config.{js,mjs,cjs,ts}', '**/*.config.{js,mjs,cjs}'],
     rules: {
       'no-console': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
     },
   },
   {

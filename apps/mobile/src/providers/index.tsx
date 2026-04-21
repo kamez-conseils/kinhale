@@ -1,6 +1,4 @@
-'use client';
-
-import type { JSX, ReactNode } from 'react';
+import { type ReactNode, type JSX } from 'react';
 import { TamaguiProvider } from 'tamagui';
 import { I18nextProvider } from 'react-i18next';
 import config from '../lib/tamagui.config';

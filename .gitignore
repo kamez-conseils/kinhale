@@ -3,6 +3,7 @@
 # Contains commercial proposals, budget data, internal estimates
 # ============================================================
 .agents/
+docs/superpowers/
 
 # Node / pnpm
 node_modules/
@@ -21,8 +22,9 @@ dist/
 build/
 out/
 lib/
-!apps/web/src/lib/
+!apps/*/src/lib/
 .next/
+.tamagui/
 .expo/
 .expo-shared/
 expo-env.d.ts
