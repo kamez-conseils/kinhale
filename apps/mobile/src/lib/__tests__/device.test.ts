@@ -9,7 +9,6 @@ describe('getOrCreateDevice', () => {
   });
 
   it('creates and persists a new device keypair', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { getOrCreateDevice } = require('../device') as typeof import('../device');
     const kp = await getOrCreateDevice();
     expect(kp).toHaveProperty('publicKeyHex');
@@ -20,7 +19,6 @@ describe('getOrCreateDevice', () => {
 
   it('returns the same keypair on second call', async () => {
     jest.resetModules();
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { getOrCreateDevice } = require('../device') as typeof import('../device');
     const kp1 = await getOrCreateDevice();
     const kp2 = await getOrCreateDevice();
@@ -29,11 +27,9 @@ describe('getOrCreateDevice', () => {
 
   it('returns same keypair after AsyncStorage reload', async () => {
     jest.resetModules();
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { getOrCreateDevice: get1 } = require('../device') as typeof import('../device');
     const kp1 = await get1();
     jest.resetModules();
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { getOrCreateDevice: get2 } = require('../device') as typeof import('../device');
     const kp2 = await get2();
     expect(kp1.publicKeyHex).toBe(kp2.publicKeyHex);
@@ -47,7 +43,6 @@ describe('getGroupKey', () => {
 
   it('derives a Uint8Array key for a household', async () => {
     jest.resetModules();
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { getGroupKey } = require('../device') as typeof import('../device');
     const key = await getGroupKey('hh-abc');
     expect(key).toBeInstanceOf(Uint8Array);
@@ -56,7 +51,6 @@ describe('getGroupKey', () => {
 
   it('returns the same key for the same householdId', async () => {
     jest.resetModules();
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { getGroupKey } = require('../device') as typeof import('../device');
     const k1 = await getGroupKey('hh-abc');
     const k2 = await getGroupKey('hh-abc');

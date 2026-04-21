@@ -13,7 +13,6 @@ jest.mock('expo-router', () => ({
 
 jest.mock('../../../src/lib/api-client', () => ({
   apiFetch: jest.fn().mockResolvedValue({}),
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ApiError: class MockApiError extends Error {
     status: number;
     constructor(status: number, message: string) {

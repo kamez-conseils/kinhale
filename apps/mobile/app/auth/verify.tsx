@@ -67,7 +67,6 @@ export default function VerifyScreen(): JSX.Element {
         setError(t('auth.verifyError'));
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (error !== null) {

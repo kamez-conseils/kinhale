@@ -24,4 +24,19 @@ export default [
       'i18next/no-literal-string': 'off',
     },
   },
+  {
+    // require() inside Jest resetModules / dynamic require patterns is the
+    // standard Jest idiom — disable import rules for all test files and the
+    // Jest setup file.
+    files: [
+      '**/__tests__/**/*.{ts,tsx}',
+      'src/**/*.test.{ts,tsx}',
+      'src/**/*.spec.{ts,tsx}',
+      'jest.setup.js',
+    ],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/consistent-type-imports': 'off',
+    },
+  },
 ];
