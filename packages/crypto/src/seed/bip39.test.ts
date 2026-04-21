@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  generateSeedPhrase,
-  validateSeedPhrase,
-  seedPhraseToBytes,
-} from './bip39.js';
+import { generateSeedPhrase, validateSeedPhrase, seedPhraseToBytes } from './bip39.js';
 
 describe('BIP39/generateSeedPhrase', () => {
   it('génère une phrase de 24 mots', () => {
@@ -33,8 +29,7 @@ describe('BIP39/validateSeedPhrase', () => {
   });
 
   it('rejette une phrase avec un mot non-BIP39', () => {
-    const invalid =
-      'invalid word not in list ' + 'abandon '.repeat(19).trim();
+    const invalid = 'invalid word not in list ' + 'abandon '.repeat(19).trim();
     expect(validateSeedPhrase(invalid)).toBe(false);
   });
 
@@ -61,9 +56,7 @@ describe('BIP39/seedPhraseToBytes', () => {
     const phrase = generateSeedPhrase();
     const b1 = seedPhraseToBytes(phrase);
     const b2 = seedPhraseToBytes(phrase);
-    expect(Buffer.from(b1).toString('hex')).toBe(
-      Buffer.from(b2).toString('hex')
-    );
+    expect(Buffer.from(b1).toString('hex')).toBe(Buffer.from(b2).toString('hex'));
   });
 
   it('round-trip : génère → octets → phrase → octets identiques', async () => {
@@ -74,9 +67,7 @@ describe('BIP39/seedPhraseToBytes', () => {
     const { wordlist } = await import('@scure/bip39/wordlists/english');
     const phrase2 = entropyToMnemonic(bytes1, wordlist);
     const bytes2 = seedPhraseToBytes(phrase2);
-    expect(Buffer.from(bytes1).toString('hex')).toBe(
-      Buffer.from(bytes2).toString('hex')
-    );
+    expect(Buffer.from(bytes1).toString('hex')).toBe(Buffer.from(bytes2).toString('hex'));
   });
 
   it('vecteur officiel BIP39 256 bits — entropie zéro (abandon×23 + art)', () => {

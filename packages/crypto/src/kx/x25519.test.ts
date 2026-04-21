@@ -90,7 +90,7 @@ describe('X25519/ed25519ToX25519', () => {
     );
   });
 
-  it('lève si secretKey n\'est pas 64 octets (clé seed brute rejetée)', async () => {
+  it("lève si secretKey n'est pas 64 octets (clé seed brute rejetée)", async () => {
     const fakeEd = {
       publicKey: new Uint8Array(32),
       secretKey: new Uint8Array(32), // 32 bytes au lieu de 64 → doit lever

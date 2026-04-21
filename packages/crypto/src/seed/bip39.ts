@@ -1,8 +1,4 @@
-import {
-  generateMnemonic,
-  validateMnemonic,
-  mnemonicToEntropy,
-} from '@scure/bip39';
+import { generateMnemonic, validateMnemonic, mnemonicToEntropy } from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english';
 
 export function generateSeedPhrase(): string {
@@ -20,9 +16,7 @@ export function validateSeedPhrase(phrase: string): boolean {
 
 export function seedPhraseToBytes(phrase: string): Uint8Array {
   if (!validateSeedPhrase(phrase)) {
-    throw new Error(
-      'bip39: phrase mnémonique invalide ou checksum incorrect'
-    );
+    throw new Error('bip39: phrase mnémonique invalide ou checksum incorrect');
   }
   return mnemonicToEntropy(phrase, wordlist);
 }
