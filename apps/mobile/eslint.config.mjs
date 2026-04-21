@@ -12,7 +12,7 @@ export default [
         'error',
         {
           markupOnly: true,
-          ignoreAttribute: ['testID', 'accessibilityLabel', 'style', 'className'],
+          ignoreAttribute: ['testID', 'style', 'className'],
         },
       ],
     },
