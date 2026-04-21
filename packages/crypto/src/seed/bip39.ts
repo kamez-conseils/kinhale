@@ -5,7 +5,7 @@ import {
 } from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english';
 
-export async function generateSeedPhrase(): Promise<string> {
+export function generateSeedPhrase(): string {
   return generateMnemonic(wordlist, 256);
 }
 

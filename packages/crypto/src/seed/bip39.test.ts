@@ -6,19 +6,19 @@ import {
 } from './bip39.js';
 
 describe('BIP39/generateSeedPhrase', () => {
-  it('génère une phrase de 24 mots', async () => {
-    const phrase = await generateSeedPhrase();
+  it('génère une phrase de 24 mots', () => {
+    const phrase = generateSeedPhrase();
     expect(phrase.split(' ')).toHaveLength(24);
   });
 
-  it('deux appels produisent des phrases différentes', async () => {
-    const p1 = await generateSeedPhrase();
-    const p2 = await generateSeedPhrase();
+  it('deux appels produisent des phrases différentes', () => {
+    const p1 = generateSeedPhrase();
+    const p2 = generateSeedPhrase();
     expect(p1).not.toBe(p2);
   });
 
-  it('la phrase générée est valide (checksum BIP39 correct)', async () => {
-    const phrase = await generateSeedPhrase();
+  it('la phrase générée est valide (checksum BIP39 correct)', () => {
+    const phrase = generateSeedPhrase();
     expect(validateSeedPhrase(phrase)).toBe(true);
   });
 });
@@ -51,14 +51,14 @@ describe('BIP39/validateSeedPhrase', () => {
 });
 
 describe('BIP39/seedPhraseToBytes', () => {
-  it('retourne 32 octets pour une phrase 24 mots (256 bits)', async () => {
-    const phrase = await generateSeedPhrase();
+  it('retourne 32 octets pour une phrase 24 mots (256 bits)', () => {
+    const phrase = generateSeedPhrase();
     const bytes = seedPhraseToBytes(phrase);
     expect(bytes).toHaveLength(32);
   });
 
-  it('déterministe : même phrase → mêmes octets', async () => {
-    const phrase = await generateSeedPhrase();
+  it('déterministe : même phrase → mêmes octets', () => {
+    const phrase = generateSeedPhrase();
     const b1 = seedPhraseToBytes(phrase);
     const b2 = seedPhraseToBytes(phrase);
     expect(Buffer.from(b1).toString('hex')).toBe(
@@ -67,7 +67,7 @@ describe('BIP39/seedPhraseToBytes', () => {
   });
 
   it('round-trip : génère → octets → phrase → octets identiques', async () => {
-    const phrase1 = await generateSeedPhrase();
+    const phrase1 = generateSeedPhrase();
     const bytes1 = seedPhraseToBytes(phrase1);
     // Reconvertir bytes → phrase via entropyToMnemonic
     const { entropyToMnemonic } = await import('@scure/bip39');
@@ -76,6 +76,17 @@ describe('BIP39/seedPhraseToBytes', () => {
     const bytes2 = seedPhraseToBytes(phrase2);
     expect(Buffer.from(bytes1).toString('hex')).toBe(
       Buffer.from(bytes2).toString('hex')
+    );
+  });
+
+  it('vecteur officiel BIP39 256 bits — entropie zéro (abandon×23 + art)', () => {
+    const phrase =
+      'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
+    expect(validateSeedPhrase(phrase)).toBe(true);
+    const bytes = seedPhraseToBytes(phrase);
+    expect(bytes).toHaveLength(32);
+    expect(Buffer.from(bytes).toString('hex')).toBe(
+      '0000000000000000000000000000000000000000000000000000000000000000',
     );
   });
 
