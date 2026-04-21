@@ -51,10 +51,17 @@ const relayRoute: FastifyPluginAsync = async (app) => {
     if (!householdSockets.has(householdId)) {
       householdSockets.set(householdId, new Set());
       // S'abonner au canal Redis dès la première connexion pour ce foyer.
-      void app.redis.sub.subscribe(householdChannel(householdId));
+      app.redis.sub.subscribe(householdChannel(householdId)).catch((err) => {
+        app.log.error({ err }, 'Échec subscribe Redis channel');
+        const sockets = householdSockets.get(householdId);
+        if (sockets) {
+          for (const s of sockets) s.close(1011, 'Erreur infrastructure');
+          householdSockets.delete(householdId);
+        }
+      });
     }
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    householdSockets.get(householdId)!.add(socket);
+    const socketSet = householdSockets.get(householdId);
+    socketSet?.add(socket);
 
     socket.on('message', async (raw) => {
       let msg: unknown;
@@ -74,16 +81,19 @@ const relayRoute: FastifyPluginAsync = async (app) => {
         return;
       }
 
-      const message = msg as { blobJson: string; seq: number; sentAtMs: number };
+      const rawMsg = msg as Record<string, unknown>;
+      const blobJson = rawMsg['blobJson'] as string; // déjà validé par le check typeof
+      const seq = typeof rawMsg['seq'] === 'number' ? rawMsg['seq'] : 0;
+      const sentAtMs = typeof rawMsg['sentAtMs'] === 'number' ? rawMsg['sentAtMs'] : Date.now();
       const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
 
       try {
         await app.db.insert(mailboxMessages).values({
           householdId,
           senderDeviceId: deviceId,
-          blobJson: message.blobJson,
-          seq: message.seq ?? 0,
-          sentAtMs: message.sentAtMs ?? Date.now(),
+          blobJson,
+          seq,
+          sentAtMs,
           expiresAt,
         });
       } catch (err) {
@@ -106,7 +116,9 @@ const relayRoute: FastifyPluginAsync = async (app) => {
         sockets.delete(socket);
         if (sockets.size === 0) {
           householdSockets.delete(householdId);
-          void app.redis.sub.unsubscribe(householdChannel(householdId));
+          app.redis.sub.unsubscribe(householdChannel(householdId)).catch((err) => {
+            app.log.warn({ err }, 'Échec unsubscribe Redis');
+          });
         }
       }
     });
