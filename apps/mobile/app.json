@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "Kinhale",
+    "slug": "kinhale",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "health.kinhale.app"
+    },
+    "android": {
+      "package": "health.kinhale.app"
+    }
+  }
+}

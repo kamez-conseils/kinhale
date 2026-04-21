@@ -21,7 +21,7 @@ dist/
 build/
 out/
 lib/
-!apps/web/src/lib/
+!apps/*/src/lib/
 .next/
 .expo/
 .expo-shared/
