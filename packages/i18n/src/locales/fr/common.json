@@ -1,11 +1,38 @@
 {
   "home": {
     "title": "Kinhale",
-    "subtitle": "Coordonnez les soins de votre enfant"
+    "subtitle": "Coordonnez les soins de votre enfant",
+    "getStarted": "Commencer"
   },
   "nav": {
     "home": "Accueil",
     "journal": "Journal",
     "settings": "Réglages"
+  },
+  "auth": {
+    "title": "Connexion",
+    "emailPlaceholder": "votre@email.com",
+    "submit": "Recevoir un lien magique",
+    "linkSent": "Lien envoyé ! Vérifiez votre boîte mail.",
+    "verifying": "Vérification en cours…",
+    "missingToken": "Lien invalide ou expiré.",
+    "verifyError": "Échec de la vérification. Réessayez.",
+    "errorSend": "Impossible d'envoyer le lien. Réessayez."
+  },
+  "journal": {
+    "title": "Journal",
+    "empty": "Aucune prise enregistrée.",
+    "dose": "Prise de pompe",
+    "addDose": "Ajouter une prise",
+    "addTitle": "Nouvelle prise",
+    "doseType": "Type de dose",
+    "maintenance": "Fond",
+    "rescue": "Secours",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…"
+  },
+  "common": {
+    "loading": "Chargement…",
+    "back": "Retour"
   }
 }
