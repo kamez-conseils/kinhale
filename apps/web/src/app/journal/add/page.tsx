@@ -1,0 +1,76 @@
+'use client';
+
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
+import { YStack, H1, Button, Text, XStack } from 'tamagui';
+import { useAuthStore } from '../../../stores/auth-store';
+import { useDocStore } from '../../../stores/doc-store';
+import { getOrCreateDevice, getGroupKey } from '../../../lib/device';
+import { useRelay } from '../../../hooks/use-relay';
+
+export default function AddDosePage(): React.JSX.Element {
+  const { t } = useTranslation('common');
+  const router = useRouter();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const deviceId = useAuthStore((s) => s.deviceId) ?? '';
+  const householdId = useAuthStore((s) => s.householdId) ?? '';
+  const appendDose = useDocStore((s) => s.appendDose);
+  const [doseType, setDoseType] = useState<'maintenance' | 'rescue'>('maintenance');
+  const [loading, setLoading] = useState(false);
+
+  const { sendChanges } = useRelay(accessToken, null);
+
+  const handleSave = async (): Promise<void> => {
+    setLoading(true);
+    try {
+      const kp = await getOrCreateDevice();
+      const payload = {
+        doseId: crypto.randomUUID(),
+        pumpId: 'default-pump',
+        childId: 'default-child',
+        caregiverId: deviceId,
+        administeredAtMs: Date.now(),
+        doseType,
+        dosesAdministered: 1,
+        symptoms: [],
+        circumstances: [],
+        freeFormTag: null,
+      };
+      const changes = await appendDose(payload, deviceId, kp.secretKey);
+      if (accessToken !== null && householdId !== '') {
+        const gk = await getGroupKey(householdId);
+        await sendChanges(changes, gk);
+      }
+      router.push('/journal');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <YStack padding="$4" gap="$4">
+      <H1>{t('journal.addTitle')}</H1>
+      <Text fontWeight="600">{t('journal.doseType')}</Text>
+      <XStack gap="$3">
+        <Button
+          flex={1}
+          onPress={() => setDoseType('maintenance')}
+          theme={doseType === 'maintenance' ? 'active' : undefined}
+        >
+          {t('journal.maintenance')}
+        </Button>
+        <Button
+          flex={1}
+          onPress={() => setDoseType('rescue')}
+          theme={doseType === 'rescue' ? 'active' : undefined}
+        >
+          {t('journal.rescue')}
+        </Button>
+      </XStack>
+      <Button onPress={() => void handleSave()} disabled={loading} marginTop="$2">
+        {loading ? t('journal.saving') : t('journal.save')}
+      </Button>
+    </YStack>
+  );
+}
