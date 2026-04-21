@@ -1,0 +1,24 @@
+{
+  "name": "@kinhale/test-utils",
+  "version": "0.1.0",
+  "description": "Helpers de test partagés pour Kinhale (factories, fixtures, crypto deterministe)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@kinhale/crypto": "workspace:*",
+    "@kinhale/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "@kinhale/eslint-config": "workspace:*",
+    "@kinhale/tsconfig": "workspace:*",
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.3",
+    "vitest": "^2.0.0"
+  }
+}
