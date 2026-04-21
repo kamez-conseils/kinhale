@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react-native';
 import { I18nextProvider } from 'react-i18next';
 import { TamaguiProvider } from 'tamagui';
-import type { ReactNode } from 'react';
+import type { JSX, ReactNode } from 'react';
 import i18n from '../lib/i18n';
 import config from '../lib/tamagui.config';
 import HomeScreen from './HomeScreen';

@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import { Providers } from './src/providers';
 import HomeScreen from './src/screens/HomeScreen';
 
