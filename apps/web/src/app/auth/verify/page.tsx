@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { YStack, Text } from 'tamagui';
-import { apiFetch } from '../../../lib/api-client';
+import { apiFetch, ApiError } from '../../../lib/api-client';
 import { useAuthStore } from '../../../stores/auth-store';
 import { getOrCreateDevice } from '../../../lib/device';
 
@@ -12,7 +12,15 @@ function decodeJwtPayload(token: string): { sub: string; deviceId: string; house
   const part = token.split('.')[1] ?? '';
   const padded = part.replace(/-/g, '+').replace(/_/g, '/');
   const json = atob(padded.padEnd(padded.length + ((4 - (padded.length % 4)) % 4), '='));
-  return JSON.parse(json) as { sub: string; deviceId: string; householdId: string };
+  const claims = JSON.parse(json) as Record<string, unknown>;
+  if (
+    typeof claims['sub'] !== 'string' ||
+    typeof claims['deviceId'] !== 'string' ||
+    typeof claims['householdId'] !== 'string'
+  ) {
+    throw new Error('JWT payload manquant : sub, deviceId ou householdId absent');
+  }
+  return { sub: claims['sub'], deviceId: claims['deviceId'], householdId: claims['householdId'] };
 }
 
 function VerifyInner(): JSX.Element {
@@ -36,18 +44,25 @@ function VerifyInner(): JSX.Element {
         const claims = decodeJwtPayload(accessToken);
         setAuth(accessToken, claims.deviceId, claims.householdId);
         const kp = await getOrCreateDevice();
-        // 409 = device déjà enregistré, pas une erreur
-        await apiFetch('/auth/register-device', {
-          method: 'POST',
-          token: accessToken,
-          body: JSON.stringify({ publicKeyHex: kp.publicKeyHex }),
-        }).catch(() => undefined);
+        try {
+          await apiFetch('/auth/register-device', {
+            method: 'POST',
+            token: accessToken,
+            body: JSON.stringify({ publicKeyHex: kp.publicKeyHex }),
+          });
+        } catch (err) {
+          if (!(err instanceof ApiError && err.status === 409)) {
+            throw err;
+          }
+          // 409 = device already registered — expected on repeat visits
+        }
         router.push('/journal');
       } catch {
         setError(t('auth.verifyError'));
       }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // params, router, setAuth, t are all stable refs — effect must run once on mount only
   }, []);
 
   if (error !== null) {

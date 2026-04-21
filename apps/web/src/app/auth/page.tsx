@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { YStack, H1, Input, Button, Text } from 'tamagui';
-import { apiFetch, ApiError } from '../../lib/api-client';
+import { apiFetch } from '../../lib/api-client';
 
 export default function AuthPage(): JSX.Element {
   const { t } = useTranslation('common');
@@ -21,8 +21,8 @@ export default function AuthPage(): JSX.Element {
         body: JSON.stringify({ email }),
       });
       setSent(true);
-    } catch (err) {
-      setError(err instanceof ApiError ? t('auth.errorSend') : t('auth.errorSend'));
+    } catch {
+      setError(t('auth.errorSend'));
     } finally {
       setLoading(false);
     }
