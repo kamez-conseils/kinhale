@@ -1,13 +1,13 @@
-import { getSodium } from '../sodium.js'
+import { getSodium } from '../sodium.js';
 
 export async function secretboxKeygen(): Promise<Uint8Array> {
-  const sodium = await getSodium()
-  return sodium.crypto_secretbox_keygen()
+  const sodium = await getSodium();
+  return sodium.crypto_secretbox_keygen();
 }
 
 export async function secretboxNonce(): Promise<Uint8Array> {
-  const sodium = await getSodium()
-  return sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES)
+  const sodium = await getSodium();
+  return sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
 }
 
 export async function secretbox(
@@ -15,8 +15,8 @@ export async function secretbox(
   nonce: Uint8Array,
   key: Uint8Array,
 ): Promise<Uint8Array> {
-  const sodium = await getSodium()
-  return sodium.crypto_secretbox_easy(plaintext, nonce, key)
+  const sodium = await getSodium();
+  return sodium.crypto_secretbox_easy(plaintext, nonce, key);
 }
 
 export async function secretboxOpen(
@@ -24,8 +24,8 @@ export async function secretboxOpen(
   nonce: Uint8Array,
   key: Uint8Array,
 ): Promise<Uint8Array> {
-  const sodium = await getSodium()
-  const result = sodium.crypto_secretbox_open_easy(ciphertext, nonce, key)
-  if (!result) throw new Error('crypto: déchiffrement échoué — MAC invalide')
-  return result
+  const sodium = await getSodium();
+  const result = sodium.crypto_secretbox_open_easy(ciphertext, nonce, key);
+  if (!result) throw new Error('crypto: déchiffrement échoué — MAC invalide');
+  return result;
 }
