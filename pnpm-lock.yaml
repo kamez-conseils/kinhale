@@ -162,6 +162,21 @@ importers:
         specifier: ^8.19.1
         version: 8.58.2(eslint@9.39.4)(typescript@5.9.3)
 
+  packages/i18n:
+    devDependencies:
+      '@kinhale/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@kinhale/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      eslint:
+        specifier: ^9.18.0
+        version: 9.39.4
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+
   packages/sync:
     dependencies:
       '@automerge/automerge':
