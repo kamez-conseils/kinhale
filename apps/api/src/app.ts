@@ -4,6 +4,7 @@ import fastifyWebsocket from '@fastify/websocket';
 import type { Env } from './env.js';
 import dbPlugin, { type DrizzleDb } from './plugins/db.js';
 import jwtPlugin from './plugins/jwt.js';
+import redisPlugin, { type RedisClients } from './plugins/redis.js';
 import healthRoute from './routes/health.js';
 import authRoute from './routes/auth.js';
 import relayRoute from './routes/relay.js';
@@ -22,6 +23,8 @@ export interface BuildAppOverrides {
    * routes testées n'accèdent pas à la DB.
    */
   db?: DrizzleDb;
+  /** Redis mock pour les tests unitaires. Si fourni, skip le plugin redisPlugin. */
+  redis?: RedisClients;
 }
 
 export function buildApp(env: Env, overrides: BuildAppOverrides = {}): FastifyInstance {
@@ -43,6 +46,13 @@ export function buildApp(env: Env, overrides: BuildAppOverrides = {}): FastifyIn
 
   // JWT
   void app.register(jwtPlugin);
+
+  // Redis pub/sub
+  if (overrides.redis !== undefined) {
+    app.decorate('redis', overrides.redis);
+  } else {
+    void app.register(redisPlugin);
+  }
 
   // Routes
   void app.register(healthRoute);
