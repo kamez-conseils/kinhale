@@ -2,6 +2,7 @@ import kinhale from '@kinhale/eslint-config';
 import i18nextPlugin from 'eslint-plugin-i18next';
 
 export default [
+  { ignores: ['.tamagui/**', '.next/**', 'next-env.d.ts'] },
   ...kinhale,
   {
     plugins: { i18next: i18nextPlugin },
