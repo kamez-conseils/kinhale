@@ -49,6 +49,9 @@ export async function serverSessionKeys(
  * Permet à un device d'utiliser une seule seed pour les deux keypairs.
  */
 export async function ed25519ToX25519(ed: SigningKeypair): Promise<KeyExchangeKeypair> {
+  if (ed.secretKey.byteLength !== 64) {
+    throw new Error('ed25519ToX25519: secretKey doit être la clé étendue Ed25519 de 64 octets');
+  }
   const sodium = await getSodium();
   const privateKey = sodium.crypto_sign_ed25519_sk_to_curve25519(ed.secretKey);
   const publicKey = sodium.crypto_sign_ed25519_pk_to_curve25519(ed.publicKey);
