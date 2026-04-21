@@ -25,7 +25,10 @@ const relayRoute: FastifyPluginAsync = async (app) => {
       if (!householdSockets.has(householdId)) {
         householdSockets.set(householdId, new Set())
       }
-      householdSockets.get(householdId)!.add(socket)
+      const sockets = householdSockets.get(householdId)
+      if (sockets) {
+        sockets.add(socket)
+      }
 
       socket.on('message', async (raw) => {
         let msg: unknown

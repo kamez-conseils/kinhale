@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { buildApp } from '../app.js'
 import { testEnv } from '../env.js'
-import type { BuildAppOverrides } from '../app.js'
 import type { DrizzleDb } from '../plugins/db.js'
 
 function makeMockDb(): DrizzleDb {
