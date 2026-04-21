@@ -61,8 +61,7 @@ function VerifyInner(): React.JSX.Element {
         setError(t('auth.verifyError'));
       }
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  // params, router, setAuth, t are all stable refs — effect must run once on mount only
+  // params, router, setAuth, t sont des refs stables — l'effet ne doit s'exécuter qu'une fois au montage
   }, []);
 
   if (error !== null) {

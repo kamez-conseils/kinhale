@@ -24,4 +24,12 @@ export default [
       'i18next/no-literal-string': 'off',
     },
   },
+  {
+    // jest.setup.ts est un fichier d'infrastructure de test Node.js — node:crypto y est
+    // autorisé car il sert uniquement à polyfiller crypto.randomUUID dans jsdom.
+    files: ['jest.setup.ts'],
+    rules: {
+      'no-restricted-imports': 'off',
+    },
+  },
 ];
