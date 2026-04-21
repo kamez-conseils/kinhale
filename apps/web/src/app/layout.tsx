@@ -1,10 +1,10 @@
-import type { Metadata } from 'next'
-import { Providers } from '../providers'
+import type { Metadata } from 'next';
+import { Providers } from '../providers';
 
 export const metadata: Metadata = {
   title: 'Kinhale',
   description: 'Coordonnez les soins de votre enfant asthmatique',
-}
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -13,5 +13,5 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>{children}</Providers>
       </body>
     </html>
-  )
+  );
 }

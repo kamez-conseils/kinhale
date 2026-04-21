@@ -1,4 +1,4 @@
-import '@testing-library/jest-dom'
+import '@testing-library/jest-dom';
 
 // jsdom ne fournit pas window.matchMedia — requis par Tamagui
 Object.defineProperty(window, 'matchMedia', {
@@ -13,4 +13,4 @@ Object.defineProperty(window, 'matchMedia', {
     removeEventListener: () => {},
     dispatchEvent: () => false,
   }),
-})
+});
