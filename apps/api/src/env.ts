@@ -7,6 +7,7 @@ export const EnvSchema = z.object({
   JWT_SECRET: z.string().min(32),
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('14d'),
+  REDIS_URL: z.string().default('redis://:kinhale_redis_dev@localhost:6379'),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -24,6 +25,7 @@ export function testEnv(overrides: Partial<Env> = {}): Env {
     JWT_SECRET: 'test-jwt-secret-minimum-32-characters-long',
     JWT_ACCESS_TTL: '15m',
     JWT_REFRESH_TTL: '14d',
+    REDIS_URL: 'redis://:kinhale_redis_dev@localhost:6379',
     ...overrides,
   };
 }

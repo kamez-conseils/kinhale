@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, bigint } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, bigint, uniqueIndex } from 'drizzle-orm/pg-core';
 
 /**
  * Comptes utilisateurs. L'email n'est jamais stocké en clair —
@@ -15,15 +15,19 @@ export const accounts = pgTable('accounts', {
  * qui authentifie ses messages. Le householdId lie le device à un foyer.
  * Aucune donnée santé ici.
  */
-export const devices = pgTable('devices', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  accountId: uuid('account_id')
-    .notNull()
-    .references(() => accounts.id, { onDelete: 'cascade' }),
-  publicKeyHex: text('public_key_hex').notNull(),
-  householdId: uuid('household_id').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+export const devices = pgTable(
+  'devices',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    publicKeyHex: text('public_key_hex').notNull(),
+    householdId: uuid('household_id').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex('devices_account_pubkey_idx').on(t.accountId, t.publicKeyHex)],
+);
 
 /**
  * Magic links d'authentification. Le token n'est stocké que sous forme

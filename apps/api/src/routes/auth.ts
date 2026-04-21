@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { sha256HexFromString, randomBytes } from '@kinhale/crypto';
-import { magicLinks, accounts } from '../db/schema.js';
+import { magicLinks, accounts, devices } from '../db/schema.js';
 import { eq, and, gt } from 'drizzle-orm';
 
 const MagicLinkBodySchema = z.object({
@@ -10,6 +10,12 @@ const MagicLinkBodySchema = z.object({
 
 const VerifyQuerySchema = z.object({
   token: z.string().min(64),
+});
+
+const RegisterDeviceBodySchema = z.object({
+  publicKeyHex: z
+    .string()
+    .regex(/^[0-9a-f]{64}$/, 'publicKeyHex doit être une clé Ed25519 (64 hex chars)'),
 });
 
 const authRoute: FastifyPluginAsync = async (app) => {
@@ -101,6 +107,41 @@ const authRoute: FastifyPluginAsync = async (app) => {
 
     return reply.status(200).send({ accessToken });
   });
+
+  app.post<{ Body: z.infer<typeof RegisterDeviceBodySchema> }>(
+    '/register-device',
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      const result = RegisterDeviceBodySchema.safeParse(request.body);
+      if (!result.success) {
+        return reply.status(400).send({
+          error: result.error.issues[0]?.message ?? 'publicKeyHex invalide',
+        });
+      }
+
+      const { publicKeyHex } = result.data;
+      const payload = request.user;
+
+      const inserted = await app.db
+        .insert(devices)
+        .values({
+          accountId: payload.sub,
+          publicKeyHex,
+          householdId: payload.householdId,
+        })
+        .onConflictDoNothing()
+        .returning();
+
+      const device = inserted[0];
+      if (device === undefined) {
+        // Deux cas : la clé publique existe déjà (conflict), ou erreur DB.
+        // onConflictDoNothing retourne tableau vide si conflict → 409.
+        return reply.status(409).send({ error: 'Device déjà enregistré pour ce compte' });
+      }
+
+      return reply.status(201).send({ deviceId: device.id });
+    },
+  );
 };
 
 export default authRoute;

@@ -2,7 +2,14 @@ import kinhale from '@kinhale/eslint-config';
 
 export default [
   {
-    ignores: ['apps/web/.tamagui/**', 'apps/web/.next/**', 'apps/web/next-env.d.ts'],
+    ignores: [
+      'apps/web/.tamagui/**',
+      'apps/web/.next/**',
+      'apps/web/next-env.d.ts',
+      '.worktrees/**/apps/web/.tamagui/**',
+      '.worktrees/**/apps/web/.next/**',
+      '.worktrees/**/apps/web/next-env.d.ts',
+    ],
   },
   ...kinhale,
   {
