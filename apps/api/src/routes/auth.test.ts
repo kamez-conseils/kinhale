@@ -152,15 +152,17 @@ describe('POST /auth/register-device', () => {
       ...makeMockDb(),
       insert: vi.fn().mockReturnValue({
         values: vi.fn().mockReturnValue({
-          returning: vi.fn().mockResolvedValue([
-            {
-              id: 'device-new-001',
-              accountId: 'account-001',
-              publicKeyHex: 'a'.repeat(64),
-              householdId: 'hh-001',
-              createdAt: new Date(),
-            },
-          ]),
+          onConflictDoNothing: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([
+              {
+                id: 'device-new-001',
+                accountId: 'account-001',
+                publicKeyHex: 'a'.repeat(64),
+                householdId: 'hh-001',
+                createdAt: new Date(),
+              },
+            ]),
+          }),
         }),
       }),
     } as unknown as DrizzleDb;
