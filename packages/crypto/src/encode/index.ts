@@ -8,11 +8,10 @@ export function toHex(bytes: Uint8Array): string {
 
 export function fromHex(hex: string): Uint8Array {
   if (hex.length % 2 !== 0) throw new Error(`encode/fromHex: longueur impaire (${hex.length})`);
+  if (!/^[0-9a-fA-F]*$/.test(hex)) throw new Error('encode/fromHex: caractères non-hex détectés');
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < bytes.length; i++) {
-    const byte = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
-    if (Number.isNaN(byte)) throw new Error(`encode/fromHex: caractère non-hex à la position ${i * 2}`);
-    bytes[i] = byte;
+    bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
   }
   return bytes;
 }

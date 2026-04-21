@@ -30,6 +30,10 @@ describe('encode/fromHex', () => {
   it('lève sur caractère non-hex', () => {
     expect(() => fromHex('zz')).toThrow();
   });
+
+  it('lève sur hex partiel (ex: "0z")', () => {
+    expect(() => fromHex('0z')).toThrow();
+  });
 });
 
 describe('encode/base64url', () => {
