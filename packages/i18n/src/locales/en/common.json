@@ -29,7 +29,8 @@
     "maintenance": "Controller",
     "rescue": "Rescue",
     "save": "Save",
-    "saving": "Saving…"
+    "saving": "Saving…",
+    "saveError": "Error saving dose"
   },
   "common": {
     "loading": "Loading…",

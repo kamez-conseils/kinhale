@@ -29,7 +29,8 @@
     "maintenance": "Fond",
     "rescue": "Secours",
     "save": "Enregistrer",
-    "saving": "Enregistrement…"
+    "saving": "Enregistrement…",
+    "saveError": "Erreur lors de l'enregistrement"
   },
   "common": {
     "loading": "Chargement…",

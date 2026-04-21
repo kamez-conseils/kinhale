@@ -18,11 +18,13 @@ export default function AddDosePage(): React.JSX.Element {
   const appendDose = useDocStore((s) => s.appendDose);
   const [doseType, setDoseType] = useState<'maintenance' | 'rescue'>('maintenance');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const { sendChanges } = useRelay(accessToken, null);
 
   const handleSave = async (): Promise<void> => {
     setLoading(true);
+    setError(null);
     try {
       const kp = await getOrCreateDevice();
       const payload = {
@@ -43,6 +45,8 @@ export default function AddDosePage(): React.JSX.Element {
         await sendChanges(changes, gk);
       }
       router.push('/journal');
+    } catch {
+      setError(t('journal.saveError'));
     } finally {
       setLoading(false);
     }
@@ -56,18 +60,19 @@ export default function AddDosePage(): React.JSX.Element {
         <Button
           flex={1}
           onPress={() => setDoseType('maintenance')}
-          theme={doseType === 'maintenance' ? 'active' : undefined}
+          theme={doseType === 'maintenance' ? 'active' : null}
         >
           {t('journal.maintenance')}
         </Button>
         <Button
           flex={1}
           onPress={() => setDoseType('rescue')}
-          theme={doseType === 'rescue' ? 'active' : undefined}
+          theme={doseType === 'rescue' ? 'active' : null}
         >
           {t('journal.rescue')}
         </Button>
       </XStack>
+      {error !== null && <Text color="$red10">{error}</Text>}
       <Button onPress={() => void handleSave()} disabled={loading} marginTop="$2">
         {loading ? t('journal.saving') : t('journal.save')}
       </Button>
