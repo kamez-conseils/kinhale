@@ -25,4 +25,12 @@ export default [
       '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
+  {
+    // jest.setup.ts est un fichier d'infrastructure de test Node.js uniquement.
+    // node:crypto y est autorisé pour polyfiller crypto.randomUUID dans jsdom.
+    files: ['**/jest.setup.ts'],
+    rules: {
+      'no-restricted-imports': 'off',
+    },
+  },
 ];
