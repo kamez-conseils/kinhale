@@ -12,7 +12,7 @@ export interface SyncCursor {
 }
 
 /** Crée un cursor initialisé sur le document courant (jamais envoyé). */
-export function createCursor(doc: A.Doc<KinhaleDoc>): SyncCursor {
+export function createCursor(): SyncCursor {
   return {
     lastSentDoc: null,
     knownHeads: [],
@@ -37,6 +37,7 @@ export function recordSent(cursor: SyncCursor, doc: A.Doc<KinhaleDoc>): SyncCurs
  * Incrémente le compteur monotone pour journalisation.
  */
 export function recordReceived(cursor: SyncCursor, changes: Uint8Array[]): SyncCursor {
+  // Changes are applied to the doc outside the cursor (via mergeChanges); only count here.
   return {
     ...cursor,
     receivedCount: cursor.receivedCount + changes.length,

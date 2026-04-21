@@ -22,28 +22,28 @@ const makeRecord = (id: string): SignedEventRecord => ({
 describe('SyncCursor', () => {
   it('createCursor initialise un curseur vide', () => {
     const doc = createDoc('hh-cursor-1');
-    const cursor = createCursor(doc);
+    const cursor = createCursor();
     expect(cursor.knownHeads).toHaveLength(0);
   });
 
   it('recordSent met à jour la tête connue', () => {
     const doc = createDoc('hh-cursor-2');
     const updated = A.change(doc, (d) => { d.events.push(makeRecord('e1')); });
-    const cursor = createCursor(doc);
+    const cursor = createCursor();
     const cursor2 = recordSent(cursor, updated);
     expect(cursor2.knownHeads.length).toBeGreaterThan(0);
   });
 
   it('pendingChanges retourne [] si rien de nouveau depuis recordSent', () => {
     const doc = createDoc('hh-cursor-3');
-    const cursor = recordSent(createCursor(doc), doc);
+    const cursor = recordSent(createCursor(), doc);
     const pending = pendingChanges(cursor, doc);
     expect(pending).toHaveLength(0);
   });
 
   it('pendingChanges retourne les changements depuis la dernière tête envoyée', () => {
     const base = createDoc('hh-cursor-4');
-    const cursor = recordSent(createCursor(base), base);
+    const cursor = recordSent(createCursor(), base);
     const updated = A.change(base, (d) => { d.events.push(makeRecord('e1')); });
     const pending = pendingChanges(cursor, updated);
     expect(pending.length).toBeGreaterThan(0);
@@ -52,14 +52,14 @@ describe('SyncCursor', () => {
   it('recordReceived met à jour la tête des changements reçus', () => {
     const doc = createDoc('hh-cursor-5');
     const changes = getAllDocChanges(doc);
-    const cursor = createCursor(doc);
+    const cursor = createCursor();
     const cursor2 = recordReceived(cursor, changes);
     expect(cursor2.receivedCount).toBe(changes.length);
   });
 
   it('enchaîne sent → nouveau commit → pendingChanges → recordSent → 0 pending', () => {
     const base = createDoc('hh-cursor-6');
-    let cursor = recordSent(createCursor(base), base);
+    let cursor = recordSent(createCursor(), base);
     const updated = A.change(base, (d) => { d.events.push(makeRecord('e2')); });
     const pending = pendingChanges(cursor, updated);
     expect(pending.length).toBeGreaterThan(0);
