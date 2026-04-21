@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { sha256HexFromString, randomBytes } from '@kinhale/crypto';
 import { magicLinks, accounts, devices } from '../db/schema.js';
 import { eq, and, gt } from 'drizzle-orm';
-import type { JwtPayload } from '../plugins/jwt.js';
 
 const MagicLinkBodySchema = z.object({
   email: z.string().email(),
@@ -121,7 +120,7 @@ const authRoute: FastifyPluginAsync = async (app) => {
       }
 
       const { publicKeyHex } = result.data;
-      const payload = request.user as JwtPayload;
+      const payload = request.user;
 
       const inserted = await app.db
         .insert(devices)
@@ -130,11 +129,14 @@ const authRoute: FastifyPluginAsync = async (app) => {
           publicKeyHex,
           householdId: payload.householdId,
         })
+        .onConflictDoNothing()
         .returning();
 
       const device = inserted[0];
       if (device === undefined) {
-        return reply.status(500).send({ error: 'Erreur enregistrement device' });
+        // Deux cas : la clé publique existe déjà (conflict), ou erreur DB.
+        // onConflictDoNothing retourne tableau vide si conflict → 409.
+        return reply.status(409).send({ error: 'Device déjà enregistré pour ce compte' });
       }
 
       return reply.status(201).send({ deviceId: device.id });
