@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { secretboxKeygen } from '@kinhale/crypto'
 import { encryptChanges, decryptChanges } from './encrypt.js'
-import type { EncryptedBlob } from './encrypt.js'
 
 describe('encryptChanges / decryptChanges', () => {
   it('encryptChanges retourne un EncryptedBlob avec nonce et ciphertext hex', async () => {
