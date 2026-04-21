@@ -1,5 +1,5 @@
-import kinhale from '@kinhale/eslint-config'
-import i18nextPlugin from 'eslint-plugin-i18next'
+import kinhale from '@kinhale/eslint-config';
+import i18nextPlugin from 'eslint-plugin-i18next';
 
 export default [
   { ignores: ['.expo/**', 'babel.config.js', 'metro.config.js', 'jest.config.js'] },
@@ -24,4 +24,4 @@ export default [
       'i18next/no-literal-string': 'off',
     },
   },
-]
+];

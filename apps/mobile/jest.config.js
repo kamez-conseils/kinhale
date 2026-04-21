@@ -9,4 +9,4 @@ module.exports = {
   transformIgnorePatterns: [
     '/node_modules/(?!\\.pnpm|(jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|react-navigation|@react-navigation/.*|tamagui|@tamagui/.*)',
   ],
-}
+};
