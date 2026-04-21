@@ -1,0 +1,11 @@
+{
+  "home": {
+    "title": "Kinhale",
+    "subtitle": "Coordonnez les soins de votre enfant"
+  },
+  "nav": {
+    "home": "Accueil",
+    "journal": "Journal",
+    "settings": "Réglages"
+  }
+}

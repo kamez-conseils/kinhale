@@ -1,0 +1,11 @@
+{
+  "home": {
+    "title": "Kinhale",
+    "subtitle": "Coordinate your child's care"
+  },
+  "nav": {
+    "home": "Home",
+    "journal": "Journal",
+    "settings": "Settings"
+  }
+}

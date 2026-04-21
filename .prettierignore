@@ -19,3 +19,6 @@ README.fr.md
 LICENSE
 SECURITY.md
 docs/**/*.md
+
+# Tamagui generated cache files
+apps/web/.tamagui/

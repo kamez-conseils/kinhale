@@ -1,6 +1,9 @@
 import kinhale from '@kinhale/eslint-config';
 
 export default [
+  {
+    ignores: ['apps/web/.tamagui/**', 'apps/web/.next/**', 'apps/web/next-env.d.ts'],
+  },
   ...kinhale,
   {
     files: ['*.{js,mjs,cjs}', '*.config.{js,mjs,cjs,ts}'],

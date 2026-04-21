@@ -1,0 +1,23 @@
+{
+  "name": "@kinhale/i18n",
+  "version": "0.1.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "description": "Ressources i18n Kinhale — locales FR/EN partagées web + mobile.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings=0 .",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@kinhale/eslint-config": "workspace:*",
+    "@kinhale/tsconfig": "workspace:*",
+    "eslint": "^9.18.0",
+    "typescript": "^5.7.3"
+  }
+}
