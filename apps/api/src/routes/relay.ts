@@ -51,7 +51,7 @@ const relayRoute: FastifyPluginAsync = async (app) => {
     if (!householdSockets.has(householdId)) {
       householdSockets.set(householdId, new Set());
       // S'abonner au canal Redis dès la première connexion pour ce foyer.
-      app.redis.sub.subscribe(householdChannel(householdId)).catch((err) => {
+      app.redis.sub.subscribe(householdChannel(householdId)).catch((err: unknown) => {
         app.log.error({ err }, 'Échec subscribe Redis channel');
         const sockets = householdSockets.get(householdId);
         if (sockets) {
@@ -116,7 +116,7 @@ const relayRoute: FastifyPluginAsync = async (app) => {
         sockets.delete(socket);
         if (sockets.size === 0) {
           householdSockets.delete(householdId);
-          app.redis.sub.unsubscribe(householdChannel(householdId)).catch((err) => {
+          app.redis.sub.unsubscribe(householdChannel(householdId)).catch((err: unknown) => {
             app.log.warn({ err }, 'Échec unsubscribe Redis');
           });
         }
