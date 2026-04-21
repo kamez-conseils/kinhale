@@ -36,8 +36,10 @@ const authRoute: FastifyPluginAsync = async (app) => {
         expiresAt,
       })
 
-      const magicUrl = `http://localhost:${app.env.PORT}/auth/verify?token=${token}`
-      app.log.info({ magicUrl }, 'Magic link généré (dev only)')
+      if (app.env.NODE_ENV === 'development') {
+        const magicUrl = `http://localhost:${app.env.PORT}/auth/verify?token=${token}`
+        app.log.info({ magicUrl }, 'Magic link généré (dev only)')
+      }
 
       return reply.status(200).send({ message: 'Magic link envoyé' })
     },
