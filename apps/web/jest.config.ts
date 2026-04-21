@@ -10,6 +10,8 @@ const customConfig: Config = {
   moduleNameMapper: {
     '^react-native$': 'react-native-web',
     '^@kinhale/i18n$': '<rootDir>/../../packages/i18n/src/index.ts',
+    '^@kinhale/crypto$': '<rootDir>/../../packages/crypto/src/index.ts',
+    '^@kinhale/sync$': '<rootDir>/../../packages/sync/src/index.ts',
   },
   transformIgnorePatterns: ['/node_modules/(?!(react-native-web|@tamagui|tamagui|@react-native)/)'],
 };
