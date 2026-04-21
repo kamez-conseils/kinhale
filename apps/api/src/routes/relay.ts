@@ -13,10 +13,9 @@ const relayRoute: FastifyPluginAsync = async (app) => {
     '/',
     { websocket: true },
     (socket: WebSocket, request) => {
-      const { householdId, deviceId } = request.query as {
-        householdId?: string
-        deviceId?: string
-      }
+      const query = (request.query ?? {}) as Record<string, unknown>
+      const householdId = typeof query['householdId'] === 'string' ? query['householdId'] : undefined
+      const deviceId = typeof query['deviceId'] === 'string' ? query['deviceId'] : undefined
 
       if (!householdId || !deviceId) {
         socket.close(1008, 'householdId et deviceId requis')
@@ -66,7 +65,11 @@ const relayRoute: FastifyPluginAsync = async (app) => {
         if (peers) {
           for (const peer of peers) {
             if (peer !== socket && peer.readyState === peer.OPEN) {
-              peer.send(raw.toString())
+              try {
+                peer.send(raw.toString())
+              } catch (sendErr) {
+                app.log.warn({ sendErr }, 'Échec envoi WS peer')
+              }
             }
           }
         }
