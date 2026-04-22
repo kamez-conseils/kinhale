@@ -41,3 +41,5 @@ export { createCursor, recordSent, recordReceived, pendingChanges } from './sync
 // Projections
 export type { ProjectedDose } from './projections/doses.js';
 export { projectDoses } from './projections/doses.js';
+export type { ProjectedChild } from './projections/child.js';
+export { projectChild } from './projections/child.js';
