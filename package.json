@@ -28,6 +28,7 @@
     "test:watch": "turbo run test:watch",
     "dev": "turbo run dev --parallel",
     "clean": "turbo run clean && rm -rf .turbo node_modules/.cache",
+    "e2e:web": "pnpm --filter @kinhale/web e2e",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
