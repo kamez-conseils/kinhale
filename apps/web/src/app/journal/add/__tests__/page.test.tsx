@@ -27,9 +27,8 @@ jest.mock('@kinhale/sync', () => ({
 
 const mockAppendDose = jest.fn().mockResolvedValue([new Uint8Array([1])]);
 jest.mock('../../../../stores/doc-store', () => ({
-  useDocStore: jest.fn(
-    (selector: (s: { appendDose: jest.Mock; doc: null }) => unknown) =>
-      selector({ appendDose: mockAppendDose, doc: null }),
+  useDocStore: jest.fn((selector: (s: { appendDose: jest.Mock; doc: null }) => unknown) =>
+    selector({ appendDose: mockAppendDose, doc: null }),
   ),
 }));
 

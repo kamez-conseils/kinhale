@@ -26,8 +26,7 @@ export default function OnboardingPumpScreen(): JSX.Element {
       setError(t('onboarding.pump.saveError'));
       return;
     }
-    const expiresAtMs =
-      expiresAtStr.trim() !== '' ? new Date(expiresAtStr.trim()).getTime() : null;
+    const expiresAtMs = expiresAtStr.trim() !== '' ? new Date(expiresAtStr.trim()).getTime() : null;
 
     setLoading(true);
     try {
@@ -95,7 +94,9 @@ export default function OnboardingPumpScreen(): JSX.Element {
         accessibilityLabel={t('onboarding.pump.expiresAtLabel')}
       />
       {error !== null && (
-        <Text accessibilityRole="alert" color="$red10">{error}</Text>
+        <Text accessibilityRole="alert" color="$red10">
+          {error}
+        </Text>
       )}
       <Button
         onPress={() => void handleSave()}

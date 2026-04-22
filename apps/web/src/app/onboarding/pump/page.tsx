@@ -28,8 +28,7 @@ export default function OnboardingPumpPage(): React.JSX.Element {
       setError(t('onboarding.pump.saveError'));
       return;
     }
-    const expiresAtMs =
-      expiresAtStr.trim() !== '' ? new Date(expiresAtStr.trim()).getTime() : null;
+    const expiresAtMs = expiresAtStr.trim() !== '' ? new Date(expiresAtStr.trim()).getTime() : null;
 
     setLoading(true);
     try {
@@ -91,7 +90,9 @@ export default function OnboardingPumpPage(): React.JSX.Element {
       />
 
       {error !== null && (
-        <Text role="alert" color="$red10">{error}</Text>
+        <Text role="alert" color="$red10">
+          {error}
+        </Text>
       )}
 
       <Button onPress={() => void handleSave()} disabled={loading} marginTop="$2">

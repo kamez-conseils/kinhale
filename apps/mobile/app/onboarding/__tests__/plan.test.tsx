@@ -5,7 +5,13 @@ import { renderWithProviders } from '../../../src/test-utils/render';
 
 jest.mock('@kinhale/sync', () => ({
   projectPumps: jest.fn(() => [
-    { pumpId: 'pump-1', name: 'Ventolin', pumpType: 'maintenance', totalDoses: 200, expiresAtMs: null },
+    {
+      pumpId: 'pump-1',
+      name: 'Ventolin',
+      pumpType: 'maintenance',
+      totalDoses: 200,
+      expiresAtMs: null,
+    },
   ]),
 }));
 
@@ -48,9 +54,8 @@ const mockDoc = {
   ],
 };
 jest.mock('../../../src/stores/doc-store', () => ({
-  useDocStore: jest.fn(
-    (selector: (s: { appendPlan: jest.Mock; doc: typeof mockDoc }) => unknown) =>
-      selector({ appendPlan: mockAppendPlan, doc: mockDoc }),
+  useDocStore: jest.fn((selector: (s: { appendPlan: jest.Mock; doc: typeof mockDoc }) => unknown) =>
+    selector({ appendPlan: mockAppendPlan, doc: mockDoc }),
   ),
 }));
 

@@ -61,7 +61,9 @@ export default function OnboardingChildScreen(): JSX.Element {
         accessibilityLabel={t('onboarding.child.birthYearLabel')}
       />
       {error !== null && (
-        <Text accessibilityRole="alert" color="$red10">{error}</Text>
+        <Text accessibilityRole="alert" color="$red10">
+          {error}
+        </Text>
       )}
       <Button
         onPress={() => void handleSave()}

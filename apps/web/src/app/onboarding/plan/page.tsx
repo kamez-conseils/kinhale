@@ -92,7 +92,9 @@ export default function OnboardingPlanPage(): React.JSX.Element {
       />
 
       {error !== null && (
-        <Text role="alert" color="$red10">{error}</Text>
+        <Text role="alert" color="$red10">
+          {error}
+        </Text>
       )}
 
       <Button

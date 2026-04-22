@@ -59,16 +59,8 @@ describe('projectChild', () => {
   });
 
   it('retourne le plus récent en cas de multiples événements ChildRegistered (RM13)', () => {
-    const older = makeChildEvent(
-      child({ childId: 'old', firstName: 'Ancienne' }),
-      1000,
-      'e-old',
-    );
-    const newer = makeChildEvent(
-      child({ childId: 'new', firstName: 'Nouvelle' }),
-      2000,
-      'e-new',
-    );
+    const older = makeChildEvent(child({ childId: 'old', firstName: 'Ancienne' }), 1000, 'e-old');
+    const newer = makeChildEvent(child({ childId: 'new', firstName: 'Nouvelle' }), 2000, 'e-new');
     const doc: KinhaleDoc = { householdId: 'hh-1', events: [older, newer] };
     const result = projectChild(doc);
     expect(result?.childId).toBe('new');

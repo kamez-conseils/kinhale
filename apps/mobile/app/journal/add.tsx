@@ -65,7 +65,8 @@ export default function AddDoseScreen(): JSX.Element {
     try {
       const kp = await getOrCreateDevice();
       const pumps = doc !== null ? projectPumps(doc) : [];
-      const activePump = pumps.find((p) => p.pumpType === doseType && !p.isExpired) ?? pumps[0] ?? null;
+      const activePump =
+        pumps.find((p) => p.pumpType === doseType && !p.isExpired) ?? pumps[0] ?? null;
       const child = doc !== null ? projectChild(doc) : null;
       const payload = {
         doseId: crypto.randomUUID(),

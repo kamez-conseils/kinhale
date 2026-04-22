@@ -58,7 +58,9 @@ export default function OnboardingChildPage(): React.JSX.Element {
         placeholder={t('onboarding.child.birthYearPlaceholder')}
       />
       {error !== null && (
-        <Text role="alert" color="$red10">{error}</Text>
+        <Text role="alert" color="$red10">
+          {error}
+        </Text>
       )}
       <Button onPress={() => void handleSave()} disabled={loading} marginTop="$2">
         {loading ? t('onboarding.child.saving') : t('onboarding.child.save')}

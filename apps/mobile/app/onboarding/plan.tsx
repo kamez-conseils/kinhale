@@ -91,7 +91,9 @@ export default function OnboardingPlanScreen(): JSX.Element {
         accessibilityLabel={t('onboarding.plan.hoursLabel')}
       />
       {error !== null && (
-        <Text accessibilityRole="alert" color="$red10">{error}</Text>
+        <Text accessibilityRole="alert" color="$red10">
+          {error}
+        </Text>
       )}
       <Button
         onPress={() => void handleSave()}

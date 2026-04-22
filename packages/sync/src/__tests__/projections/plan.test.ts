@@ -51,7 +51,17 @@ describe('projectPlan', () => {
   it('ignore les payload JSON invalides', () => {
     const doc: KinhaleDoc = {
       householdId: 'hh-1',
-      events: [{ id: 'e1', type: 'PlanUpdated', payloadJson: 'bad{{{', signerPublicKeyHex: 'a'.repeat(64), signatureHex: 'b'.repeat(128), deviceId: 'dev-1', occurredAtMs: 1000 }],
+      events: [
+        {
+          id: 'e1',
+          type: 'PlanUpdated',
+          payloadJson: 'bad{{{',
+          signerPublicKeyHex: 'a'.repeat(64),
+          signatureHex: 'b'.repeat(128),
+          deviceId: 'dev-1',
+          occurredAtMs: 1000,
+        },
+      ],
     };
     expect(projectPlan(doc)).toBeNull();
   });
