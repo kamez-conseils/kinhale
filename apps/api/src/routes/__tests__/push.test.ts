@@ -71,7 +71,6 @@ describe('POST /push/register-token', () => {
     });
 
     expect(res.statusCode).toBe(201);
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(db.insert).toHaveBeenCalledOnce();
     expect(db._insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -141,7 +140,6 @@ describe('DELETE /push/register-token', () => {
     });
 
     expect(res.statusCode).toBe(204);
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(db.delete).toHaveBeenCalledOnce();
     expect(db._deleteWhere).toHaveBeenCalledOnce();
     await app.close();
