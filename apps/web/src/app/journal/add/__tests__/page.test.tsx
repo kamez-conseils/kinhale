@@ -65,8 +65,8 @@ describe('AddDosePage', () => {
   });
 
   it('navigue vers /journal après sauvegarde réussie', async () => {
-    // groupKey n'est pas nécessaire : router.push est appelé même si groupKey=null
     renderWithProviders(<AddDosePage />);
+    await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalledWith('hh-1'));
     fireEvent.click(screen.getByRole('button', { name: /enregistrer|save/i }));
     await waitFor(() => {
       expect(mockAppendDose).toHaveBeenCalled();
