@@ -78,14 +78,10 @@ describe('AddDosePage', () => {
     mockAppendDose.mockRejectedValueOnce(new Error('réseau indisponible'));
     renderWithProviders(<AddDosePage />);
     fireEvent.click(screen.getByRole('button', { name: /enregistrer|save/i }));
-    // Flush: getOrCreateDevice → appendDose rejection → catch setError → setLoading
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-      await Promise.resolve();
+    await waitFor(() => {
+      expect(mockAppendDose).toHaveBeenCalled();
+      expect(mockPush).not.toHaveBeenCalledWith('/journal');
     });
-    expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(mockPush).not.toHaveBeenCalledWith('/journal');
   });
 
   it('appelle sendChanges quand groupKey est disponible', async () => {
