@@ -28,9 +28,28 @@
     "doseType": "Type de dose",
     "maintenance": "Fond",
     "rescue": "Secours",
+    "symptoms": "Symptômes",
+    "circumstances": "Circonstances",
+    "freeFormTag": "Note libre",
+    "freeFormTagPlaceholder": "Ex : après sport, soirée froide…",
     "save": "Enregistrer",
     "saving": "Enregistrement…",
-    "saveError": "Erreur lors de l'enregistrement"
+    "saveError": "Erreur lors de l'enregistrement",
+    "rescueNeedsContext": "Pour une prise de secours, sélectionnez au moins un symptôme, une circonstance ou ajoutez une note.",
+    "symptom": {
+      "cough": "Toux",
+      "wheezing": "Sifflements",
+      "shortness_of_breath": "Essoufflement",
+      "chest_tightness": "Oppression thoracique"
+    },
+    "circumstance": {
+      "exercise": "Effort physique",
+      "allergen": "Allergène",
+      "cold_air": "Air froid",
+      "night": "Nuit",
+      "infection": "Infection",
+      "stress": "Stress"
+    }
   },
   "common": {
     "loading": "Chargement…",

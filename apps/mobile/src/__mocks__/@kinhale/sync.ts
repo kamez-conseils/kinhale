@@ -24,3 +24,4 @@ export const createCursor = jest.fn().mockReturnValue({ lastSentSeq: 0, lastRece
 export const recordSent = jest.fn().mockReturnValue({ lastSentSeq: 1, lastReceivedSeq: 0 });
 export const recordReceived = jest.fn().mockReturnValue({ lastSentSeq: 0, lastReceivedSeq: 1 });
 export const pendingChanges = jest.fn().mockReturnValue([new Uint8Array(5)]);
+export const projectDoses = jest.fn().mockReturnValue([]);
