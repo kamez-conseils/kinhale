@@ -36,9 +36,7 @@
         "accounts_email_hash_unique": {
           "name": "accounts_email_hash_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email_hash"
-          ]
+          "columns": ["email_hash"]
         }
       },
       "policies": {},
@@ -110,12 +108,8 @@
           "name": "devices_account_id_accounts_id_fk",
           "tableFrom": "devices",
           "tableTo": "accounts",
-          "columnsFrom": [
-            "account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["account_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -176,9 +170,7 @@
         "magic_links_token_hash_unique": {
           "name": "magic_links_token_hash_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token_hash"
-          ]
+          "columns": ["token_hash"]
         }
       },
       "policies": {},
@@ -334,12 +326,8 @@
           "name": "push_tokens_device_id_devices_id_fk",
           "tableFrom": "push_tokens",
           "tableTo": "devices",
-          "columnsFrom": [
-            "device_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["device_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
