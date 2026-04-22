@@ -19,6 +19,7 @@ export type {
   PlanUpdatedPayload,
   CaregiverInvitedPayload,
   CaregiverRevokedPayload,
+  ChildRegisteredPayload,
 } from './events/types.js';
 export { canonicalBytes, signEvent, verifySignedEvent } from './events/sign.js';
 export { appendEvent } from './events/append.js';
