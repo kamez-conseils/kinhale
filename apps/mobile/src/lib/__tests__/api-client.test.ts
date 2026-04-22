@@ -15,7 +15,9 @@ describe('apiFetch', () => {
     await apiFetch('/test');
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/test'),
-      expect.objectContaining({ headers: expect.objectContaining({ 'Content-Type': 'application/json' }) }),
+      expect.objectContaining({
+        headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+      }),
     );
   });
 

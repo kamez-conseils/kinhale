@@ -16,10 +16,8 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       deviceId: null,
       householdId: null,
-      setAuth: (token, deviceId, householdId) =>
-        set({ accessToken: token, deviceId, householdId }),
-      clearAuth: () =>
-        set({ accessToken: null, deviceId: null, householdId: null }),
+      setAuth: (token, deviceId, householdId) => set({ accessToken: token, deviceId, householdId }),
+      clearAuth: () => set({ accessToken: null, deviceId: null, householdId: null }),
     }),
     {
       name: 'kinhale-auth',

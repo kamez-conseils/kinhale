@@ -22,7 +22,9 @@ export async function apiFetch<T = unknown>(path: string, options: FetchOptions 
   };
   const res = await fetch(`${API_URL}${path}`, { ...rest, headers });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ message: res.statusText })) as { message?: string };
+    const body = (await res.json().catch(() => ({ message: res.statusText }))) as {
+      message?: string;
+    };
     throw new ApiError(res.status, body.message ?? res.statusText);
   }
   return res.json() as Promise<T>;

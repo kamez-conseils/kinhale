@@ -30,16 +30,12 @@ export default function JournalScreen(): JSX.Element {
   }, [accessToken, householdId, initDoc, router]);
 
   const doses: DoseEvent[] =
-    (doc?.events as DoseEvent[] | undefined)?.filter(
-      (e) => e.type === 'DoseAdministered',
-    ) ?? [];
+    (doc?.events as DoseEvent[] | undefined)?.filter((e) => e.type === 'DoseAdministered') ?? [];
 
   return (
     <YStack padding="$4" gap="$4">
       <H1>{t('journal.title')}</H1>
-      {doses.length === 0 && (
-        <Text color="$color10">{t('journal.empty')}</Text>
-      )}
+      {doses.length === 0 && <Text color="$color10">{t('journal.empty')}</Text>}
       {doses.map((e) => (
         <YStack
           key={e.id}

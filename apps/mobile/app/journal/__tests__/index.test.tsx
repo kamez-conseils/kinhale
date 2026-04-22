@@ -12,19 +12,14 @@ jest.mock('expo-router', () => ({
 
 jest.mock('../../../src/stores/auth-store', () => ({
   useAuthStore: jest.fn(
-    (
-      selector: (s: {
-        accessToken: string | null;
-        householdId: string | null;
-      }) => unknown,
-    ) => selector({ accessToken: 'tok-1', householdId: 'hh-1' }),
+    (selector: (s: { accessToken: string | null; householdId: string | null }) => unknown) =>
+      selector({ accessToken: 'tok-1', householdId: 'hh-1' }),
   ),
 }));
 
 jest.mock('../../../src/stores/doc-store', () => ({
-  useDocStore: jest.fn(
-    (selector: (s: { doc: null; initDoc: jest.Mock }) => unknown) =>
-      selector({ doc: null, initDoc: jest.fn() }),
+  useDocStore: jest.fn((selector: (s: { doc: null; initDoc: jest.Mock }) => unknown) =>
+    selector({ doc: null, initDoc: jest.fn() }),
   ),
 }));
 
