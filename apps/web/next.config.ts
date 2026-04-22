@@ -21,6 +21,12 @@ const nextConfig: NextConfig = {
       ...config.resolve.extensionAlias,
       '.js': ['.ts', '.tsx', '.js', '.jsx'],
     };
+    // Automerge 2.x embarque du WebAssembly via @automerge/automerge.
+    // Next.js 15 (webpack 5) nécessite l'opt-in explicite asyncWebAssembly.
+    config.experiments = {
+      ...config.experiments,
+      asyncWebAssembly: true,
+    };
     return config;
   },
 };
