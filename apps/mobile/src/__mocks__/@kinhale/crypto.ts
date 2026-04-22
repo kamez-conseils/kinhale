@@ -1,4 +1,6 @@
 // Mock miroir de packages/crypto/src/index.ts
+import { Buffer } from 'buffer';
+
 export const sha256Hex = jest.fn().mockResolvedValue('a'.repeat(64));
 export const sha256HexFromString = jest.fn().mockResolvedValue('a'.repeat(64));
 export const CRYPTO_UNAVAILABLE_MESSAGE = 'crypto unavailable';
@@ -53,3 +55,13 @@ export const deriveDeviceKeypair = jest.fn().mockReturnValue({
   secretKey: new Uint8Array(64),
   publicKeyHex: 'a'.repeat(64),
 });
+
+export const generateStorageKey = jest.fn().mockResolvedValue(new Uint8Array(32).fill(42));
+export const encryptDocBlob = jest.fn(async (plaintext: Uint8Array) => ({
+  nonceHex: '00'.repeat(24),
+  ciphertextHex: Buffer.from(plaintext).toString('hex'),
+  version: 1 as const,
+}));
+export const decryptDocBlob = jest.fn(async (blob: { ciphertextHex: string }) =>
+  Uint8Array.from(Buffer.from(blob.ciphertextHex, 'hex')),
+);
