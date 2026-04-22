@@ -1,0 +1,44 @@
+name: E2E Web (Playwright)
+
+on:
+  pull_request:
+    paths:
+      - 'apps/web/**'
+      - 'packages/ui/**'
+      - 'packages/i18n/**'
+      - 'packages/sync/**'
+      - 'packages/crypto/**'
+      - '.github/workflows/e2e-web.yml'
+  push:
+    branches:
+      - develop
+      - main
+
+jobs:
+  playwright:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright browsers
+        run: pnpm --filter @kinhale/web exec playwright install --with-deps chromium webkit
+      - name: Run Playwright tests
+        run: pnpm e2e:web
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3002
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
