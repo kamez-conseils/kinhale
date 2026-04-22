@@ -18,6 +18,7 @@ export type {
   PumpReplacedPayload,
   PlanUpdatedPayload,
   CaregiverInvitedPayload,
+  CaregiverAcceptedPayload,
   CaregiverRevokedPayload,
   ChildRegisteredPayload,
 } from './events/types.js';
@@ -39,11 +40,13 @@ export type { SyncCursor } from './sync/cursor.js';
 export { createCursor, recordSent, recordReceived, pendingChanges } from './sync/cursor.js';
 
 // Projections
-export type { ProjectedDose } from './projections/doses.js';
-export { projectDoses } from './projections/doses.js';
+export type { ProjectedCaregiver } from './projections/caregivers.js';
+export { projectCaregivers } from './projections/caregivers.js';
 export type { ProjectedChild } from './projections/child.js';
 export { projectChild } from './projections/child.js';
-export type { ProjectedPump } from './projections/pumps.js';
-export { projectPumps } from './projections/pumps.js';
+export type { ProjectedDose } from './projections/doses.js';
+export { projectDoses } from './projections/doses.js';
 export type { ProjectedPlan } from './projections/plan.js';
 export { projectPlan } from './projections/plan.js';
+export type { ProjectedPump } from './projections/pumps.js';
+export { projectPumps } from './projections/pumps.js';
