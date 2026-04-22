@@ -92,5 +92,33 @@
       "saving": "Saving…",
       "saveError": "Error saving"
     }
+  },
+  "invitation": {
+    "listTitle": "Household caregivers",
+    "listEmpty": "No caregiver invited yet.",
+    "createCta": "Invite a caregiver",
+    "createTitle": "New invitation",
+    "roleLabel": "Role",
+    "roleContributor": "Full caregiver (personal account)",
+    "roleRestricted": "Restricted caregiver (shared device, 8h session)",
+    "displayNameLabel": "Display name",
+    "displayNamePlaceholder": "Mom, Daycare, …",
+    "generateCta": "Generate invitation",
+    "qrTitle": "Invitation code",
+    "qrInstruction": "Have the caregiver scan this code and enter the PIN below.",
+    "pinLabel": "PIN",
+    "expiresIn": "Expires in {{minutes}} min",
+    "copyLink": "Copy link",
+    "revokeCta": "Revoke",
+    "acceptTitle": "Join household",
+    "acceptInstruction": "Enter the 6-digit PIN provided by the Admin.",
+    "consentLabel": "I agree to share my entries with this household.",
+    "acceptCta": "Join",
+    "errorQuota": "Active invitations limit (10) reached.",
+    "errorExpired": "This invitation has expired.",
+    "errorPinMismatch": "Incorrect PIN.",
+    "errorLocked": "Too many attempts. Invitation locked for 15 min.",
+    "errorConsent": "Please accept sharing to continue.",
+    "cameraPermissionDenied": "Camera permission denied. Enable it in settings."
   }
 }

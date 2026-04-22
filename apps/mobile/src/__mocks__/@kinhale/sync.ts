@@ -28,3 +28,4 @@ export const projectDoses = jest.fn().mockReturnValue([]);
 export const projectPumps = jest.fn().mockReturnValue([]);
 export const projectChild = jest.fn().mockReturnValue(null);
 export const projectPlan = jest.fn().mockReturnValue(null);
+export const projectCaregivers = jest.fn().mockReturnValue([]);
