@@ -1,7 +1,12 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { WebSocket } from 'ws';
-import { mailboxMessages } from '../db/schema.js';
+import { Expo } from 'expo-server-sdk';
+import { eq, and, ne } from 'drizzle-orm';
+import { mailboxMessages, pushTokens } from '../db/schema.js';
 import type { JwtPayload } from '../plugins/jwt.js';
+import { dispatchPush } from '../push/push-dispatch.js';
+
+const expo = new Expo();
 
 const householdChannel = (id: string) => `household:${id}`;
 
@@ -104,6 +109,22 @@ const relayRoute: FastifyPluginAsync = async (app) => {
           socket.send(JSON.stringify({ error: 'Erreur persistance message' }));
           return;
         }
+
+        // Push dispatch — fire-and-forget, ne bloque pas le flux relay
+        void (async () => {
+          try {
+            const rows = await app.db
+              .select({ token: pushTokens.token })
+              .from(pushTokens)
+              .where(
+                and(eq(pushTokens.householdId, householdId), ne(pushTokens.deviceId, deviceId)),
+              );
+            const tokens = rows.map((r) => r.token);
+            await dispatchPush(expo, tokens, app.log);
+          } catch (err) {
+            app.log.warn({ err }, 'Échec dispatch push (ignoré)');
+          }
+        })();
 
         // Publier vers Redis → broadcast à tous les relay nodes du même foyer.
         try {

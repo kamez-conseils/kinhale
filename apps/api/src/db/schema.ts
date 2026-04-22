@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, bigint, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, bigint, uniqueIndex, index } from 'drizzle-orm/pg-core';
 
 /**
  * Comptes utilisateurs. L'email n'est jamais stocké en clair —
@@ -58,3 +58,25 @@ export const mailboxMessages = pgTable('mailbox_messages', {
   expiresAt: timestamp('expires_at').notNull(),
   ackedAt: timestamp('acked_at'),
 });
+
+/**
+ * Expo push tokens enregistrés par device. Un device peut avoir plusieurs tokens
+ * (réinstallation). Payload push = opaque, sans donnée santé.
+ */
+export const pushTokens = pgTable(
+  'push_tokens',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    deviceId: uuid('device_id')
+      .notNull()
+      .references(() => devices.id, { onDelete: 'cascade' }),
+    householdId: uuid('household_id').notNull(),
+    token: text('token').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex('push_tokens_device_token_idx').on(t.deviceId, t.token),
+    index('push_tokens_household_idx').on(t.householdId),
+  ],
+);

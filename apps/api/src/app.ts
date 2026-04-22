@@ -9,6 +9,7 @@ import healthRoute from './routes/health.js';
 import authRoute from './routes/auth.js';
 import relayRoute from './routes/relay.js';
 import catchupRoute from './routes/catchup.js';
+import pushRoute from './routes/push.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -60,6 +61,7 @@ export function buildApp(env: Env, overrides: BuildAppOverrides = {}): FastifyIn
   void app.register(authRoute, { prefix: '/auth' });
   void app.register(relayRoute, { prefix: '/relay' });
   void app.register(catchupRoute, { prefix: '/relay' });
+  void app.register(pushRoute, { prefix: '/push' });
 
   return app;
 }
