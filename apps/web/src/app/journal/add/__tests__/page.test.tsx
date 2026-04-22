@@ -88,7 +88,10 @@ describe('AddDosePage', () => {
     renderWithProviders(<AddDosePage />);
     await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalled());
     // Flush la résolution de la Promise (setGroupKey) via deux ticks de microtasks
-    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
     fireEvent.click(screen.getByText(/enregistrer|save/i));
     await waitFor(() => {
       expect(mockSendChanges).toHaveBeenCalled();
