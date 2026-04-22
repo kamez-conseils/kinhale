@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "Kinhale",
+    "scheme": "kinhale",
     "slug": "kinhale",
     "version": "0.1.0",
     "orientation": "portrait",

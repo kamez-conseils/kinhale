@@ -20,15 +20,30 @@ export default [
     },
   },
   {
-    files: ['**/*.test.ts', '**/*.spec.ts'],
+    files: ['**/*.test.ts', '**/*.spec.ts', '**/*.test.tsx', '**/*.spec.tsx'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
   {
+    // require() dans jest.mock factories + jest.resetModules() est le pattern
+    // Jest standard en mode CJS (jest-expo/Babel). Les règles d'import ESM ne
+    // s'appliquent pas aux fichiers de test et d'infrastructure Jest.
+    files: [
+      '**/__tests__/**/*.{ts,tsx}',
+      '**/*.test.{ts,tsx}',
+      '**/*.spec.{ts,tsx}',
+      '**/jest.setup.{js,ts}',
+    ],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/consistent-type-imports': 'off',
+    },
+  },
+  {
     // jest.setup.ts est un fichier d'infrastructure de test Node.js uniquement.
     // node:crypto y est autorisé pour polyfiller crypto.randomUUID dans jsdom.
-    files: ['**/jest.setup.ts'],
+    files: ['**/jest.setup.{ts,js}'],
     rules: {
       'no-restricted-imports': 'off',
     },
