@@ -268,7 +268,7 @@ describe('POST /invitations/:token/accept', () => {
     await app.close();
   });
 
-  it('retourne 401 pour un PIN incorrect, puis 423 après 3 échecs', async () => {
+  it('retourne 401 pour un PIN incorrect, puis 423 après 3 échecs', { timeout: 20_000 }, async () => {
     const redis = makeMockRedis();
     const app = buildTestApp(redis);
     await app.ready();

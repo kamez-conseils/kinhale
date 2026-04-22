@@ -14,19 +14,31 @@ const nextConfig: NextConfig = {
     '@kinhale/domain',
     '@kinhale/ui',
   ],
-  webpack: (config) => {
+  webpack: (config, { isServer }) => {
     // Les packages monorepo utilisent NodeNext (imports avec extension .js)
     // mais sont en source TypeScript. On dit à webpack de tenter .ts/.tsx avant .js.
     config.resolve.extensionAlias = {
       ...config.resolve.extensionAlias,
       '.js': ['.ts', '.tsx', '.js', '.jsx'],
     };
-    // Automerge 2.x embarque du WebAssembly via @automerge/automerge.
-    // Next.js 15 (webpack 5) nécessite l'opt-in explicite asyncWebAssembly.
+    // Automerge 2.x embarque du WebAssembly. L'entrypoint nodejs/automerge_wasm.cjs
+    // utilise fs.readFileSync pour charger le .wasm — or le fichier n'est pas copié
+    // dans .next/server/vendor-chunks. On force l'entrypoint bundler partout
+    // (client + server) + opt-in asyncWebAssembly pour webpack.
     config.experiments = {
       ...config.experiments,
       asyncWebAssembly: true,
     };
+    // Sur le serveur, on marque @automerge/automerge comme external pour éviter
+    // son eval lors du SSR — les composants qui l'importent sont 'use client'.
+    if (isServer) {
+      const existingExternals = Array.isArray(config.externals) ? config.externals : [];
+      config.externals = [
+        ...existingExternals,
+        '@automerge/automerge',
+        '@automerge/automerge/next',
+      ];
+    }
     return config;
   },
 };
