@@ -65,24 +65,34 @@ describe('AddDosePage', () => {
   });
 
   it('navigue vers /journal après sauvegarde réussie', async () => {
-    renderWithProviders(<AddDosePage />);
-    await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalledWith('hh-1'));
-    // Flush setGroupKey + re-render Tamagui avant le clic (même pattern que test sendChanges)
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    fireEvent.click(screen.getByRole('button', { name: /enregistrer|save/i }));
-    await waitFor(() => {
+    // Fake timers : empêche Tamagui de scheduler des setState via setTimeout hors act(),
+    // ce qui crée une boucle MutationObserver dans RTL v16 + React 19 + jsdom (CI Docker).
+    jest.useFakeTimers();
+    try {
+      renderWithProviders(<AddDosePage />);
+      // Flush le useEffect getGroupKey → setGroupKey (2 ticks : résolution Promise + setState)
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      fireEvent.click(screen.getByRole('button', { name: /enregistrer|save/i }));
+      // Flush handleSave : getOrCreateDevice → appendDose → sendChanges → router.push + setLoading
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
       expect(mockAppendDose).toHaveBeenCalled();
       expect(mockPush).toHaveBeenCalledWith('/journal');
-    });
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
   });
 
   it('affiche une erreur si appendDose échoue', async () => {
-    // Fake timers : empêche Tamagui de faire setState hors act() via setTimeout,
-    // ce qui causerait un deadlock dans act() (CI React 19 + jsdom).
-    // On flush la chaîne async manuellement via Promise.resolve() sans waitFor.
+    // Fake timers : même raison que les autres tests (deadlock Tamagui × RTL × React 19 CI).
     jest.useFakeTimers();
     try {
       mockAppendDose.mockRejectedValueOnce(new Error('réseau indisponible'));
@@ -102,41 +112,69 @@ describe('AddDosePage', () => {
   });
 
   it('appelle sendChanges quand groupKey est disponible', async () => {
-    renderWithProviders(<AddDosePage />);
-    await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalled());
-    // Flush la résolution de la Promise (setGroupKey) via deux ticks de microtasks
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    fireEvent.click(screen.getByText(/enregistrer|save/i));
-    await waitFor(() => {
+    jest.useFakeTimers();
+    try {
+      renderWithProviders(<AddDosePage />);
+      // Flush getGroupKey → setGroupKey pour que groupKey !== null au moment du clic
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      fireEvent.click(screen.getByText(/enregistrer|save/i));
+      // Flush handleSave : getOrCreateDevice → appendDose → sendChanges → router.push + setLoading
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
       expect(mockSendChanges).toHaveBeenCalled();
-    });
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
   });
 
   it('affiche une erreur RM4 si rescue sans contexte', async () => {
-    renderWithProviders(<AddDosePage />);
-    await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalledWith('hh-1'));
-
-    fireEvent.click(screen.getByText(/secours|rescue/i));
-    fireEvent.click(screen.getByText(/enregistrer|save/i));
-
-    await waitFor(() => {
+    jest.useFakeTimers();
+    try {
+      renderWithProviders(<AddDosePage />);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      fireEvent.click(screen.getByText(/secours|rescue/i));
+      fireEvent.click(screen.getByText(/enregistrer|save/i));
+      // validate() échoue de façon synchrone → setError batché par React
+      await act(async () => {
+        await Promise.resolve();
+      });
       expect(screen.getByRole('alert')).toBeTruthy();
-    });
-    expect(mockAppendDose).not.toHaveBeenCalled();
+      expect(mockAppendDose).not.toHaveBeenCalled();
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
   });
 
   it('sauvegarde rescue avec symptôme sélectionné', async () => {
-    renderWithProviders(<AddDosePage />);
-    await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalledWith('hh-1'));
-
-    fireEvent.click(screen.getByText(/secours|rescue/i));
-    fireEvent.click(screen.getByText(/toux|cough/i));
-    fireEvent.click(screen.getByText(/enregistrer|save/i));
-
-    await waitFor(() => {
+    jest.useFakeTimers();
+    try {
+      renderWithProviders(<AddDosePage />);
+      // Flush getGroupKey pour cohérence (sendChanges éventuellement appelé)
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      fireEvent.click(screen.getByText(/secours|rescue/i));
+      fireEvent.click(screen.getByText(/toux|cough/i));
+      fireEvent.click(screen.getByText(/enregistrer|save/i));
+      await act(async () => {
+        await Promise.resolve(); // getOrCreateDevice
+        await Promise.resolve(); // appendDose
+        await Promise.resolve(); // sendChanges
+        await Promise.resolve(); // state updates
+      });
       expect(mockAppendDose).toHaveBeenCalledWith(
         expect.objectContaining({
           doseType: 'rescue',
@@ -145,6 +183,9 @@ describe('AddDosePage', () => {
         expect.any(String),
         expect.any(Uint8Array),
       );
-    });
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
   });
 });
