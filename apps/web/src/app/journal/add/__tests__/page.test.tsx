@@ -44,6 +44,10 @@ jest.mock('../../../../lib/device', () => ({
 }));
 
 describe('AddDosePage', () => {
+  // CI Docker (Ubuntu runner) est nettement plus lent que local : hausse du timeout
+  // pour absorber les variations de scheduler React 19 + Tamagui sans timeout 5 s.
+  jest.setTimeout(15000);
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockAppendDose.mockResolvedValue([new Uint8Array([1])]);
@@ -87,16 +91,19 @@ describe('AddDosePage', () => {
   });
 
   it('affiche une erreur si appendDose échoue', async () => {
-    // Fake timers : même raison que les autres tests (deadlock Tamagui × RTL × React 19 CI).
+    // Fake timers + getByText + 4 ticks : pattern uniforme pour éliminer les
+    // variations de scheduler React 19 entre tests (évite que le timeout saute
+    // d'un test à l'autre au gré du load CI Docker).
     jest.useFakeTimers();
     try {
       mockAppendDose.mockRejectedValueOnce(new Error('réseau indisponible'));
       renderWithProviders(<AddDosePage />);
-      fireEvent.click(screen.getByRole('button', { name: /enregistrer|save/i }));
+      fireEvent.click(screen.getByText(/enregistrer|save/i));
       await act(async () => {
         await Promise.resolve(); // getOrCreateDevice résout
-        await Promise.resolve(); // appendDose rejette → catch setError + finally setLoading
-        await Promise.resolve(); // mises à jour d'état propagées
+        await Promise.resolve(); // appendDose rejette → catch setError
+        await Promise.resolve(); // finally setLoading
+        await Promise.resolve(); // React propage les state updates
       });
       expect(mockAppendDose).toHaveBeenCalled();
       expect(mockPush).not.toHaveBeenCalledWith('/journal');
