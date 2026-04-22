@@ -19,6 +19,7 @@ export type {
   PlanUpdatedPayload,
   CaregiverInvitedPayload,
   CaregiverRevokedPayload,
+  ChildRegisteredPayload,
 } from './events/types.js';
 export { canonicalBytes, signEvent, verifySignedEvent } from './events/sign.js';
 export { appendEvent } from './events/append.js';
@@ -40,3 +41,9 @@ export { createCursor, recordSent, recordReceived, pendingChanges } from './sync
 // Projections
 export type { ProjectedDose } from './projections/doses.js';
 export { projectDoses } from './projections/doses.js';
+export type { ProjectedChild } from './projections/child.js';
+export { projectChild } from './projections/child.js';
+export type { ProjectedPump } from './projections/pumps.js';
+export { projectPumps } from './projections/pumps.js';
+export type { ProjectedPlan } from './projections/plan.js';
+export { projectPlan } from './projections/plan.js';

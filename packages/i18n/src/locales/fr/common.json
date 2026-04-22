@@ -54,5 +54,43 @@
   "common": {
     "loading": "Chargement…",
     "back": "Retour"
+  },
+  "onboarding": {
+    "child": {
+      "title": "Votre enfant",
+      "firstNameLabel": "Prénom",
+      "firstNamePlaceholder": "Prénom de l'enfant",
+      "birthYearLabel": "Année de naissance",
+      "birthYearPlaceholder": "Ex : 2020",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saveError": "Erreur lors de l'enregistrement"
+    },
+    "pump": {
+      "title": "Ajouter une pompe",
+      "nameLabel": "Nom de la pompe",
+      "namePlaceholder": "Ex : Ventolin, Flixotide…",
+      "typeLabel": "Type",
+      "typeMaintenance": "Fond",
+      "typeRescue": "Secours",
+      "totalDosesLabel": "Nombre de doses",
+      "totalDosesPlaceholder": "Ex : 200",
+      "expiresAtLabel": "Date de péremption (optionnel)",
+      "expiresAtPlaceholder": "YYYY-MM-DD",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saveError": "Erreur lors de l'enregistrement"
+    },
+    "plan": {
+      "title": "Plan de traitement",
+      "pumpLabel": "Pompe de fond",
+      "noPumps": "Aucune pompe de fond enregistrée",
+      "hoursLabel": "Heures d'administration (UTC)",
+      "hoursPlaceholder": "Ex : 8, 20",
+      "startLabel": "Début du plan",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saveError": "Erreur lors de l'enregistrement"
+    }
   }
 }

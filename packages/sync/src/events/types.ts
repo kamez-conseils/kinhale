@@ -4,7 +4,8 @@ export type DomainEventType =
   | 'PumpReplaced'
   | 'PlanUpdated'
   | 'CaregiverInvited'
-  | 'CaregiverRevoked';
+  | 'CaregiverRevoked'
+  | 'ChildRegistered';
 
 /** Payload pour DoseAdministered */
 export interface DoseAdministeredPayload {
@@ -57,13 +58,22 @@ export interface CaregiverRevokedPayload {
   caregiverId: string;
 }
 
+/** Payload pour ChildRegistered */
+export interface ChildRegisteredPayload {
+  childId: string;
+  firstName: string;
+  /** Année de naissance (pas la date exacte pour minimiser les données personnelles) */
+  birthYear: number;
+}
+
 /** Union discriminée des payloads */
 export type DomainEventPayload =
   | { type: 'DoseAdministered'; payload: DoseAdministeredPayload }
   | { type: 'PumpReplaced'; payload: PumpReplacedPayload }
   | { type: 'PlanUpdated'; payload: PlanUpdatedPayload }
   | { type: 'CaregiverInvited'; payload: CaregiverInvitedPayload }
-  | { type: 'CaregiverRevoked'; payload: CaregiverRevokedPayload };
+  | { type: 'CaregiverRevoked'; payload: CaregiverRevokedPayload }
+  | { type: 'ChildRegistered'; payload: ChildRegisteredPayload };
 
 /**
  * Événement non signé : données à signer avant insertion dans le document.

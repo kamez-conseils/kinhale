@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { YStack, H1, Button, Text, XStack, Input } from 'tamagui';
 import { useAuthStore } from '../../../stores/auth-store';
 import { useDocStore } from '../../../stores/doc-store';
+import { projectChild, projectPumps } from '@kinhale/sync';
 import { getOrCreateDevice, getGroupKey } from '../../../lib/device';
 import { useRelay } from '../../../hooks/use-relay';
 
@@ -26,6 +27,7 @@ export default function AddDosePage(): React.JSX.Element {
   const deviceId = useAuthStore((s) => s.deviceId) ?? '';
   const householdId = useAuthStore((s) => s.householdId) ?? '';
   const appendDose = useDocStore((s) => s.appendDose);
+  const doc = useDocStore((s) => s.doc);
 
   const [doseType, setDoseType] = useState<'maintenance' | 'rescue'>('maintenance');
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
@@ -64,11 +66,16 @@ export default function AddDosePage(): React.JSX.Element {
     setLoading(true);
     try {
       const kp = await getOrCreateDevice();
+      const child = doc !== null ? projectChild(doc) : null;
+      const pumps = doc !== null ? projectPumps(doc) : [];
+      const activePump =
+        pumps.find((p) => p.pumpType === doseType && !p.isExpired) ?? pumps[0] ?? null;
+
       const payload = {
         doseId: crypto.randomUUID(),
-        pumpId: 'default-pump', // TODO(KIN-035): remplacer par pumpId sélectionné depuis le doc
-        childId: 'default-child', // TODO(KIN-035): remplacer par childId depuis le doc (RM13 un enfant/foyer)
-        caregiverId: deviceId, // TODO(KIN-035): caregiverId = userId, pas deviceId
+        pumpId: activePump?.pumpId ?? 'default-pump',
+        childId: child?.childId ?? 'default-child',
+        caregiverId: deviceId,
         administeredAtMs: Date.now(),
         doseType,
         dosesAdministered: 1,
