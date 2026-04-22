@@ -10,10 +10,4 @@ export const cancelScheduledNotificationAsync = jest.fn().mockResolvedValue(unde
 export const setNotificationHandler = jest.fn();
 
 export const AndroidImportance = { MAX: 5 };
-
-export function __resetMocks(): void {
-  jest.clearAllMocks();
-  getPermissionsAsync.mockResolvedValue({ status: 'granted' });
-  requestPermissionsAsync.mockResolvedValue({ status: 'granted' });
-  getExpoPushTokenAsync.mockResolvedValue({ data: 'ExponentPushToken[test-token-mock]' });
-}
+export const SchedulableTriggerInputTypes = { TIME_INTERVAL: 'timeInterval' };
