@@ -122,7 +122,10 @@ export default function AddDosePage(): React.JSX.Element {
           <Button
             key={s}
             size="$3"
-            onPress={() => { setSymptoms((prev) => toggle(prev, s)); setError(null); }}
+            onPress={() => {
+              setSymptoms((prev) => toggle(prev, s));
+              setError(null);
+            }}
             theme={symptoms.includes(s) ? 'active' : null}
           >
             {t(`journal.symptom.${s}`)}
@@ -136,7 +139,10 @@ export default function AddDosePage(): React.JSX.Element {
           <Button
             key={c}
             size="$3"
-            onPress={() => { setCircumstances((prev) => toggle(prev, c)); setError(null); }}
+            onPress={() => {
+              setCircumstances((prev) => toggle(prev, c));
+              setError(null);
+            }}
             theme={circumstances.includes(c) ? 'active' : null}
           >
             {t(`journal.circumstance.${c}`)}
@@ -147,7 +153,10 @@ export default function AddDosePage(): React.JSX.Element {
       <Text fontWeight="600">{t('journal.freeFormTag')}</Text>
       <Input
         value={freeFormTag}
-        onChangeText={(text) => { setFreeFormTag(text); setError(null); }}
+        onChangeText={(text) => {
+          setFreeFormTag(text);
+          setError(null);
+        }}
         placeholder={t('journal.freeFormTagPlaceholder')}
       />
 

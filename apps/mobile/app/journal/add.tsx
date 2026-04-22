@@ -124,7 +124,10 @@ export default function AddDoseScreen(): JSX.Element {
           <Button
             key={s}
             size="$3"
-            onPress={() => { setSymptoms((prev) => toggle(prev, s)); setError(null); }}
+            onPress={() => {
+              setSymptoms((prev) => toggle(prev, s));
+              setError(null);
+            }}
             theme={symptoms.includes(s) ? 'active' : null}
             accessible
             accessibilityRole="button"
@@ -140,7 +143,10 @@ export default function AddDoseScreen(): JSX.Element {
           <Button
             key={c}
             size="$3"
-            onPress={() => { setCircumstances((prev) => toggle(prev, c)); setError(null); }}
+            onPress={() => {
+              setCircumstances((prev) => toggle(prev, c));
+              setError(null);
+            }}
             theme={circumstances.includes(c) ? 'active' : null}
             accessible
             accessibilityRole="button"
@@ -153,7 +159,10 @@ export default function AddDoseScreen(): JSX.Element {
       <Text fontWeight="600">{t('journal.freeFormTag')}</Text>
       <Input
         value={freeFormTag}
-        onChangeText={(text) => { setFreeFormTag(text); setError(null); }}
+        onChangeText={(text) => {
+          setFreeFormTag(text);
+          setError(null);
+        }}
         placeholder={t('journal.freeFormTagPlaceholder')}
         accessible
         accessibilityLabel={t('journal.freeFormTag')}
