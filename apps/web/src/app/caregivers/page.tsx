@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { YStack, XStack, Text, Button, Card } from 'tamagui';
 import { projectCaregivers } from '@kinhale/sync';
 import { useDocStore } from '../../stores/doc-store';
+import { useAuthStore } from '../../stores/auth-store';
 import {
   listInvitations,
   revokeInvitation,
@@ -15,18 +16,27 @@ import {
 export default function CaregiversPage(): React.JSX.Element {
   const { t } = useTranslation('common');
   const router = useRouter();
+  const accessToken = useAuthStore((s) => s.accessToken);
   const doc = useDocStore((s) => s.doc);
   const caregivers = doc !== null ? projectCaregivers(doc) : [];
   const [invitations, setInvitations] = React.useState<InvitationSummary[]>([]);
   const [error, setError] = React.useState<string | null>(null);
 
+  React.useEffect(() => {
+    if (accessToken === null || accessToken === undefined || accessToken === '') {
+      router.replace('/auth');
+    }
+  }, [accessToken, router]);
+
   const refresh = React.useCallback(async () => {
+    if (!accessToken) return;
     try {
       setInvitations(await listInvitations());
-    } catch (e) {
-      setError((e as Error).message);
+      setError(null);
+    } catch {
+      setError(t('invitation.errorLoadList'));
     }
-  }, []);
+  }, [accessToken, t]);
 
   React.useEffect(() => {
     void refresh();
@@ -36,8 +46,8 @@ export default function CaregiversPage(): React.JSX.Element {
     try {
       await revokeInvitation(token);
       await refresh();
-    } catch (e) {
-      setError((e as Error).message);
+    } catch {
+      setError(t('invitation.errorLoadList'));
     }
   };
 

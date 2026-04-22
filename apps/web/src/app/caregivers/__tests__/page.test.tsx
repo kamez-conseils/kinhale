@@ -4,8 +4,9 @@ import CaregiversPage from '../page';
 import { renderWithProviders } from '../../../test-utils/render';
 
 const mockPush = jest.fn();
+const mockReplace = jest.fn();
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mockPush }),
+  useRouter: () => ({ push: mockPush, replace: mockReplace }),
 }));
 
 jest.mock('@kinhale/sync', () => ({
@@ -16,9 +17,10 @@ jest.mock('../../../stores/doc-store', () => ({
   useDocStore: jest.fn((selector: (s: { doc: null }) => unknown) => selector({ doc: null })),
 }));
 
+let mockAccessToken: string | null = 'tok-valid';
 jest.mock('../../../stores/auth-store', () => ({
   useAuthStore: jest.fn((selector: (s: { accessToken: string | null }) => unknown) =>
-    selector({ accessToken: null }),
+    selector({ accessToken: mockAccessToken }),
   ),
 }));
 
@@ -34,6 +36,7 @@ describe('CaregiversPage', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAccessToken = 'tok-valid';
     mockListInvitations.mockResolvedValue([]);
     mockRevokeInvitation.mockResolvedValue(undefined);
   });
@@ -104,6 +107,43 @@ describe('CaregiversPage', () => {
 
       fireEvent.click(screen.getByText(/inviter un aidant|invite a caregiver/i));
       expect(mockPush).toHaveBeenCalledWith('/caregivers/invite');
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
+  });
+
+  it('redirige vers /auth quand accessToken est absent', async () => {
+    mockAccessToken = null;
+    jest.useFakeTimers();
+    try {
+      renderWithProviders(<CaregiversPage />);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(mockReplace).toHaveBeenCalledWith('/auth');
+      expect(mockListInvitations).not.toHaveBeenCalled();
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
+  });
+
+  it("affiche le message d'erreur localisé quand listInvitations échoue", async () => {
+    mockListInvitations.mockRejectedValue(new Error('Network error'));
+    jest.useFakeTimers();
+    try {
+      renderWithProviders(<CaregiversPage />);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(screen.getByText(/impossible de charger|could not load/i)).toBeTruthy();
     } finally {
       jest.clearAllTimers();
       jest.useRealTimers();
