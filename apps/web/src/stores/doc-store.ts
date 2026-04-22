@@ -16,14 +16,25 @@ import type {
   PlanUpdatedPayload,
   UnsignedEvent,
 } from '@kinhale/sync';
+import { encryptDocBlob, decryptDocBlob } from '@kinhale/crypto';
+import type { EncryptedBlob } from '@kinhale/crypto';
+import { getOrCreateStorageKey, readEncryptedDoc, writeEncryptedDoc } from './storage-key';
 
 type KinhaleDocument = ReturnType<typeof createDoc>;
 
-const DOC_STORAGE_KEY = 'kinhale-doc';
+/** Clé de chiffrement du stockage — chargée une seule fois dans initDoc. */
+let sek: Uint8Array | null = null;
+
+async function persistDoc(doc: KinhaleDocument): Promise<void> {
+  if (sek === null) return;
+  const binary = saveDoc(doc);
+  const blob = await encryptDocBlob(binary, sek);
+  await writeEncryptedDoc(blob);
+}
 
 interface DocState {
   doc: KinhaleDocument | null;
-  initDoc: (householdId: string) => void;
+  initDoc: (householdId: string) => Promise<void>;
   appendDose: (
     payload: DoseAdministeredPayload,
     deviceId: string,
@@ -47,26 +58,51 @@ interface DocState {
   receiveChanges: (changes: Uint8Array[]) => void;
 }
 
-function persistDoc(doc: KinhaleDocument): void {
-  const binary = saveDoc(doc);
-  localStorage.setItem(DOC_STORAGE_KEY, Buffer.from(binary).toString('base64'));
-}
-
 export const useDocStore = create<DocState>()((set, get) => ({
   doc: null,
 
-  initDoc(householdId) {
-    const stored = localStorage.getItem(DOC_STORAGE_KEY);
+  async initDoc(householdId) {
+    // Charge (ou crée) la Storage Encryption Key une seule fois par session.
+    sek = await getOrCreateStorageKey();
+
+    const stored = await readEncryptedDoc();
     let doc: KinhaleDocument;
+
     if (stored !== null) {
-      try {
-        doc = loadDoc(Buffer.from(stored, 'base64'));
-      } catch {
+      // Entrée IndexedDB présente — doit être un EncryptedBlob v1.
+      if (
+        typeof stored === 'object' &&
+        'version' in (stored as object) &&
+        (stored as EncryptedBlob).version === 1
+      ) {
+        try {
+          const plaintext = await decryptDocBlob(stored as EncryptedBlob, sek);
+          doc = loadDoc(plaintext);
+        } catch {
+          doc = createDoc(householdId);
+        }
+      } else {
+        // Format inattendu — on repart de zéro.
         doc = createDoc(householdId);
       }
     } else {
-      doc = createDoc(householdId);
+      // Aucune entrée IDB. Vérifie si une migration depuis localStorage est nécessaire.
+      const legacy = localStorage.getItem('kinhale-doc');
+      if (legacy !== null) {
+        // Migration : doc base64 non chiffré → IDB chiffré.
+        try {
+          doc = loadDoc(Buffer.from(legacy, 'base64'));
+          await persistDoc(doc);
+          localStorage.removeItem('kinhale-doc');
+        } catch {
+          doc = createDoc(householdId);
+        }
+      } else {
+        doc = createDoc(householdId);
+        await persistDoc(doc);
+      }
     }
+
     set({ doc });
   },
 
@@ -85,7 +121,7 @@ export const useDocStore = create<DocState>()((set, get) => ({
     const newDoc = appendEvent(doc, record);
     const changes = getDocChanges(doc, newDoc);
 
-    persistDoc(newDoc);
+    void persistDoc(newDoc);
     set({ doc: newDoc });
     return changes;
   },
@@ -105,7 +141,7 @@ export const useDocStore = create<DocState>()((set, get) => ({
     const newDoc = appendEvent(doc, record);
     const changes = getDocChanges(doc, newDoc);
 
-    persistDoc(newDoc);
+    void persistDoc(newDoc);
     set({ doc: newDoc });
     return changes;
   },
@@ -125,7 +161,7 @@ export const useDocStore = create<DocState>()((set, get) => ({
     const newDoc = appendEvent(doc, record);
     const changes = getDocChanges(doc, newDoc);
 
-    persistDoc(newDoc);
+    void persistDoc(newDoc);
     set({ doc: newDoc });
     return changes;
   },
@@ -145,7 +181,7 @@ export const useDocStore = create<DocState>()((set, get) => ({
     const newDoc = appendEvent(doc, record);
     const changes = getDocChanges(doc, newDoc);
 
-    persistDoc(newDoc);
+    void persistDoc(newDoc);
     set({ doc: newDoc });
     return changes;
   },
@@ -154,7 +190,7 @@ export const useDocStore = create<DocState>()((set, get) => ({
     const doc = get().doc;
     if (doc === null) return;
     const newDoc = mergeChanges(doc, changes);
-    persistDoc(newDoc);
+    void persistDoc(newDoc);
     set({ doc: newDoc });
   },
 }));

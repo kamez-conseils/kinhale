@@ -13,7 +13,9 @@ const customConfig: Config = {
     '^@kinhale/crypto$': '<rootDir>/../../packages/crypto/src/index.ts',
     '^@kinhale/sync$': '<rootDir>/../../packages/sync/src/index.ts',
   },
-  transformIgnorePatterns: ['/node_modules/(?!(react-native-web|@tamagui|tamagui|@react-native)/)'],
+  transformIgnorePatterns: [
+    '/node_modules/(?!(react-native-web|@tamagui|tamagui|@react-native|idb|fake-indexeddb)/)/',
+  ],
 };
 
 const jestConfig: () => Promise<Config> = createJestConfig(customConfig);
