@@ -36,3 +36,7 @@ export { buildSyncMessage, consumeSyncMessage } from './mailbox/pipeline.js';
 // Cursor de synchronisation
 export type { SyncCursor } from './sync/cursor.js';
 export { createCursor, recordSent, recordReceived, pendingChanges } from './sync/cursor.js';
+
+// Projections
+export type { ProjectedDose } from './projections/doses.js';
+export { projectDoses } from './projections/doses.js';
