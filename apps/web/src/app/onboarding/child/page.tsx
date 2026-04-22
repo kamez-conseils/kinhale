@@ -7,10 +7,12 @@ import { YStack, H1, Button, Text, Input } from 'tamagui';
 import { useAuthStore } from '../../../stores/auth-store';
 import { useDocStore } from '../../../stores/doc-store';
 import { getOrCreateDevice } from '../../../lib/device';
+import { useRequireAuth } from '../../../lib/useRequireAuth';
 
-export default function OnboardingChildPage(): React.JSX.Element {
+export default function OnboardingChildPage(): React.JSX.Element | null {
   const { t } = useTranslation('common');
   const router = useRouter();
+  const authenticated = useRequireAuth();
   const deviceId = useAuthStore((s) => s.deviceId) ?? '';
   const appendChild = useDocStore((s) => s.appendChild);
 
@@ -41,6 +43,8 @@ export default function OnboardingChildPage(): React.JSX.Element {
       setLoading(false);
     }
   };
+
+  if (!authenticated) return null;
 
   return (
     <YStack padding="$4" gap="$4">

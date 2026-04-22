@@ -1,3 +1,12 @@
+/**
+ * COMPROMIS PHASE KIN-036 — Tests 04, 05, 06, 07, 09 :
+ * Depuis fix #181 (useRequireAuth), les pages protégées redirigent vers /auth
+ * quand aucun token n'est présent en localStorage. Les assertions sur le rendu
+ * authentifié ont été remplacées par des assertions de redirection (miroir des
+ * tests 03 et 08). La couverture du rendu réel de ces pages en CI sera rétablie
+ * dans une PR suivante via page.addInitScript (injection d'un token factice).
+ * Refs: KIN-036, #181
+ */
 import { test, expect, type Page } from '@playwright/test';
 
 const SCREENSHOT_DIR = 'test-results/critical-paths';
@@ -51,71 +60,40 @@ test.describe('Parcours critiques — rendu réel des pages', () => {
     await expect(page).toHaveURL(/\/auth$/);
   });
 
-  test('04 Journal/add affiche les CTAs de saisie de dose', async ({ page }) => {
+  test('04 Journal/add redirige vers /auth si non authentifié', async ({ page }) => {
     await page.goto('/journal/add');
     await page.waitForLoadState('networkidle');
     await page.screenshot({ path: `${SCREENSHOT_DIR}/04-journal-add.png`, fullPage: true });
     await expectNoNextError(page);
-    // H1 via t('journal.addTitle') = "Nouvelle prise"
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Nouvelle prise');
-    // Bouton type dose "Fond" via t('journal.maintenance') = "Fond"
-    await expect(page.getByRole('button', { name: /^fond$/i })).toBeVisible();
-    // Bouton type dose "Secours" via t('journal.rescue') = "Secours"
-    await expect(page.getByRole('button', { name: /^secours$/i })).toBeVisible();
-    // Bouton save via t('journal.save') = "Enregistrer"
-    await expect(page.getByRole('button', { name: /^enregistrer$/i })).toBeVisible();
+    // Fix #181 : useRequireAuth redirige vers /auth si accessToken absent
+    await expect(page).toHaveURL(/\/auth$/);
   });
 
-  test('05 Onboarding/child affiche le formulaire enfant', async ({ page }) => {
+  test('05 Onboarding/child redirige vers /auth si non authentifié', async ({ page }) => {
     await page.goto('/onboarding/child');
     await page.waitForLoadState('networkidle');
     await page.screenshot({ path: `${SCREENSHOT_DIR}/05-onboarding-child.png`, fullPage: true });
     await expectNoNextError(page);
-    // H1 via t('onboarding.child.title') = "Votre enfant"
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Votre enfant');
-    // Label prénom via t('onboarding.child.firstNameLabel') = "Prénom"
-    await expect(page.getByText('Prénom')).toBeVisible();
-    // Label année via t('onboarding.child.birthYearLabel') = "Année de naissance"
-    await expect(page.getByText('Année de naissance')).toBeVisible();
+    // Fix #181 : useRequireAuth redirige vers /auth si accessToken absent
+    await expect(page).toHaveURL(/\/auth$/);
   });
 
-  test('06 Onboarding/pump affiche le formulaire pompe', async ({ page }) => {
+  test('06 Onboarding/pump redirige vers /auth si non authentifié', async ({ page }) => {
     await page.goto('/onboarding/pump');
     await page.waitForLoadState('networkidle');
     await page.screenshot({ path: `${SCREENSHOT_DIR}/06-onboarding-pump.png`, fullPage: true });
     await expectNoNextError(page);
-    // H1 via t('onboarding.pump.title') = "Ajouter une pompe"
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Ajouter une pompe');
-    // Label nom via t('onboarding.pump.nameLabel') = "Nom de la pompe"
-    await expect(page.getByText('Nom de la pompe')).toBeVisible();
-    // Label type via t('onboarding.pump.typeLabel') = "Type"
-    await expect(page.getByText('Type')).toBeVisible();
+    // Fix #181 : useRequireAuth redirige vers /auth si accessToken absent
+    await expect(page).toHaveURL(/\/auth$/);
   });
 
-  test('07 Onboarding/plan affiche le garde-fou sans pompe ou le formulaire sinon', async ({
-    page,
-  }) => {
+  test('07 Onboarding/plan redirige vers /auth si non authentifié', async ({ page }) => {
     await page.goto('/onboarding/plan');
     await page.waitForLoadState('networkidle');
     await page.screenshot({ path: `${SCREENSHOT_DIR}/07-onboarding-plan.png`, fullPage: true });
     await expectNoNextError(page);
-    // H1 via t('onboarding.plan.title') = "Plan de traitement"
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Plan de traitement');
-    // Deux états possibles selon le doc Automerge local :
-    //   • Sans pompe de fond : t('onboarding.plan.noMaintenancePumpTitle')
-    //     = "Ajoute d'abord une pompe de fond" + CTA t('onboarding.plan.goToPumpCta')
-    //     = "Ajouter une pompe"
-    //   • Avec pompe : label t('onboarding.plan.hoursLabel') = "Heures d'administration (UTC)"
-    // Les deux sont acceptables — on valide qu'au moins l'un est affiché.
-    const hasNoPumpGuardrail = await page
-      .getByText(/ajoute d'abord une pompe de fond/i)
-      .isVisible()
-      .catch(() => false);
-    const hasHoursField = await page
-      .getByText(/heures d'administration/i)
-      .isVisible()
-      .catch(() => false);
-    expect(hasNoPumpGuardrail || hasHoursField).toBe(true);
+    // Fix #181 : useRequireAuth redirige vers /auth si accessToken absent
+    await expect(page).toHaveURL(/\/auth$/);
   });
 
   test('08 Caregivers redirige vers /auth si non authentifié', async ({ page }) => {
@@ -128,20 +106,18 @@ test.describe('Parcours critiques — rendu réel des pages', () => {
     await expect(page).toHaveURL(/\/auth$/);
   });
 
-  test('09 Caregivers/invite affiche le formulaire invitation', async ({ page }) => {
+  test('09 Caregivers/invite redirige vers /auth si non authentifié', async ({ page }) => {
     await page.goto('/caregivers/invite');
     await page.waitForLoadState('networkidle');
     await page.screenshot({ path: `${SCREENSHOT_DIR}/09-caregivers-invite.png`, fullPage: true });
     await expectNoNextError(page);
-    // Titre via t('invitation.createTitle') = "Nouvelle invitation"
-    await expect(page.getByText('Nouvelle invitation')).toBeVisible();
-    // Bouton generate via t('invitation.generateCta') = "Générer l'invitation"
-    await expect(page.getByRole('button', { name: /générer l'invitation/i })).toBeVisible();
-    // Label nom affiché via t('invitation.displayNameLabel') = "Nom affiché"
-    await expect(page.getByText('Nom affiché')).toBeVisible();
+    // Fix #181 : useRequireAuth redirige vers /auth si accessToken absent
+    await expect(page).toHaveURL(/\/auth$/);
   });
 
-  test('10 Accept-invitation avec token factice affiche erreur expiration', async ({ page }) => {
+  test('10 Accept-invitation avec token factice affiche erreur et bouton retour', async ({
+    page,
+  }) => {
     await page.goto('/accept-invitation/fake-token-does-not-exist');
     await page.waitForLoadState('networkidle');
     await page.screenshot({
@@ -151,6 +127,8 @@ test.describe('Parcours critiques — rendu réel des pages', () => {
     await expectNoNextError(page);
     // L'appel API échoue → catch → t('invitation.errorExpired') = "Cette invitation a expiré."
     await expect(page.getByText(/cette invitation a expiré/i)).toBeVisible();
+    // Fix #179 : bouton backToAuth = "Retour à la connexion"
+    await expect(page.getByRole('button', { name: /retour à la connexion/i })).toBeVisible();
   });
 
   test('11 404 renvoie HTTP 404 et affiche le message Next.js', async ({ page }) => {

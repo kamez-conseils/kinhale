@@ -8,10 +8,12 @@ import { projectPumps } from '@kinhale/sync';
 import { useAuthStore } from '../../../stores/auth-store';
 import { useDocStore } from '../../../stores/doc-store';
 import { getOrCreateDevice } from '../../../lib/device';
+import { useRequireAuth } from '../../../lib/useRequireAuth';
 
-export default function OnboardingPlanPage(): React.JSX.Element {
+export default function OnboardingPlanPage(): React.JSX.Element | null {
   const { t } = useTranslation('common');
   const router = useRouter();
+  const authenticated = useRequireAuth();
   const deviceId = useAuthStore((s) => s.deviceId) ?? '';
   const appendPlan = useDocStore((s) => s.appendPlan);
   const doc = useDocStore((s) => s.doc);
@@ -64,6 +66,8 @@ export default function OnboardingPlanPage(): React.JSX.Element {
       setLoading(false);
     }
   };
+
+  if (!authenticated) return null;
 
   if (maintenancePumps.length === 0) {
     return (

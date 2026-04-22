@@ -9,6 +9,7 @@ import { useDocStore } from '../../../stores/doc-store';
 import { projectChild, projectPumps } from '@kinhale/sync';
 import { getOrCreateDevice, getGroupKey } from '../../../lib/device';
 import { useRelay } from '../../../hooks/use-relay';
+import { useRequireAuth } from '../../../lib/useRequireAuth';
 
 const SYMPTOMS = ['cough', 'wheezing', 'shortness_of_breath', 'chest_tightness'] as const;
 const CIRCUMSTANCES = ['exercise', 'allergen', 'cold_air', 'night', 'infection', 'stress'] as const;
@@ -20,9 +21,10 @@ function toggle<T>(arr: T[], item: T): T[] {
   return arr.includes(item) ? arr.filter((x) => x !== item) : [...arr, item];
 }
 
-export default function AddDosePage(): React.JSX.Element {
+export default function AddDosePage(): React.JSX.Element | null {
   const { t } = useTranslation('common');
   const router = useRouter();
+  const authenticated = useRequireAuth();
   const accessToken = useAuthStore((s) => s.accessToken);
   const deviceId = useAuthStore((s) => s.deviceId) ?? '';
   const householdId = useAuthStore((s) => s.householdId) ?? '';
@@ -94,6 +96,8 @@ export default function AddDosePage(): React.JSX.Element {
       setLoading(false);
     }
   };
+
+  if (!authenticated) return null;
 
   return (
     <YStack padding="$4" gap="$4">

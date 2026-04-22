@@ -56,7 +56,7 @@ describe('AcceptInvitationPage', () => {
     }
   });
 
-  it('affiche errorExpired si le lookup renvoie 404', async () => {
+  it('affiche errorExpired et le bouton backToAuth si le lookup renvoie 404', async () => {
     jest.useFakeTimers();
     try {
       mockGetInvitationPublic.mockRejectedValueOnce(new Error('not_found_or_expired'));
@@ -70,6 +70,27 @@ describe('AcceptInvitationPage', () => {
       expect(screen.getByText(/expir/i)).toBeTruthy();
       // Le formulaire ne doit pas être affiché
       expect(screen.queryByText(/Rejoindre|Join/i)).toBeNull();
+      // Bouton retour à la connexion doit être affiché (#179)
+      expect(screen.getByText(/retour à la connexion|back to login/i)).toBeTruthy();
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
+  });
+
+  it('navigue vers /auth au clic sur le bouton backToAuth (#179)', async () => {
+    jest.useFakeTimers();
+    try {
+      mockGetInvitationPublic.mockRejectedValueOnce(new Error('not_found_or_expired'));
+      renderWithProviders(<AcceptInvitationPage />);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      fireEvent.click(screen.getByText(/retour à la connexion|back to login/i));
+      expect(mockPush).toHaveBeenCalledWith('/auth');
     } finally {
       jest.clearAllTimers();
       jest.useRealTimers();

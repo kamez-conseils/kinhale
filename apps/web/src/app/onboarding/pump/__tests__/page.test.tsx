@@ -6,10 +6,12 @@ import { renderWithProviders } from '../../../../test-utils/render';
 jest.setTimeout(15000);
 
 const mockPush = jest.fn();
+const mockReplace = jest.fn();
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mockPush }),
+  useRouter: () => ({ push: mockPush, replace: mockReplace }),
 }));
 
+let mockAccessToken: string | null = 'tok-1';
 jest.mock('../../../../stores/auth-store', () => ({
   useAuthStore: jest.fn(
     (
@@ -18,7 +20,7 @@ jest.mock('../../../../stores/auth-store', () => ({
         deviceId: string | null;
         householdId: string | null;
       }) => unknown,
-    ) => selector({ accessToken: 'tok-1', deviceId: 'dev-1', householdId: 'hh-1' }),
+    ) => selector({ accessToken: mockAccessToken, deviceId: 'dev-1', householdId: 'hh-1' }),
   ),
 }));
 
@@ -41,12 +43,31 @@ jest.mock('../../../../lib/device', () => ({
 describe('OnboardingPumpPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAccessToken = 'tok-1';
     mockAppendPump.mockResolvedValue([new Uint8Array([1])]);
   });
 
   it('affiche le formulaire', () => {
     renderWithProviders(<OnboardingPumpPage />);
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+  });
+
+  it('redirige vers /auth si non authentifié (#181)', async () => {
+    mockAccessToken = null;
+    jest.useFakeTimers();
+    try {
+      renderWithProviders(<OnboardingPumpPage />);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(mockReplace).toHaveBeenCalledWith('/auth');
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
   });
 
   it('navigue vers /onboarding/plan après sauvegarde réussie', async () => {

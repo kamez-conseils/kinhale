@@ -12,21 +12,17 @@ import {
   revokeInvitation,
   type InvitationSummary,
 } from '../../lib/invitations/client';
+import { useRequireAuth } from '../../lib/useRequireAuth';
 
-export default function CaregiversPage(): React.JSX.Element {
+export default function CaregiversPage(): React.JSX.Element | null {
   const { t } = useTranslation('common');
   const router = useRouter();
+  const authenticated = useRequireAuth();
   const accessToken = useAuthStore((s) => s.accessToken);
   const doc = useDocStore((s) => s.doc);
   const caregivers = doc !== null ? projectCaregivers(doc) : [];
   const [invitations, setInvitations] = React.useState<InvitationSummary[]>([]);
   const [error, setError] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    if (accessToken === null || accessToken === undefined || accessToken === '') {
-      router.replace('/auth');
-    }
-  }, [accessToken, router]);
 
   const refresh = React.useCallback(async () => {
     if (!accessToken) return;
@@ -50,6 +46,8 @@ export default function CaregiversPage(): React.JSX.Element {
       setError(t('invitation.errorLoadList'));
     }
   };
+
+  if (!authenticated) return null;
 
   return (
     <YStack padding="$4" gap="$3">
