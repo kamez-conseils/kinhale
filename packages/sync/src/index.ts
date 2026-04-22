@@ -43,3 +43,5 @@ export type { ProjectedDose } from './projections/doses.js';
 export { projectDoses } from './projections/doses.js';
 export type { ProjectedChild } from './projections/child.js';
 export { projectChild } from './projections/child.js';
+export type { ProjectedPump } from './projections/pumps.js';
+export { projectPumps } from './projections/pumps.js';
