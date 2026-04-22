@@ -21,19 +21,39 @@ describe('projectCaregivers', () => {
   it('liste les aidants invités en statut "invited"', () => {
     const doc: KinhaleDoc = {
       householdId: 'h1',
-      events: [record('CaregiverInvited', { caregiverId: 'c1', role: 'contributor', displayName: 'Maman' }, 1)],
+      events: [
+        record(
+          'CaregiverInvited',
+          { caregiverId: 'c1', role: 'contributor', displayName: 'Maman' },
+          1,
+        ),
+      ],
     };
     const caregivers = projectCaregivers(doc);
     expect(caregivers).toHaveLength(1);
-    expect(caregivers[0]).toMatchObject({ caregiverId: 'c1', role: 'contributor', displayName: 'Maman', status: 'invited', acceptedAtMs: null });
+    expect(caregivers[0]).toMatchObject({
+      caregiverId: 'c1',
+      role: 'contributor',
+      displayName: 'Maman',
+      status: 'invited',
+      acceptedAtMs: null,
+    });
   });
 
   it('passe au statut "active" après CaregiverAccepted', () => {
     const doc: KinhaleDoc = {
       householdId: 'h1',
       events: [
-        record('CaregiverInvited', { caregiverId: 'c1', role: 'contributor', displayName: 'Maman' }, 1),
-        record('CaregiverAccepted', { caregiverId: 'c1', invitationId: 'inv1', acceptedAtMs: 2, deviceId: 'dev-1' }, 2),
+        record(
+          'CaregiverInvited',
+          { caregiverId: 'c1', role: 'contributor', displayName: 'Maman' },
+          1,
+        ),
+        record(
+          'CaregiverAccepted',
+          { caregiverId: 'c1', invitationId: 'inv1', acceptedAtMs: 2, deviceId: 'dev-1' },
+          2,
+        ),
       ],
     };
     const caregivers = projectCaregivers(doc);
@@ -44,7 +64,11 @@ describe('projectCaregivers', () => {
     const doc: KinhaleDoc = {
       householdId: 'h1',
       events: [
-        record('CaregiverInvited', { caregiverId: 'c1', role: 'contributor', displayName: 'Maman' }, 1),
+        record(
+          'CaregiverInvited',
+          { caregiverId: 'c1', role: 'contributor', displayName: 'Maman' },
+          1,
+        ),
         record('CaregiverRevoked', { caregiverId: 'c1' }, 5),
       ],
     };
@@ -55,7 +79,15 @@ describe('projectCaregivers', () => {
     const doc: KinhaleDoc = {
       householdId: 'h1',
       events: [
-        { id: 'x', type: 'CaregiverInvited', payloadJson: '{invalid json', signerPublicKeyHex: 'aa', signatureHex: 'bb', deviceId: 'd', occurredAtMs: 1 },
+        {
+          id: 'x',
+          type: 'CaregiverInvited',
+          payloadJson: '{invalid json',
+          signerPublicKeyHex: 'aa',
+          signatureHex: 'bb',
+          deviceId: 'd',
+          occurredAtMs: 1,
+        },
       ],
     };
     expect(projectCaregivers(doc)).toEqual([]);

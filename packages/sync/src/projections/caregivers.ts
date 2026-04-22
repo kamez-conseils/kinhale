@@ -21,8 +21,17 @@ export function projectCaregivers(doc: KinhaleDoc): ProjectedCaregiver[] {
   for (const ev of doc.events) {
     try {
       if (ev.type === 'CaregiverInvited') {
-        const p = JSON.parse(ev.payloadJson) as { caregiverId: string; role: string; displayName: string };
-        if (typeof p.caregiverId !== 'string' || typeof p.role !== 'string' || typeof p.displayName !== 'string') continue;
+        const p = JSON.parse(ev.payloadJson) as {
+          caregiverId: string;
+          role: string;
+          displayName: string;
+        };
+        if (
+          typeof p.caregiverId !== 'string' ||
+          typeof p.role !== 'string' ||
+          typeof p.displayName !== 'string'
+        )
+          continue;
         byId.set(p.caregiverId, {
           caregiverId: p.caregiverId,
           role: p.role,
