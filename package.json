@@ -1,6 +1,6 @@
 {
   "name": "kinhale",
-  "version": "0.1.0",
+  "version": "0.1.0-preview.1",
   "private": true,
   "type": "module",
   "description": "Kinhale — journal, rappels et partage E2EE pour aidants d'enfant asthmatique. AGPL v3.",
