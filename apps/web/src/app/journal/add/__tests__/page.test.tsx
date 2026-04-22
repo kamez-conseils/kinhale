@@ -77,6 +77,8 @@ describe('AddDosePage', () => {
   it('affiche une erreur si appendDose échoue', async () => {
     mockAppendDose.mockRejectedValueOnce(new Error('réseau indisponible'));
     renderWithProviders(<AddDosePage />);
+    // Stabilise le composant (useEffect groupKey) avant l'interaction
+    await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalledWith('hh-1'));
     fireEvent.click(screen.getByRole('button', { name: /enregistrer|save/i }));
     await waitFor(() => {
       expect(mockAppendDose).toHaveBeenCalled();
