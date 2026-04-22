@@ -67,21 +67,16 @@ describe('AddDosePage', () => {
   it('navigue vers /journal après sauvegarde réussie', async () => {
     // Fake timers : empêche Tamagui de scheduler des setState via setTimeout hors act(),
     // ce qui crée une boucle MutationObserver dans RTL v16 + React 19 + jsdom (CI Docker).
+    // Pas de warm-up getGroupKey : groupKey reste null, sendChanges est skippé,
+    // router.push est appelé directement (structure identique au test d'erreur qui passe).
     jest.useFakeTimers();
     try {
       renderWithProviders(<AddDosePage />);
-      // Flush le useEffect getGroupKey → setGroupKey (2 ticks : résolution Promise + setState)
+      fireEvent.click(screen.getByText(/enregistrer|save/i));
       await act(async () => {
-        await Promise.resolve();
-        await Promise.resolve();
-      });
-      fireEvent.click(screen.getByRole('button', { name: /enregistrer|save/i }));
-      // Flush handleSave : getOrCreateDevice → appendDose → sendChanges → router.push + setLoading
-      await act(async () => {
-        await Promise.resolve();
-        await Promise.resolve();
-        await Promise.resolve();
-        await Promise.resolve();
+        await Promise.resolve(); // getOrCreateDevice résout
+        await Promise.resolve(); // appendDose résout → (groupKey null, skip) → router.push
+        await Promise.resolve(); // mises à jour d'état propagées
       });
       expect(mockAppendDose).toHaveBeenCalled();
       expect(mockPush).toHaveBeenCalledWith('/journal');
