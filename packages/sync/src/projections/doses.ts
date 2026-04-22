@@ -18,7 +18,13 @@ export function projectDoses(doc: KinhaleDoc): ProjectedDose[] {
   const result: ProjectedDose[] = [];
   for (const event of doc.events) {
     if (event.type !== 'DoseAdministered') continue;
-    const payload = JSON.parse(event.payloadJson) as DoseAdministeredPayload;
+    let payload: DoseAdministeredPayload;
+    try {
+      payload = JSON.parse(event.payloadJson) as DoseAdministeredPayload;
+    } catch {
+      // payload malformé — ignoré silencieusement (log sans donnée santé)
+      continue;
+    }
     result.push({
       ...payload,
       eventId: event.id,

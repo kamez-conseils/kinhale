@@ -14,8 +14,7 @@ export interface DoseAdministeredPayload {
   caregiverId: string;
   /** UTC ms */
   administeredAtMs: number;
-  /** 'maintenance' | 'rescue' */
-  doseType: string;
+  doseType: 'maintenance' | 'rescue';
   dosesAdministered: number;
   symptoms: string[];
   circumstances: string[];
