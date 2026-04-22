@@ -75,15 +75,22 @@ describe('AddDosePage', () => {
   });
 
   it('affiche une erreur si appendDose échoue', async () => {
-    mockAppendDose.mockRejectedValueOnce(new Error('réseau indisponible'));
-    renderWithProviders(<AddDosePage />);
-    // Stabilise le composant (useEffect groupKey) avant l'interaction
-    await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalledWith('hh-1'));
-    fireEvent.click(screen.getByRole('button', { name: /enregistrer|save/i }));
-    await waitFor(() => {
-      expect(mockAppendDose).toHaveBeenCalled();
-      expect(mockPush).not.toHaveBeenCalledWith('/journal');
-    });
+    // Fake timers : RTL v16 désactive son MutationObserver, évitant le deadlock
+    // causé par les setTimeout Tamagui qui recheck waitFor en boucle (CI React 19).
+    jest.useFakeTimers();
+    try {
+      mockAppendDose.mockRejectedValueOnce(new Error('réseau indisponible'));
+      renderWithProviders(<AddDosePage />);
+      await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalledWith('hh-1'));
+      fireEvent.click(screen.getByRole('button', { name: /enregistrer|save/i }));
+      await waitFor(() => {
+        expect(mockAppendDose).toHaveBeenCalled();
+        expect(mockPush).not.toHaveBeenCalledWith('/journal');
+      });
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
   });
 
   it('appelle sendChanges quand groupKey est disponible', async () => {
