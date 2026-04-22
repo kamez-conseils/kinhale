@@ -6,6 +6,7 @@ import { useAuthStore } from '../../src/stores/auth-store';
 import { useDocStore } from '../../src/stores/doc-store';
 import { getOrCreateDevice, getGroupKey } from '../../src/lib/device';
 import { useRelay } from '../../src/hooks/use-relay';
+import { projectChild, projectPumps } from '@kinhale/sync';
 
 const SYMPTOMS = ['cough', 'wheezing', 'shortness_of_breath', 'chest_tightness'] as const;
 const CIRCUMSTANCES = ['exercise', 'allergen', 'cold_air', 'night', 'infection', 'stress'] as const;
@@ -24,6 +25,7 @@ export default function AddDoseScreen(): JSX.Element {
   const deviceId = useAuthStore((s) => s.deviceId) ?? '';
   const householdId = useAuthStore((s) => s.householdId) ?? '';
   const appendDose = useDocStore((s) => s.appendDose);
+  const doc = useDocStore((s) => s.doc);
 
   const [doseType, setDoseType] = useState<'maintenance' | 'rescue'>('maintenance');
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
@@ -62,11 +64,14 @@ export default function AddDoseScreen(): JSX.Element {
     setLoading(true);
     try {
       const kp = await getOrCreateDevice();
+      const pumps = doc !== null ? projectPumps(doc) : [];
+      const activePump = pumps.find((p) => p.pumpType === doseType && !p.isExpired) ?? pumps[0] ?? null;
+      const child = doc !== null ? projectChild(doc) : null;
       const payload = {
         doseId: crypto.randomUUID(),
-        pumpId: 'default-pump', // TODO(KIN-035): remplacer par pumpId sélectionné depuis le doc
-        childId: 'default-child', // TODO(KIN-035): remplacer par childId depuis le doc (RM13 un enfant/foyer)
-        caregiverId: deviceId, // TODO(KIN-035): caregiverId = userId, pas deviceId
+        pumpId: activePump?.pumpId ?? 'default-pump',
+        childId: child?.childId ?? 'default-child',
+        caregiverId: deviceId,
         administeredAtMs: Date.now(),
         doseType,
         dosesAdministered: 1,
