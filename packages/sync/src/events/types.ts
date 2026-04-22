@@ -4,6 +4,7 @@ export type DomainEventType =
   | 'PumpReplaced'
   | 'PlanUpdated'
   | 'CaregiverInvited'
+  | 'CaregiverAccepted'
   | 'CaregiverRevoked'
   | 'ChildRegistered';
 
@@ -53,6 +54,16 @@ export interface CaregiverInvitedPayload {
   displayName: string;
 }
 
+/** Payload pour CaregiverAccepted */
+export interface CaregiverAcceptedPayload {
+  caregiverId: string;
+  invitationId: string;
+  /** UTC ms — moment d'acceptation confirmé côté API */
+  acceptedAtMs: number;
+  /** Device de l'aidant qui accepte */
+  deviceId: string;
+}
+
 /** Payload pour CaregiverRevoked */
 export interface CaregiverRevokedPayload {
   caregiverId: string;
@@ -72,6 +83,7 @@ export type DomainEventPayload =
   | { type: 'PumpReplaced'; payload: PumpReplacedPayload }
   | { type: 'PlanUpdated'; payload: PlanUpdatedPayload }
   | { type: 'CaregiverInvited'; payload: CaregiverInvitedPayload }
+  | { type: 'CaregiverAccepted'; payload: CaregiverAcceptedPayload }
   | { type: 'CaregiverRevoked'; payload: CaregiverRevokedPayload }
   | { type: 'ChildRegistered'; payload: ChildRegisteredPayload };
 
