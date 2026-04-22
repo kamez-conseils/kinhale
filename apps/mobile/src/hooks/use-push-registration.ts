@@ -7,16 +7,27 @@ export function usePushRegistration(): void {
   const accessToken = useAuthStore((s) => s.accessToken);
 
   useEffect(() => {
-    if (!accessToken) return; // ne s'exécute pas tant que l'utilisateur n'est pas authentifié
+    if (!accessToken) return;
+
+    let currentToken: string | null = null;
 
     void (async () => {
       const pushToken = await requestPushPermission();
       if (!pushToken) return;
+      currentToken = pushToken;
       try {
         await apiClient.post('/push/register-token', { pushToken }, { token: accessToken });
       } catch {
         // silencieux — réessai au prochain mount
       }
     })();
-  }, [accessToken]); // se re-déclenche à chaque changement d'état d'auth
+
+    return () => {
+      if (currentToken) {
+        void apiClient
+          .delete('/push/register-token', { pushToken: currentToken }, { token: accessToken })
+          .catch(() => undefined);
+      }
+    };
+  }, [accessToken]);
 }

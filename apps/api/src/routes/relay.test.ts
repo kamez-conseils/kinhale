@@ -144,6 +144,7 @@ describe('relay WS → dispatchPush fire-and-forget', () => {
     expect(dispatchPushSpy).toHaveBeenCalledWith(
       expect.anything(), // instance Expo
       expect.arrayContaining([PUSH_TOKEN]),
+      expect.anything(), // logger Fastify
     );
 
     await app.close();

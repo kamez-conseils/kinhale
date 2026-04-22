@@ -4,8 +4,10 @@ import { pushTokens } from '../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import type { JwtPayload } from '../plugins/jwt.js';
 
+const EXPO_TOKEN_RE = /^ExponentPushToken\[.{1,200}\]$/;
+
 const RegisterBody = z.object({
-  pushToken: z.string().min(1),
+  pushToken: z.string().min(1).max(512).regex(EXPO_TOKEN_RE, 'Format token Expo invalide'),
 });
 
 const pushRoute: FastifyPluginAsync = async (app) => {
@@ -19,7 +21,10 @@ const pushRoute: FastifyPluginAsync = async (app) => {
     await app.db
       .insert(pushTokens)
       .values({ deviceId, householdId, token: pushToken })
-      .onConflictDoNothing();
+      .onConflictDoUpdate({
+        target: [pushTokens.deviceId, pushTokens.token],
+        set: { updatedAt: new Date() },
+      });
     return reply.status(201).send();
   });
 

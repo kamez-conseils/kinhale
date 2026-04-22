@@ -22,7 +22,7 @@ describe('dispatchPush', () => {
   it('envoie une notification opaque à chaque token valide', async () => {
     const mockExpo = new Expo();
     const tokens = ['ExponentPushToken[aaa]', 'ExponentPushToken[bbb]'];
-    await dispatchPush(mockExpo, tokens);
+    await dispatchPush(mockExpo, tokens, undefined);
     expect(mockExpo.sendPushNotificationsAsync).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({
@@ -62,5 +62,22 @@ describe('dispatchPush', () => {
     expect(msg.title).toBe('Kinhale');
     expect(msg.body).toBe('Nouvelle activité');
     expect(msg.data).toBeUndefined();
+  });
+
+  it('appelle logger.warn quand le SDK lance une erreur', async () => {
+    const mockExpo = new Expo();
+    const sendError = new Error('SDK error');
+    (mockExpo.sendPushNotificationsAsync as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      sendError,
+    );
+
+    const logger = { warn: vi.fn() };
+    await dispatchPush(mockExpo, ['ExponentPushToken[aaa]'], logger);
+
+    expect(logger.warn).toHaveBeenCalledOnce();
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ err: sendError }),
+      'Échec envoi push chunk (ignoré)',
+    );
   });
 });

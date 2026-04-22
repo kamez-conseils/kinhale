@@ -39,7 +39,11 @@ export const apiClient = {
   post<T = unknown>(path: string, body: unknown, options: FetchOptions = {}): Promise<T> {
     return apiFetch<T>(path, { method: 'POST', body: JSON.stringify(body), ...options });
   },
-  delete<T = unknown>(path: string, options: FetchOptions = {}): Promise<T> {
-    return apiFetch<T>(path, { method: 'DELETE', ...options });
+  delete<T = unknown>(path: string, body?: unknown, options: FetchOptions = {}): Promise<T> {
+    return apiFetch<T>(path, {
+      method: 'DELETE',
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      ...options,
+    });
   },
 };

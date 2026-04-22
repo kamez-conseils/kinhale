@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { WebSocket } from 'ws';
 import { Expo } from 'expo-server-sdk';
-import { eq } from 'drizzle-orm';
+import { eq, and, ne } from 'drizzle-orm';
 import { mailboxMessages, pushTokens } from '../db/schema.js';
 import type { JwtPayload } from '../plugins/jwt.js';
 import { dispatchPush } from '../push/push-dispatch.js';
@@ -116,9 +116,11 @@ const relayRoute: FastifyPluginAsync = async (app) => {
             const rows = await app.db
               .select({ token: pushTokens.token })
               .from(pushTokens)
-              .where(eq(pushTokens.householdId, householdId));
+              .where(
+                and(eq(pushTokens.householdId, householdId), ne(pushTokens.deviceId, deviceId)),
+              );
             const tokens = rows.map((r) => r.token);
-            await dispatchPush(expo, tokens);
+            await dispatchPush(expo, tokens, app.log);
           } catch (err) {
             app.log.warn({ err }, 'Échec dispatch push (ignoré)');
           }

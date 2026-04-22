@@ -11,8 +11,9 @@ const ACCOUNT_ID = '00000000-0000-0000-0000-000000000003';
 const PUSH_TOKEN = 'ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]';
 
 function makeMockDb() {
+  const onConflictDoUpdate = vi.fn().mockResolvedValue(undefined);
   const onConflictDoNothing = vi.fn().mockResolvedValue(undefined);
-  const insertValues = vi.fn().mockReturnValue({ onConflictDoNothing });
+  const insertValues = vi.fn().mockReturnValue({ onConflictDoNothing, onConflictDoUpdate });
   const insert = vi.fn().mockReturnValue({ values: insertValues });
 
   const deleteWhere = vi.fn().mockResolvedValue(undefined);
@@ -23,10 +24,12 @@ function makeMockDb() {
     delete: deleteFn,
     _insertValues: insertValues,
     _onConflictDoNothing: onConflictDoNothing,
+    _onConflictDoUpdate: onConflictDoUpdate,
     _deleteWhere: deleteWhere,
   } as unknown as DrizzleDb & {
     _insertValues: ReturnType<typeof vi.fn>;
     _onConflictDoNothing: ReturnType<typeof vi.fn>;
+    _onConflictDoUpdate: ReturnType<typeof vi.fn>;
     _deleteWhere: ReturnType<typeof vi.fn>;
   };
 }
@@ -79,7 +82,7 @@ describe('POST /push/register-token', () => {
         token: PUSH_TOKEN,
       }),
     );
-    expect(db._onConflictDoNothing).toHaveBeenCalledOnce();
+    expect(db._onConflictDoUpdate).toHaveBeenCalledOnce();
     await app.close();
   });
 
@@ -110,6 +113,25 @@ describe('POST /push/register-token', () => {
     });
 
     expect(res.statusCode).toBe(401);
+    await app.close();
+  });
+
+  it('retourne 400 si le format du token Expo est invalide', async () => {
+    const token = app.jwt.sign({
+      sub: ACCOUNT_ID,
+      deviceId: DEVICE_ID,
+      householdId: HOUSEHOLD_ID,
+      type: 'access',
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/push/register-token',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { pushToken: 'not-a-valid-token' },
+    });
+
+    expect(res.statusCode).toBe(400);
     await app.close();
   });
 });
