@@ -67,6 +67,11 @@ describe('AddDosePage', () => {
   it('navigue vers /journal après sauvegarde réussie', async () => {
     renderWithProviders(<AddDosePage />);
     await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalledWith('hh-1'));
+    // Flush setGroupKey + re-render Tamagui avant le clic (même pattern que test sendChanges)
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
     fireEvent.click(screen.getByRole('button', { name: /enregistrer|save/i }));
     await waitFor(() => {
       expect(mockAppendDose).toHaveBeenCalled();
