@@ -8,7 +8,14 @@ import {
   signEvent,
   appendEvent,
 } from '@kinhale/sync';
-import type { KinhaleDoc, DoseAdministeredPayload, UnsignedEvent } from '@kinhale/sync';
+import type {
+  KinhaleDoc,
+  DoseAdministeredPayload,
+  ChildRegisteredPayload,
+  PumpReplacedPayload,
+  PlanUpdatedPayload,
+  UnsignedEvent,
+} from '@kinhale/sync';
 
 type KinhaleDocument = ReturnType<typeof createDoc>;
 
@@ -19,6 +26,21 @@ interface DocState {
   initDoc: (householdId: string) => void;
   appendDose: (
     payload: DoseAdministeredPayload,
+    deviceId: string,
+    secretKey: Uint8Array,
+  ) => Promise<Uint8Array[]>;
+  appendChild: (
+    payload: ChildRegisteredPayload,
+    deviceId: string,
+    secretKey: Uint8Array,
+  ) => Promise<Uint8Array[]>;
+  appendPump: (
+    payload: PumpReplacedPayload,
+    deviceId: string,
+    secretKey: Uint8Array,
+  ) => Promise<Uint8Array[]>;
+  appendPlan: (
+    payload: PlanUpdatedPayload,
     deviceId: string,
     secretKey: Uint8Array,
   ) => Promise<Uint8Array[]>;
@@ -58,6 +80,66 @@ export const useDocStore = create<DocState>()((set, get) => ({
       deviceId,
       occurredAtMs: Date.now(),
       event: { type: 'DoseAdministered', payload },
+    };
+    const record = await signEvent(unsigned, secretKey);
+    const newDoc = appendEvent(doc, record);
+    const changes = getDocChanges(doc, newDoc);
+
+    persistDoc(newDoc);
+    set({ doc: newDoc });
+    return changes;
+  },
+
+  async appendChild(payload, deviceId, secretKey) {
+    const currentDoc = get().doc;
+    const hid = (currentDoc as KinhaleDoc | null)?.householdId ?? deviceId;
+    const doc = currentDoc ?? createDoc(hid);
+
+    const unsigned: UnsignedEvent = {
+      id: crypto.randomUUID(),
+      deviceId,
+      occurredAtMs: Date.now(),
+      event: { type: 'ChildRegistered', payload },
+    };
+    const record = await signEvent(unsigned, secretKey);
+    const newDoc = appendEvent(doc, record);
+    const changes = getDocChanges(doc, newDoc);
+
+    persistDoc(newDoc);
+    set({ doc: newDoc });
+    return changes;
+  },
+
+  async appendPump(payload, deviceId, secretKey) {
+    const currentDoc = get().doc;
+    const hid = (currentDoc as KinhaleDoc | null)?.householdId ?? deviceId;
+    const doc = currentDoc ?? createDoc(hid);
+
+    const unsigned: UnsignedEvent = {
+      id: crypto.randomUUID(),
+      deviceId,
+      occurredAtMs: Date.now(),
+      event: { type: 'PumpReplaced', payload },
+    };
+    const record = await signEvent(unsigned, secretKey);
+    const newDoc = appendEvent(doc, record);
+    const changes = getDocChanges(doc, newDoc);
+
+    persistDoc(newDoc);
+    set({ doc: newDoc });
+    return changes;
+  },
+
+  async appendPlan(payload, deviceId, secretKey) {
+    const currentDoc = get().doc;
+    const hid = (currentDoc as KinhaleDoc | null)?.householdId ?? deviceId;
+    const doc = currentDoc ?? createDoc(hid);
+
+    const unsigned: UnsignedEvent = {
+      id: crypto.randomUUID(),
+      deviceId,
+      occurredAtMs: Date.now(),
+      event: { type: 'PlanUpdated', payload },
     };
     const record = await signEvent(unsigned, secretKey);
     const newDoc = appendEvent(doc, record);

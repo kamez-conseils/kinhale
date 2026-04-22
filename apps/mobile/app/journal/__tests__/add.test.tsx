@@ -25,8 +25,8 @@ jest.mock('../../../src/stores/auth-store', () => ({
 
 const mockAppendDose = jest.fn().mockResolvedValue([new Uint8Array([1])]);
 jest.mock('../../../src/stores/doc-store', () => ({
-  useDocStore: jest.fn((selector: (s: { appendDose: jest.Mock }) => unknown) =>
-    selector({ appendDose: mockAppendDose }),
+  useDocStore: jest.fn((selector: (s: { appendDose: jest.Mock; doc: null }) => unknown) =>
+    selector({ appendDose: mockAppendDose, doc: null }),
   ),
 }));
 
