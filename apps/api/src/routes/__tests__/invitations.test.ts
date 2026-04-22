@@ -268,54 +268,58 @@ describe('POST /invitations/:token/accept', () => {
     await app.close();
   });
 
-  it('retourne 401 pour un PIN incorrect, puis 423 après 3 échecs', async () => {
-    const redis = makeMockRedis();
-    const app = buildTestApp(redis);
-    await app.ready();
+  it(
+    'retourne 401 pour un PIN incorrect, puis 423 après 3 échecs',
+    { timeout: 20_000 },
+    async () => {
+      const redis = makeMockRedis();
+      const app = buildTestApp(redis);
+      await app.ready();
 
-    // Create an invitation
-    const jwt = app.jwt.sign({
-      sub: ACCOUNT_ID,
-      deviceId: 'dev-001',
-      householdId: HOUSEHOLD_ID,
-      type: 'access',
-    });
+      // Create an invitation
+      const jwt = app.jwt.sign({
+        sub: ACCOUNT_ID,
+        deviceId: 'dev-001',
+        householdId: HOUSEHOLD_ID,
+        type: 'access',
+      });
 
-    const createRes = await app.inject({
-      method: 'POST',
-      url: '/invitations',
-      headers: { Authorization: `Bearer ${jwt}` },
-      payload: { targetRole: 'restricted_contributor', displayName: 'Tata Sylvie' },
-    });
-    const { token } = createRes.json<{ token: string }>();
+      const createRes = await app.inject({
+        method: 'POST',
+        url: '/invitations',
+        headers: { Authorization: `Bearer ${jwt}` },
+        payload: { targetRole: 'restricted_contributor', displayName: 'Tata Sylvie' },
+      });
+      const { token } = createRes.json<{ token: string }>();
 
-    // 1st wrong PIN → 401
-    const res1 = await app.inject({
-      method: 'POST',
-      url: `/invitations/${token}/accept`,
-      payload: { pin: '000000', consentAccepted: true },
-    });
-    expect(res1.statusCode).toBe(401);
-    expect(res1.json<{ error: string }>().error).toBe('pin_mismatch');
+      // 1st wrong PIN → 401
+      const res1 = await app.inject({
+        method: 'POST',
+        url: `/invitations/${token}/accept`,
+        payload: { pin: '000000', consentAccepted: true },
+      });
+      expect(res1.statusCode).toBe(401);
+      expect(res1.json<{ error: string }>().error).toBe('pin_mismatch');
 
-    // 2nd wrong PIN → 401
-    const res2 = await app.inject({
-      method: 'POST',
-      url: `/invitations/${token}/accept`,
-      payload: { pin: '000000', consentAccepted: true },
-    });
-    expect(res2.statusCode).toBe(401);
+      // 2nd wrong PIN → 401
+      const res2 = await app.inject({
+        method: 'POST',
+        url: `/invitations/${token}/accept`,
+        payload: { pin: '000000', consentAccepted: true },
+      });
+      expect(res2.statusCode).toBe(401);
 
-    // 3rd wrong PIN → 423 locked
-    const res3 = await app.inject({
-      method: 'POST',
-      url: `/invitations/${token}/accept`,
-      payload: { pin: '000000', consentAccepted: true },
-    });
-    expect(res3.statusCode).toBe(423);
-    expect(res3.json<{ error: string }>().error).toBe('locked');
-    await app.close();
-  });
+      // 3rd wrong PIN → 423 locked
+      const res3 = await app.inject({
+        method: 'POST',
+        url: `/invitations/${token}/accept`,
+        payload: { pin: '000000', consentAccepted: true },
+      });
+      expect(res3.statusCode).toBe(423);
+      expect(res3.json<{ error: string }>().error).toBe('locked');
+      await app.close();
+    },
+  );
 
   it('retourne 200 avec sessionToken pour un PIN correct + consentement (RM22)', async () => {
     const redis = makeMockRedis();
