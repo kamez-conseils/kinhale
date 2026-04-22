@@ -1,6 +1,5 @@
 import React from 'react';
-import { screen, waitFor, fireEvent } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { screen, waitFor, fireEvent, act } from '@testing-library/react';
 import AddDosePage from '../page';
 import { renderWithProviders } from '../../../../test-utils/render';
 
@@ -66,12 +65,11 @@ describe('AddDosePage', () => {
   });
 
   it('navigue vers /journal après sauvegarde réussie', async () => {
-    const user = userEvent.setup();
     renderWithProviders(<AddDosePage />);
-    const saveButton = screen.getByRole('button', { name: /enregistrer|save/i });
-    // Attendre que le useEffect ait résolu getGroupKey avant de cliquer
     await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalledWith('hh-1'));
-    await user.click(saveButton);
+    // Flush le state update de setGroupKey
+    await act(async () => {});
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer|save/i }));
     await waitFor(() => {
       expect(mockAppendDose).toHaveBeenCalled();
       expect(mockSendChanges).toHaveBeenCalled();
@@ -81,11 +79,10 @@ describe('AddDosePage', () => {
 
   it('affiche une erreur si appendDose échoue', async () => {
     mockAppendDose.mockRejectedValueOnce(new Error('réseau indisponible'));
-    const user = userEvent.setup();
     renderWithProviders(<AddDosePage />);
     await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalled());
-    const saveButton = screen.getByRole('button', { name: /enregistrer|save/i });
-    await user.click(saveButton);
+    await act(async () => {});
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer|save/i }));
     await waitFor(() => {
       expect(screen.getByText(/erreur|error/i)).toBeInTheDocument();
     });
@@ -95,9 +92,9 @@ describe('AddDosePage', () => {
   it('appelle sendChanges quand groupKey est disponible', async () => {
     renderWithProviders(<AddDosePage />);
     await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalled());
-
+    // Flush le state update de setGroupKey avant de cliquer
+    await act(async () => {});
     fireEvent.click(screen.getByText(/enregistrer|save/i));
-
     await waitFor(() => {
       expect(mockSendChanges).toHaveBeenCalled();
     });
