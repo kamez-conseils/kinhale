@@ -5,16 +5,19 @@ import { renderWithProviders } from '../../../../test-utils/render';
 
 jest.setTimeout(15000);
 
+const mockProjectPumps = jest.fn((_doc: unknown) => [
+  {
+    pumpId: 'pump-1',
+    name: 'Ventolin',
+    pumpType: 'maintenance',
+    totalDoses: 200,
+    expiresAtMs: null,
+    isExpired: false,
+  },
+]);
+
 jest.mock('@kinhale/sync', () => ({
-  projectPumps: jest.fn(() => [
-    {
-      pumpId: 'pump-1',
-      name: 'Ventolin',
-      pumpType: 'maintenance',
-      totalDoses: 200,
-      expiresAtMs: null,
-    },
-  ]),
+  projectPumps: (doc: unknown) => mockProjectPumps(doc),
 }));
 
 const mockPush = jest.fn();
@@ -74,12 +77,23 @@ describe('OnboardingPlanPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAppendPlan.mockResolvedValue([new Uint8Array([1])]);
+    mockProjectPumps.mockReturnValue([
+      {
+        pumpId: 'pump-1',
+        name: 'Ventolin',
+        pumpType: 'maintenance',
+        totalDoses: 200,
+        expiresAtMs: null,
+        isExpired: false,
+      },
+    ]);
   });
 
-  it('affiche la pompe de fond disponible', () => {
+  it('affiche le formulaire quand une pompe de fond est disponible', () => {
     renderWithProviders(<OnboardingPlanPage />);
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
-    expect(screen.getByText(/ventolin/i)).toBeInTheDocument();
+    // Avec une seule pompe, le sélecteur est masqué (auto-sélection) et le champ heures est affiché
+    expect(screen.getByPlaceholderText(/8.*20|ex.*8/i)).toBeInTheDocument();
   });
 
   it('navigue vers /journal après sauvegarde réussie', async () => {
@@ -102,6 +116,29 @@ describe('OnboardingPlanPage', () => {
         expect.any(Uint8Array),
       );
       expect(mockPush).toHaveBeenCalledWith('/journal');
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
+  });
+
+  it('affiche le CTA "Ajouter une pompe" quand aucune pompe de fond n\'est enregistrée', async () => {
+    mockProjectPumps.mockReturnValue([]);
+    renderWithProviders(<OnboardingPlanPage />);
+    expect(
+      screen.getByText(/ajoute d'abord une pompe|add a maintenance pump/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/ajouter une pompe|add a pump/i)).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/8.*20|ex.*8/i)).toBeNull();
+  });
+
+  it('navigue vers /onboarding/pump en cliquant sur le CTA quand aucune pompe', async () => {
+    mockProjectPumps.mockReturnValue([]);
+    jest.useFakeTimers();
+    try {
+      renderWithProviders(<OnboardingPlanPage />);
+      fireEvent.click(screen.getByText(/ajouter une pompe|add a pump/i));
+      expect(mockPush).toHaveBeenCalledWith('/onboarding/pump');
     } finally {
       jest.clearAllTimers();
       jest.useRealTimers();

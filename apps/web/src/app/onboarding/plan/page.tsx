@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { YStack, H1, Button, Text, Input, XStack } from 'tamagui';
+import { YStack, H1, Button, Text, Input, XStack, Card } from 'tamagui';
 import { projectPumps } from '@kinhale/sync';
 import { useAuthStore } from '../../../stores/auth-store';
 import { useDocStore } from '../../../stores/doc-store';
@@ -17,10 +17,12 @@ export default function OnboardingPlanPage(): React.JSX.Element {
   const doc = useDocStore((s) => s.doc);
 
   const maintenancePumps =
-    doc !== null ? projectPumps(doc).filter((p) => p.pumpType === 'maintenance') : [];
+    doc !== null
+      ? projectPumps(doc).filter((p) => p.pumpType === 'maintenance' && !p.isExpired)
+      : [];
 
   const [selectedPumpId, setSelectedPumpId] = useState<string | null>(
-    maintenancePumps[0]?.pumpId ?? null,
+    maintenancePumps.length === 1 ? (maintenancePumps[0]?.pumpId ?? null) : null,
   );
   const [hoursStr, setHoursStr] = useState('');
   const [loading, setLoading] = useState(false);
@@ -63,25 +65,46 @@ export default function OnboardingPlanPage(): React.JSX.Element {
     }
   };
 
+  if (maintenancePumps.length === 0) {
+    return (
+      <YStack padding="$4" gap="$4">
+        <H1>{t('onboarding.plan.title')}</H1>
+        <Card padding="$4" gap="$3">
+          <Text fontWeight="bold" fontSize="$5">
+            {t('onboarding.plan.noMaintenancePumpTitle')}
+          </Text>
+          <Text>{t('onboarding.plan.noMaintenancePumpBody')}</Text>
+          <Button
+            onPress={() => router.push('/onboarding/pump')}
+            theme="active"
+            accessibilityLabel={t('onboarding.plan.goToPumpCta')}
+          >
+            {t('onboarding.plan.goToPumpCta')}
+          </Button>
+        </Card>
+      </YStack>
+    );
+  }
+
   return (
     <YStack padding="$4" gap="$4">
       <H1>{t('onboarding.plan.title')}</H1>
 
-      <Text fontWeight="600">{t('onboarding.plan.pumpLabel')}</Text>
-      {maintenancePumps.length === 0 ? (
-        <Text color="$color10">{t('onboarding.plan.noPumps')}</Text>
-      ) : (
-        <XStack flexWrap="wrap" gap="$2">
-          {maintenancePumps.map((p) => (
-            <Button
-              key={p.pumpId}
-              onPress={() => setSelectedPumpId(p.pumpId)}
-              theme={selectedPumpId === p.pumpId ? 'active' : null}
-            >
-              {p.name}
-            </Button>
-          ))}
-        </XStack>
+      {maintenancePumps.length > 1 && (
+        <>
+          <Text fontWeight="600">{t('onboarding.plan.pumpSelectLabel')}</Text>
+          <XStack flexWrap="wrap" gap="$2">
+            {maintenancePumps.map((p) => (
+              <Button
+                key={p.pumpId}
+                onPress={() => setSelectedPumpId(p.pumpId)}
+                theme={selectedPumpId === p.pumpId ? 'active' : null}
+              >
+                {p.name}
+              </Button>
+            ))}
+          </XStack>
+        </>
       )}
 
       <Text fontWeight="600">{t('onboarding.plan.hoursLabel')}</Text>
@@ -97,11 +120,7 @@ export default function OnboardingPlanPage(): React.JSX.Element {
         </Text>
       )}
 
-      <Button
-        onPress={() => void handleSave()}
-        disabled={loading || maintenancePumps.length === 0}
-        marginTop="$2"
-      >
+      <Button onPress={() => void handleSave()} disabled={loading} marginTop="$2">
         {loading ? t('onboarding.plan.saving') : t('onboarding.plan.save')}
       </Button>
     </YStack>
