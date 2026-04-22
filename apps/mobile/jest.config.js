@@ -12,6 +12,7 @@ module.exports = {
     '^@kinhale/i18n$': '<rootDir>/../../packages/i18n/src/index.ts',
     '^@react-native-async-storage/async-storage$':
       '@react-native-async-storage/async-storage/jest/async-storage-mock.js',
+    '^expo-secure-store$': '<rootDir>/src/__mocks__/expo-secure-store.ts',
     '^@kinhale/crypto$': '<rootDir>/src/__mocks__/@kinhale/crypto.ts',
     '^@kinhale/sync$': '<rootDir>/src/__mocks__/@kinhale/sync.ts',
   },

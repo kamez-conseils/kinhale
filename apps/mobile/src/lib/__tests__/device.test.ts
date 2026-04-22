@@ -1,10 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 jest.mock('@kinhale/crypto');
+jest.mock('expo-secure-store');
 
 describe('getOrCreateDevice', () => {
   beforeEach(async () => {
     await AsyncStorage.clear();
+    const secureStore = jest.requireMock('expo-secure-store') as {
+      __resetForTests: () => void;
+    };
+    secureStore.__resetForTests();
     jest.clearAllMocks();
   });
 
@@ -13,7 +18,7 @@ describe('getOrCreateDevice', () => {
     const kp = await getOrCreateDevice();
     expect(kp).toHaveProperty('publicKeyHex');
     expect(kp).toHaveProperty('secretKey');
-    const stored = await AsyncStorage.getItem('kinhale-device');
+    const stored = await AsyncStorage.getItem('kinhale-device-pubkey');
     expect(stored).not.toBeNull();
   });
 
@@ -25,7 +30,7 @@ describe('getOrCreateDevice', () => {
     expect(kp1.publicKeyHex).toBe(kp2.publicKeyHex);
   });
 
-  it('returns same keypair after AsyncStorage reload', async () => {
+  it('returns same keypair after reload', async () => {
     jest.resetModules();
     const { getOrCreateDevice: get1 } = require('../device') as typeof import('../device');
     const kp1 = await get1();
@@ -39,6 +44,10 @@ describe('getOrCreateDevice', () => {
 describe('getGroupKey', () => {
   beforeEach(async () => {
     await AsyncStorage.clear();
+    const secureStore = jest.requireMock('expo-secure-store') as {
+      __resetForTests: () => void;
+    };
+    secureStore.__resetForTests();
   });
 
   it('derives a Uint8Array key for a household', async () => {
