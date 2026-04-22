@@ -16,3 +16,5 @@ export type { KeyExchangeKeypair, SessionKeys } from './kx/x25519.js';
 export { generateSeedPhrase, validateSeedPhrase, seedPhraseToBytes } from './seed/bip39.js';
 export { deriveDeviceKeypair } from './device/keypair.js';
 export type { DeviceKeypair } from './device/keypair.js';
+export { generateInvitationToken } from './invitation/token.js';
+export { generatePin, hashPin, verifyPin } from './invitation/pin.js';
