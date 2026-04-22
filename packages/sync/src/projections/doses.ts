@@ -22,7 +22,7 @@ export function projectDoses(doc: KinhaleDoc): ProjectedDose[] {
     try {
       payload = JSON.parse(event.payloadJson) as DoseAdministeredPayload;
     } catch {
-      // payload malformé — ignoré silencieusement (log sans donnée santé)
+      // payload JSON invalide — ignoré silencieusement, aucun log (zero-knowledge)
       continue;
     }
     if (
