@@ -28,9 +28,28 @@
     "doseType": "Dose type",
     "maintenance": "Controller",
     "rescue": "Rescue",
+    "symptoms": "Symptoms",
+    "circumstances": "Circumstances",
+    "freeFormTag": "Free note",
+    "freeFormTagPlaceholder": "E.g. after exercise, cold evening…",
     "save": "Save",
     "saving": "Saving…",
-    "saveError": "Error saving dose"
+    "saveError": "Error saving dose",
+    "rescueNeedsContext": "For a rescue dose, select at least one symptom, circumstance, or add a note.",
+    "symptom": {
+      "cough": "Cough",
+      "wheezing": "Wheezing",
+      "shortness_of_breath": "Shortness of breath",
+      "chest_tightness": "Chest tightness"
+    },
+    "circumstance": {
+      "exercise": "Physical activity",
+      "allergen": "Allergen",
+      "cold_air": "Cold air",
+      "night": "Night",
+      "infection": "Infection",
+      "stress": "Stress"
+    }
   },
   "common": {
     "loading": "Loading…",
