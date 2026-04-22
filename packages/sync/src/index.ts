@@ -45,3 +45,5 @@ export type { ProjectedChild } from './projections/child.js';
 export { projectChild } from './projections/child.js';
 export type { ProjectedPump } from './projections/pumps.js';
 export { projectPumps } from './projections/pumps.js';
+export type { ProjectedPlan } from './projections/plan.js';
+export { projectPlan } from './projections/plan.js';
