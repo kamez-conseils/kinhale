@@ -20,10 +20,16 @@ jest.mock('../../../../stores/auth-store', () => ({
   ),
 }));
 
+jest.mock('@kinhale/sync', () => ({
+  projectChild: jest.fn(() => null),
+  projectPumps: jest.fn(() => []),
+}));
+
 const mockAppendDose = jest.fn().mockResolvedValue([new Uint8Array([1])]);
 jest.mock('../../../../stores/doc-store', () => ({
-  useDocStore: jest.fn((selector: (s: { appendDose: jest.Mock }) => unknown) =>
-    selector({ appendDose: mockAppendDose }),
+  useDocStore: jest.fn(
+    (selector: (s: { appendDose: jest.Mock; doc: null }) => unknown) =>
+      selector({ appendDose: mockAppendDose, doc: null }),
   ),
 }));
 
