@@ -124,6 +124,7 @@
     "errorPinMismatch": "PIN incorrect.",
     "errorLocked": "Trop de tentatives. Invitation verrouillée 15 min.",
     "errorConsent": "Merci d'accepter le partage pour continuer.",
-    "cameraPermissionDenied": "Permission caméra refusée. Active-la dans les réglages."
+    "cameraPermissionDenied": "Permission caméra refusée. Active-la dans les réglages.",
+    "backToAuth": "Retour à la connexion"
   }
 }

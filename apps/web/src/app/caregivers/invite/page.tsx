@@ -3,13 +3,15 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import QRCode from 'qrcode';
-import { YStack, Text, Button, Input } from 'tamagui';
+import { YStack, XStack, Text, Button, Input } from 'tamagui';
 import { createInvitation, type CreatedInvitation } from '../../../lib/invitations/client';
+import { useRequireAuth } from '../../../lib/useRequireAuth';
 
 type TargetRole = 'contributor' | 'restricted_contributor';
 
-export default function InviteCaregiverPage(): React.JSX.Element {
+export default function InviteCaregiverPage(): React.JSX.Element | null {
   const { t } = useTranslation('common');
+  const authenticated = useRequireAuth();
   const [role, setRole] = React.useState<TargetRole>('restricted_contributor');
   const [displayName, setDisplayName] = React.useState('');
   const [created, setCreated] = React.useState<CreatedInvitation | null>(null);
@@ -47,6 +49,8 @@ export default function InviteCaregiverPage(): React.JSX.Element {
     );
   };
 
+  if (!authenticated) return null;
+
   if (created !== null) {
     const minutes = Math.max(0, Math.floor(remainingMs / 60_000));
     return (
@@ -78,20 +82,32 @@ export default function InviteCaregiverPage(): React.JSX.Element {
 
       <YStack gap="$2">
         <Text>{t('invitation.roleLabel')}</Text>
-        <Button
-          onPress={() => setRole('contributor')}
-          theme={role === 'contributor' ? 'active' : null}
-          accessibilityLabel={t('invitation.roleContributor')}
-        >
-          {t('invitation.roleContributor')}
-        </Button>
-        <Button
-          onPress={() => setRole('restricted_contributor')}
-          theme={role === 'restricted_contributor' ? 'active' : null}
-          accessibilityLabel={t('invitation.roleRestricted')}
-        >
-          {t('invitation.roleRestricted')}
-        </Button>
+        <XStack gap="$2">
+          <Button
+            onPress={() => setRole('contributor')}
+            theme={role === 'contributor' ? 'active' : null}
+            borderWidth={2}
+            borderColor={role === 'contributor' ? '$blue10' : '$borderColor'}
+            flex={1}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: role === 'contributor' }}
+            accessibilityLabel={t('invitation.roleContributor')}
+          >
+            {t('invitation.roleContributor')}
+          </Button>
+          <Button
+            onPress={() => setRole('restricted_contributor')}
+            theme={role === 'restricted_contributor' ? 'active' : null}
+            borderWidth={2}
+            borderColor={role === 'restricted_contributor' ? '$blue10' : '$borderColor'}
+            flex={1}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: role === 'restricted_contributor' }}
+            accessibilityLabel={t('invitation.roleRestricted')}
+          >
+            {t('invitation.roleRestricted')}
+          </Button>
+        </XStack>
       </YStack>
 
       <YStack gap="$2">

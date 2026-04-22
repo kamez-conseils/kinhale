@@ -21,10 +21,12 @@ jest.mock('@kinhale/sync', () => ({
 }));
 
 const mockPush = jest.fn();
+const mockReplace = jest.fn();
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mockPush }),
+  useRouter: () => ({ push: mockPush, replace: mockReplace }),
 }));
 
+let mockAccessToken: string | null = 'tok-1';
 jest.mock('../../../../stores/auth-store', () => ({
   useAuthStore: jest.fn(
     (
@@ -33,7 +35,7 @@ jest.mock('../../../../stores/auth-store', () => ({
         deviceId: string | null;
         householdId: string | null;
       }) => unknown,
-    ) => selector({ accessToken: 'tok-1', deviceId: 'dev-1', householdId: 'hh-1' }),
+    ) => selector({ accessToken: mockAccessToken, deviceId: 'dev-1', householdId: 'hh-1' }),
   ),
 }));
 
@@ -76,6 +78,7 @@ jest.mock('../../../../lib/device', () => ({
 describe('OnboardingPlanPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAccessToken = 'tok-1';
     mockAppendPlan.mockResolvedValue([new Uint8Array([1])]);
     mockProjectPumps.mockReturnValue([
       {
@@ -87,6 +90,24 @@ describe('OnboardingPlanPage', () => {
         isExpired: false,
       },
     ]);
+  });
+
+  it('redirige vers /auth si non authentifié (#181)', async () => {
+    mockAccessToken = null;
+    jest.useFakeTimers();
+    try {
+      renderWithProviders(<OnboardingPlanPage />);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(mockReplace).toHaveBeenCalledWith('/auth');
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
   });
 
   it('affiche le formulaire quand une pompe de fond est disponible', () => {

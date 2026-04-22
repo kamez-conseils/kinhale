@@ -9,6 +9,18 @@ jest.mock('qrcode', () => ({
   toDataURL: jest.fn().mockResolvedValue('data:image/png;base64,AAAA'),
 }));
 
+const mockReplace = jest.fn();
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: jest.fn(), replace: mockReplace }),
+}));
+
+let mockAccessToken: string | null = 'tok-valid';
+jest.mock('../../../../stores/auth-store', () => ({
+  useAuthStore: jest.fn((selector: (s: { accessToken: string | null }) => unknown) =>
+    selector({ accessToken: mockAccessToken }),
+  ),
+}));
+
 const mockCreateInvitation = jest.fn().mockResolvedValue({
   token: 'tok-abc',
   pin: '123456',
@@ -25,6 +37,7 @@ describe('InviteCaregiverPage', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAccessToken = 'tok-valid';
     mockCreateInvitation.mockResolvedValue({
       token: 'tok-abc',
       pin: '123456',
@@ -87,6 +100,45 @@ describe('InviteCaregiverPage', () => {
       });
       // Le PIN doit apparaître
       expect(screen.getByText('123456')).toBeTruthy();
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
+  });
+
+  it('redirige vers /auth si non authentifié (#181)', async () => {
+    mockAccessToken = null;
+    jest.useFakeTimers();
+    try {
+      renderWithProviders(<InviteCaregiverPage />);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(mockReplace).toHaveBeenCalledWith('/auth');
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
+  });
+
+  it('affiche les boutons rôle côte-à-côte avec accessibilityRole radio (#180)', async () => {
+    jest.useFakeTimers();
+    try {
+      renderWithProviders(<InviteCaregiverPage />);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      // Les deux boutons doivent être présents
+      const contributorBtn = screen.getByText(/aidant complet|full caregiver/i);
+      const restrictedBtn = screen.getByText(/aidant restreint|restricted caregiver/i);
+      expect(contributorBtn).toBeTruthy();
+      expect(restrictedBtn).toBeTruthy();
     } finally {
       jest.clearAllTimers();
       jest.useRealTimers();

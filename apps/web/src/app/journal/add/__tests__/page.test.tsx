@@ -4,10 +4,12 @@ import AddDosePage from '../page';
 import { renderWithProviders } from '../../../../test-utils/render';
 
 const mockPush = jest.fn();
+const mockReplace = jest.fn();
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mockPush }),
+  useRouter: () => ({ push: mockPush, replace: mockReplace }),
 }));
 
+let mockAccessToken: string | null = 'tok-1';
 jest.mock('../../../../stores/auth-store', () => ({
   useAuthStore: jest.fn(
     (
@@ -16,7 +18,7 @@ jest.mock('../../../../stores/auth-store', () => ({
         deviceId: string | null;
         householdId: string | null;
       }) => unknown,
-    ) => selector({ accessToken: 'tok-1', deviceId: 'dev-1', householdId: 'hh-1' }),
+    ) => selector({ accessToken: mockAccessToken, deviceId: 'dev-1', householdId: 'hh-1' }),
   ),
 }));
 
@@ -55,6 +57,7 @@ describe('AddDosePage', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAccessToken = 'tok-1';
     mockAppendDose.mockResolvedValue([new Uint8Array([1])]);
     mockGetOrCreateDevice.mockResolvedValue({
       publicKey: new Uint8Array(32),
@@ -63,6 +66,24 @@ describe('AddDosePage', () => {
     });
     mockGetGroupKey.mockResolvedValue(new Uint8Array(32));
     mockSendChanges.mockResolvedValue(undefined);
+  });
+
+  it('redirige vers /auth si non authentifié (#181)', async () => {
+    mockAccessToken = null;
+    jest.useFakeTimers();
+    try {
+      renderWithProviders(<AddDosePage />);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(mockReplace).toHaveBeenCalledWith('/auth');
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
   });
 
   it('affiche le formulaire avec les deux boutons de type', async () => {

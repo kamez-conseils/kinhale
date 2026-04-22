@@ -124,6 +124,7 @@
     "errorPinMismatch": "Incorrect PIN.",
     "errorLocked": "Too many attempts. Invitation locked for 15 min.",
     "errorConsent": "Please accept sharing to continue.",
-    "cameraPermissionDenied": "Camera permission denied. Enable it in settings."
+    "cameraPermissionDenied": "Camera permission denied. Enable it in settings.",
+    "backToAuth": "Back to login"
   }
 }

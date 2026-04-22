@@ -64,6 +64,14 @@ export default function AcceptInvitationPage(): React.JSX.Element {
     return (
       <YStack padding="$4" gap="$3">
         <Text color="$red10">{lookupError}</Text>
+        <Button
+          onPress={() => router.push('/auth')}
+          theme="active"
+          accessibilityRole="button"
+          accessibilityLabel={t('invitation.backToAuth')}
+        >
+          {t('invitation.backToAuth')}
+        </Button>
       </YStack>
     );
   }
