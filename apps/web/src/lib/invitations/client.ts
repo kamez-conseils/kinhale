@@ -1,5 +1,5 @@
-import { apiFetch, ApiError } from '../api-client.js';
-import { useAuthStore } from '../../stores/auth-store.js';
+import { apiFetch, ApiError } from '../api-client';
+import { useAuthStore } from '../../stores/auth-store';
 
 const API_BASE = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 
