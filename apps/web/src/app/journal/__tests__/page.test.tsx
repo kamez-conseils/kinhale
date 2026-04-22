@@ -1,6 +1,13 @@
 import { screen } from '@testing-library/react';
 import JournalPage from '../page';
 import { renderWithProviders } from '../../../test-utils/render';
+import type { ProjectedDose } from '@kinhale/sync';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockProjectDoses = jest.fn<ProjectedDose[], any[]>(() => []);
+jest.mock('@kinhale/sync', () => ({
+  projectDoses: (doc: unknown) => mockProjectDoses(doc),
+}));
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -39,21 +46,35 @@ describe('JournalPage', () => {
     const { useDocStore } = jest.requireMock('../../../stores/doc-store') as {
       useDocStore: jest.Mock;
     };
+
+    const fakeDose: ProjectedDose = {
+      eventId: 'e1',
+      occurredAtMs: 1_700_000_000_000,
+      deviceId: 'dev-1',
+      doseId: 'd1',
+      pumpId: 'pump-1',
+      childId: 'child-1',
+      caregiverId: 'dev-1',
+      administeredAtMs: 1_700_000_000_000,
+      doseType: 'maintenance',
+      dosesAdministered: 1,
+      symptoms: [],
+      circumstances: [],
+      freeFormTag: null,
+    };
+
+    mockProjectDoses.mockReturnValueOnce([fakeDose]);
+
     useDocStore.mockImplementation(
-      (
-        selector: (s: {
-          doc: { events: { id: string; type: string; occurredAtMs: number }[] };
-          initDoc: jest.Mock;
-        }) => unknown,
-      ) =>
+      (selector: (s: { doc: object; initDoc: jest.Mock }) => unknown) =>
         selector({
-          doc: {
-            events: [{ id: 'e1', type: 'DoseAdministered', occurredAtMs: 1_700_000_000_000 }],
-          },
+          doc: { householdId: 'hh-1', events: [] },
           initDoc: jest.fn(),
         }),
     );
+
     renderWithProviders(<JournalPage />);
-    expect(screen.getByText(/prise de pompe|inhaler dose/i)).toBeInTheDocument();
+    // doseType === 'maintenance' → t('journal.maintenance') → 'Fond'
+    expect(screen.getByText(/fond|maintenance/i)).toBeInTheDocument();
   });
 });

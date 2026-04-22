@@ -1,5 +1,5 @@
 import React from 'react';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AddDosePage from '../page';
 import { renderWithProviders } from '../../../../test-utils/render';
@@ -89,5 +89,38 @@ describe('AddDosePage', () => {
       expect(screen.getByText(/erreur|error/i)).toBeInTheDocument();
     });
     expect(mockPush).not.toHaveBeenCalledWith('/journal');
+  });
+
+  it('affiche une erreur RM4 si rescue sans contexte', async () => {
+    renderWithProviders(<AddDosePage />);
+    await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalledWith('hh-1'));
+
+    fireEvent.click(screen.getByText(/secours|rescue/i));
+    fireEvent.click(screen.getByText(/enregistrer|save/i));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeTruthy();
+    });
+    expect(mockAppendDose).not.toHaveBeenCalled();
+  });
+
+  it('sauvegarde rescue avec symptôme sélectionné', async () => {
+    renderWithProviders(<AddDosePage />);
+    await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalledWith('hh-1'));
+
+    fireEvent.click(screen.getByText(/secours|rescue/i));
+    fireEvent.click(screen.getByText(/toux|cough/i));
+    fireEvent.click(screen.getByText(/enregistrer|save/i));
+
+    await waitFor(() => {
+      expect(mockAppendDose).toHaveBeenCalledWith(
+        expect.objectContaining({
+          doseType: 'rescue',
+          symptoms: expect.arrayContaining(['cough']),
+        }),
+        expect.any(String),
+        expect.any(Uint8Array),
+      );
+    });
   });
 });
