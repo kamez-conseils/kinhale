@@ -1,0 +1,25 @@
+# Dev image pour Kinhale Web (Next.js 15)
+# Usage : docker compose -f infra/docker/docker-compose.yml up -d --build
+FROM node:20-alpine
+
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /app
+
+# Copie minimaliste pour optimiser le cache docker
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json tsconfig.base.json ./
+COPY apps/web/package.json ./apps/web/
+COPY packages/crypto/package.json ./packages/crypto/
+COPY packages/sync/package.json ./packages/sync/
+COPY packages/domain/package.json ./packages/domain/
+COPY packages/i18n/package.json ./packages/i18n/
+COPY packages/eslint-config/package.json ./packages/eslint-config/
+COPY packages/tsconfig/package.json ./packages/tsconfig/
+COPY packages/test-utils/package.json ./packages/test-utils/
+
+RUN pnpm install --frozen-lockfile
+
+EXPOSE 3000
+
+CMD ["pnpm", "--filter", "@kinhale/web", "dev"]

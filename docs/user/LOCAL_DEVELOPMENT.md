@@ -16,7 +16,38 @@ cd kinhale
 pnpm install
 ```
 
-## Démarrage
+## Démarrage 100% Docker (nouveau)
+
+Pour lancer toute l'app (API + web + infra) sans installer Node en local :
+
+```bash
+docker compose -f infra/docker/docker-compose.yml up -d --build
+```
+
+Attendre ~1-2 min que les images se construisent et que les services soient prêts, puis ouvrir :
+
+- **Web** : http://localhost:3000
+- **API** : http://localhost:3002/health
+- **Mailpit** (voir les magic links) : http://localhost:8027
+
+Pour suivre les logs :
+```bash
+docker compose -f infra/docker/docker-compose.yml logs -f web api
+```
+
+Pour arrêter :
+```bash
+docker compose -f infra/docker/docker-compose.yml down
+```
+
+Pour tout reset (y compris volumes DB) :
+```bash
+docker compose -f infra/docker/docker-compose.yml down -v
+```
+
+---
+
+## Démarrage classique (Node en local)
 
 ### 1. Lancer l'infrastructure (Postgres, Redis, Mailpit)
 
