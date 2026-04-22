@@ -88,4 +88,62 @@ describe('AddDoseScreen', () => {
       expect(screen.getByText(/erreur|error/i)).toBeTruthy();
     });
   });
+
+  it('affiche une erreur RM4 si rescue sans contexte', async () => {
+    renderWithProviders(<AddDoseScreen />);
+    await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalled());
+
+    // Sélectionner "Secours"
+    fireEvent.press(screen.getByText(/secours/i));
+
+    // Appuyer sur Enregistrer sans sélectionner symptôme/circonstance
+    const saveBtn = screen.getByText(/enregistrer/i);
+    fireEvent.press(saveBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeTruthy();
+    });
+    expect(mockAppendDose).not.toHaveBeenCalled();
+  });
+
+  it('sauvegarde rescue avec symptôme sélectionné', async () => {
+    renderWithProviders(<AddDoseScreen />);
+    await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalled());
+
+    fireEvent.press(screen.getByText(/secours/i));
+    fireEvent.press(screen.getByText(/toux/i));
+
+    const saveBtn = screen.getByText(/enregistrer/i);
+    fireEvent.press(saveBtn);
+
+    await waitFor(() => {
+      expect(mockAppendDose).toHaveBeenCalledWith(
+        expect.objectContaining({
+          doseType: 'rescue',
+          symptoms: expect.arrayContaining(['cough']),
+        }),
+        'dev-1',
+        expect.any(Uint8Array),
+      );
+    });
+  });
+
+  it('sauvegarde avec note libre uniquement pour rescue', async () => {
+    renderWithProviders(<AddDoseScreen />);
+    await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalled());
+
+    fireEvent.press(screen.getByText(/secours/i));
+    fireEvent.changeText(screen.getByPlaceholderText(/après sport/i), 'vacances');
+
+    const saveBtn = screen.getByText(/enregistrer/i);
+    fireEvent.press(saveBtn);
+
+    await waitFor(() => {
+      expect(mockAppendDose).toHaveBeenCalledWith(
+        expect.objectContaining({ freeFormTag: 'vacances' }),
+        'dev-1',
+        expect.any(Uint8Array),
+      );
+    });
+  });
 });
