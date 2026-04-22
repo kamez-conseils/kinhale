@@ -1,0 +1,96 @@
+{
+  "home": {
+    "title": "Kinhale",
+    "subtitle": "Coordinate your child's care",
+    "getStarted": "Get started"
+  },
+  "nav": {
+    "home": "Home",
+    "journal": "Journal",
+    "settings": "Settings"
+  },
+  "auth": {
+    "title": "Sign in",
+    "emailPlaceholder": "your@email.com",
+    "submit": "Send magic link",
+    "linkSent": "Link sent! Check your inbox.",
+    "verifying": "Verifying…",
+    "missingToken": "Link is invalid or expired.",
+    "verifyError": "Verification failed. Please try again.",
+    "errorSend": "Failed to send link. Please try again."
+  },
+  "journal": {
+    "title": "Journal",
+    "empty": "No doses recorded yet.",
+    "dose": "Inhaler dose",
+    "addDose": "Add dose",
+    "addTitle": "New dose",
+    "doseType": "Dose type",
+    "maintenance": "Controller",
+    "rescue": "Rescue",
+    "symptoms": "Symptoms",
+    "circumstances": "Circumstances",
+    "freeFormTag": "Free note",
+    "freeFormTagPlaceholder": "E.g. after exercise, cold evening…",
+    "save": "Save",
+    "saving": "Saving…",
+    "saveError": "Error saving dose",
+    "rescueNeedsContext": "For a rescue dose, select at least one symptom, circumstance, or add a note.",
+    "symptom": {
+      "cough": "Cough",
+      "wheezing": "Wheezing",
+      "shortness_of_breath": "Shortness of breath",
+      "chest_tightness": "Chest tightness"
+    },
+    "circumstance": {
+      "exercise": "Physical activity",
+      "allergen": "Allergen",
+      "cold_air": "Cold air",
+      "night": "Night",
+      "infection": "Infection",
+      "stress": "Stress"
+    }
+  },
+  "common": {
+    "loading": "Loading…",
+    "back": "Back"
+  },
+  "onboarding": {
+    "child": {
+      "title": "Your child",
+      "firstNameLabel": "First name",
+      "firstNamePlaceholder": "Child's first name",
+      "birthYearLabel": "Birth year",
+      "birthYearPlaceholder": "E.g. 2020",
+      "save": "Save",
+      "saving": "Saving…",
+      "saveError": "Error saving"
+    },
+    "pump": {
+      "title": "Add an inhaler",
+      "nameLabel": "Inhaler name",
+      "namePlaceholder": "E.g. Ventolin, Flovent…",
+      "typeLabel": "Type",
+      "typeMaintenance": "Controller",
+      "typeRescue": "Rescue",
+      "totalDosesLabel": "Number of doses",
+      "totalDosesPlaceholder": "E.g. 200",
+      "expiresAtLabel": "Expiry date (optional)",
+      "expiresAtPlaceholder": "YYYY-MM-DD",
+      "save": "Save",
+      "saving": "Saving…",
+      "saveError": "Error saving"
+    },
+    "plan": {
+      "title": "Treatment plan",
+      "pumpLabel": "Controller inhaler",
+      "noPumps": "No controller inhaler registered",
+      "hoursLabel": "Administration hours (UTC)",
+      "hoursPlaceholder": "E.g. 8, 20",
+      "startLabel": "Plan start",
+      "save": "Save",
+      "saving": "Saving…",
+      "saveError": "Error saving"
+    }
+  }
+}

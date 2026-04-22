@@ -107,8 +107,81 @@ Résumé — détails complets dans `docs/contributing/GITFLOW.md`.
 - Review d'au moins 1 pair ; **2 reviews obligatoires** si la PR touche `packages/crypto`, `packages/sync`, ou tout code de sécurité.
 - Aucune PR ne touche plus de ~400 lignes modifiées sauf exception justifiée.
 - Pas de commit direct sur `main` ou `develop`.
-- Conventional commits (`feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`, `build`, `ci`, `security`).
 - Un ADR (`docs/architecture/adr/`) pour toute décision architecturale structurante.
+
+### Workflow de revue assistée (obligatoire avant toute PR)
+
+Avant d'ouvrir une PR vers `develop`, le workflow suivant est obligatoire :
+
+1. **Implémentation TDD** — tests rouges d'abord, puis code minimal, puis refactor.
+2. **Passage `kz-review` systématique** — revue automatisée du diff : fit fonctionnel, qualité TypeScript strict, pureté, couverture et granularité des tests, conventions, gestion d'erreurs, risques de régression, anti-patterns. Le rapport est intégré au corps de la PR ou mentionné dans un commentaire.
+3. **Passage `kz-securite` systématique** dès que la zone touchée est sensible : `packages/crypto`, `packages/sync`, authentification, I/O, secrets, données santé, payloads push/email, dépendances. En cas de doute, invoquer plutôt que d'omettre.
+4. **Correction** des points MAJEURS relevés avant ouverture de PR. Les points MINEURS sont traités soit dans la même PR, soit dans un ticket de suivi explicite.
+5. **Push + PR** vers `develop` : la revue humaine ne voit que du code déjà auto-filtré.
+6. **Revue humaine + squash-merge** (seul mode autorisé par les settings repo).
+
+Ce workflow n'est pas optionnel. Il a été adopté le 2026-04-20 après constat que les 3 premières PRs du domaine (KIN-005, KIN-007, KIN-008) s'étaient reposées uniquement sur la revue humaine GitHub.
+
+## Format des messages de commit
+
+Chaque commit comporte **obligatoirement** une ligne de description (sujet) **et** un corps (body). Conforme à [Conventional Commits 1.0](https://www.conventionalcommits.org/fr/v1.0.0/).
+
+### Ligne de description (sujet)
+
+Une seule ligne, **≤ 72 caractères**, à l'impératif présent, sans point final, structure :
+
+```text
+<type>(<scope>): <description>
+```
+
+- **`type`** (obligatoire) : `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`, `build`, `ci`, `security`, `revert`.
+- **`scope`** (optionnel, recommandé) : module ou package touché — `crypto`, `sync`, `domain`, `api`, `mobile`, `web`, `ui`, `i18n`, `infra`, `ci`, `auth`, `push`, `offline`, …
+- **`description`** : verbe à l'impératif + contexte minimal, en minuscules, sans ponctuation finale.
+
+Exemples de sujets valides :
+
+```text
+fix(sync): corrige la perte d'événements lors d'une reconnexion WS
+feat(auth): ajoute la connexion via passkey WebAuthn
+docs(compliance): met à jour la matrice Loi 25 / RGPD
+security(crypto): active l'Argon2id params OWASP 2024
+```
+
+### Corps (body)
+
+Séparé du sujet par **une ligne vide**. Obligatoire pour tout commit non trivial (≥ quelques lignes modifiées ou toute modification métier / sécurité / infra).
+
+Le corps explique **pourquoi** le changement est fait, pas quoi (le diff le montre) :
+
+- Contexte et motivation du changement.
+- Impacts (migrations DB, breaking changes, dépendances, feature flags, ADR liée).
+- Références ticket / issue (`Refs: KIN-042`, `Closes: #137`).
+- Signature `Co-Authored-By:` si pair-programming ou assistance IA.
+
+### Exemple complet
+
+```text
+fix(sync): corrige la perte d'événements lors d'une reconnexion WS
+
+Lorsque le client se reconnecte après une perte réseau, le serveur
+renvoyait le cursor `lastSeq` avant de confirmer la souscription.
+Résultat : les événements arrivés pendant la fenêtre de reconnexion
+étaient perdus silencieusement.
+
+La séquence est désormais : ack subscribe -> replay depuis lastSeq.
+Test de reconnexion avec latence simulée ajouté.
+
+Refs: KIN-042
+Closes: #73
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+### Cas particuliers
+
+- **Breaking change** : ajouter `!` après le type / scope (`feat(api)!: …`) **et** un footer `BREAKING CHANGE: <description>` dans le body.
+- **Hotfix prod** : toujours `fix(<scope>): …` + référence incident + ticket dans le body.
+- **Revert** : `revert: <sujet du commit reverté>` + dans le body la raison et le SHA reverté (`Reverts: <sha>`).
+- **Changements crypto ou sécurité** : type `security(<scope>)` obligatoire ; body mentionne l'ADR, le test vector ajouté et l'auditeur informé.
 
 ## Règles de code
 

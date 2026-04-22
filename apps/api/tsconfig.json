@@ -1,0 +1,8 @@
+{
+  "extends": "@kinhale/tsconfig/fastify.json",
+  "compilerOptions": {
+    "rootDir": "src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+}

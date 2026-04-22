@@ -1,0 +1,96 @@
+{
+  "home": {
+    "title": "Kinhale",
+    "subtitle": "Coordonnez les soins de votre enfant",
+    "getStarted": "Commencer"
+  },
+  "nav": {
+    "home": "Accueil",
+    "journal": "Journal",
+    "settings": "Réglages"
+  },
+  "auth": {
+    "title": "Connexion",
+    "emailPlaceholder": "votre@email.com",
+    "submit": "Recevoir un lien magique",
+    "linkSent": "Lien envoyé ! Vérifiez votre boîte mail.",
+    "verifying": "Vérification en cours…",
+    "missingToken": "Lien invalide ou expiré.",
+    "verifyError": "Échec de la vérification. Réessayez.",
+    "errorSend": "Impossible d'envoyer le lien. Réessayez."
+  },
+  "journal": {
+    "title": "Journal",
+    "empty": "Aucune prise enregistrée.",
+    "dose": "Prise de pompe",
+    "addDose": "Ajouter une prise",
+    "addTitle": "Nouvelle prise",
+    "doseType": "Type de dose",
+    "maintenance": "Fond",
+    "rescue": "Secours",
+    "symptoms": "Symptômes",
+    "circumstances": "Circonstances",
+    "freeFormTag": "Note libre",
+    "freeFormTagPlaceholder": "Ex : après sport, soirée froide…",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "saveError": "Erreur lors de l'enregistrement",
+    "rescueNeedsContext": "Pour une prise de secours, sélectionnez au moins un symptôme, une circonstance ou ajoutez une note.",
+    "symptom": {
+      "cough": "Toux",
+      "wheezing": "Sifflements",
+      "shortness_of_breath": "Essoufflement",
+      "chest_tightness": "Oppression thoracique"
+    },
+    "circumstance": {
+      "exercise": "Effort physique",
+      "allergen": "Allergène",
+      "cold_air": "Air froid",
+      "night": "Nuit",
+      "infection": "Infection",
+      "stress": "Stress"
+    }
+  },
+  "common": {
+    "loading": "Chargement…",
+    "back": "Retour"
+  },
+  "onboarding": {
+    "child": {
+      "title": "Votre enfant",
+      "firstNameLabel": "Prénom",
+      "firstNamePlaceholder": "Prénom de l'enfant",
+      "birthYearLabel": "Année de naissance",
+      "birthYearPlaceholder": "Ex : 2020",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saveError": "Erreur lors de l'enregistrement"
+    },
+    "pump": {
+      "title": "Ajouter une pompe",
+      "nameLabel": "Nom de la pompe",
+      "namePlaceholder": "Ex : Ventolin, Flixotide…",
+      "typeLabel": "Type",
+      "typeMaintenance": "Fond",
+      "typeRescue": "Secours",
+      "totalDosesLabel": "Nombre de doses",
+      "totalDosesPlaceholder": "Ex : 200",
+      "expiresAtLabel": "Date de péremption (optionnel)",
+      "expiresAtPlaceholder": "YYYY-MM-DD",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saveError": "Erreur lors de l'enregistrement"
+    },
+    "plan": {
+      "title": "Plan de traitement",
+      "pumpLabel": "Pompe de fond",
+      "noPumps": "Aucune pompe de fond enregistrée",
+      "hoursLabel": "Heures d'administration (UTC)",
+      "hoursPlaceholder": "Ex : 8, 20",
+      "startLabel": "Début du plan",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saveError": "Erreur lors de l'enregistrement"
+    }
+  }
+}
