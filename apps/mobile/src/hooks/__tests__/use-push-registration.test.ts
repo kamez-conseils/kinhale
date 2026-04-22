@@ -40,9 +40,8 @@ describe('usePushRegistration', () => {
     const { useAuthStore } = jest.requireMock('../../stores/auth-store') as {
       useAuthStore: jest.Mock;
     };
-    useAuthStore.mockImplementation(
-      (selector: (s: { accessToken: string | null }) => unknown) =>
-        selector({ accessToken: 'test-access-token' }),
+    useAuthStore.mockImplementation((selector: (s: { accessToken: string | null }) => unknown) =>
+      selector({ accessToken: 'test-access-token' }),
     );
 
     const { usePushRegistration } =
@@ -67,9 +66,8 @@ describe('usePushRegistration', () => {
     const { useAuthStore } = jest.requireMock('../../stores/auth-store') as {
       useAuthStore: jest.Mock;
     };
-    useAuthStore.mockImplementation(
-      (selector: (s: { accessToken: string | null }) => unknown) =>
-        selector({ accessToken: null }),
+    useAuthStore.mockImplementation((selector: (s: { accessToken: string | null }) => unknown) =>
+      selector({ accessToken: null }),
     );
 
     const { usePushRegistration } =
@@ -88,9 +86,8 @@ describe('usePushRegistration', () => {
     const { useAuthStore } = jest.requireMock('../../stores/auth-store') as {
       useAuthStore: jest.Mock;
     };
-    useAuthStore.mockImplementation(
-      (selector: (s: { accessToken: string | null }) => unknown) =>
-        selector({ accessToken: 'test-access-token' }),
+    useAuthStore.mockImplementation((selector: (s: { accessToken: string | null }) => unknown) =>
+      selector({ accessToken: 'test-access-token' }),
     );
 
     const { usePushRegistration } =
