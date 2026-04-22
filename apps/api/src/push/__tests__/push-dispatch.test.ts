@@ -25,8 +25,16 @@ describe('dispatchPush', () => {
     await dispatchPush(mockExpo, tokens);
     expect(mockExpo.sendPushNotificationsAsync).toHaveBeenCalledWith(
       expect.arrayContaining([
-        expect.objectContaining({ to: 'ExponentPushToken[aaa]', title: 'Kinhale', body: 'Nouvelle activité' }),
-        expect.objectContaining({ to: 'ExponentPushToken[bbb]', title: 'Kinhale', body: 'Nouvelle activité' }),
+        expect.objectContaining({
+          to: 'ExponentPushToken[aaa]',
+          title: 'Kinhale',
+          body: 'Nouvelle activité',
+        }),
+        expect.objectContaining({
+          to: 'ExponentPushToken[bbb]',
+          title: 'Kinhale',
+          body: 'Nouvelle activité',
+        }),
       ]),
     );
   });

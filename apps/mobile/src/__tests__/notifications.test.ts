@@ -10,7 +10,8 @@ describe('requestPushPermission', () => {
   });
 
   it('retourne le token si permission accordée', async () => {
-    const { requestPushPermission } = require('../lib/notifications') as typeof import('../lib/notifications');
+    const { requestPushPermission } =
+      require('../lib/notifications') as typeof import('../lib/notifications');
     const token = await requestPushPermission();
     expect(token).toBe('ExponentPushToken[test-token-mock]');
   });
@@ -23,14 +24,16 @@ describe('requestPushPermission', () => {
     mockNotif.getPermissionsAsync.mockResolvedValue({ status: 'denied' });
     mockNotif.requestPermissionsAsync.mockResolvedValue({ status: 'denied' });
 
-    const { requestPushPermission } = require('../lib/notifications') as typeof import('../lib/notifications');
+    const { requestPushPermission } =
+      require('../lib/notifications') as typeof import('../lib/notifications');
     const token = await requestPushPermission();
     expect(token).toBeNull();
   });
 
   it('retourne null sur simulateur (isDevice = false)', async () => {
     jest.doMock('expo-device', () => ({ isDevice: false }));
-    const { requestPushPermission } = require('../lib/notifications') as typeof import('../lib/notifications');
+    const { requestPushPermission } =
+      require('../lib/notifications') as typeof import('../lib/notifications');
     const token = await requestPushPermission();
     expect(token).toBeNull();
   });

@@ -35,7 +35,10 @@ export async function scheduleLocalNotification(
 ): Promise<string> {
   return Notifications.scheduleNotificationAsync({
     content: { title, body },
-    trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: triggerSeconds },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds: triggerSeconds,
+    },
   });
 }
 

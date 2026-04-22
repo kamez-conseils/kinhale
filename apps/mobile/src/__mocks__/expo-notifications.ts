@@ -4,7 +4,9 @@ export const getExpoPushTokenAsync = jest.fn().mockResolvedValue({
   data: 'ExponentPushToken[test-token-mock]',
 });
 export const addNotificationReceivedListener = jest.fn().mockReturnValue({ remove: jest.fn() });
-export const addNotificationResponseReceivedListener = jest.fn().mockReturnValue({ remove: jest.fn() });
+export const addNotificationResponseReceivedListener = jest
+  .fn()
+  .mockReturnValue({ remove: jest.fn() });
 export const scheduleNotificationAsync = jest.fn().mockResolvedValue('notification-id-mock');
 export const cancelScheduledNotificationAsync = jest.fn().mockResolvedValue(undefined);
 export const setNotificationHandler = jest.fn();

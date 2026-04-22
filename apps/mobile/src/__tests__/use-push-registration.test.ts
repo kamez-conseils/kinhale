@@ -24,7 +24,8 @@ describe('usePushRegistration', () => {
   });
 
   it('enregistre le token via POST /push/register-token', async () => {
-    const { usePushRegistration } = require('../hooks/use-push-registration') as typeof import('../hooks/use-push-registration');
+    const { usePushRegistration } =
+      require('../hooks/use-push-registration') as typeof import('../hooks/use-push-registration');
 
     renderHook(() => usePushRegistration());
 
@@ -35,10 +36,11 @@ describe('usePushRegistration', () => {
     });
   });
 
-  it("ne plante pas si la permission est refusée", async () => {
+  it('ne plante pas si la permission est refusée', async () => {
     mockRequestPushPermission.mockResolvedValue(null);
 
-    const { usePushRegistration } = require('../hooks/use-push-registration') as typeof import('../hooks/use-push-registration');
+    const { usePushRegistration } =
+      require('../hooks/use-push-registration') as typeof import('../hooks/use-push-registration');
 
     const { unmount } = renderHook(() => usePushRegistration());
 
@@ -54,7 +56,8 @@ describe('usePushRegistration', () => {
   it('ne plante pas si POST échoue (erreur réseau)', async () => {
     mockApiPost.mockRejectedValue(new Error('Network error'));
 
-    const { usePushRegistration } = require('../hooks/use-push-registration') as typeof import('../hooks/use-push-registration');
+    const { usePushRegistration } =
+      require('../hooks/use-push-registration') as typeof import('../hooks/use-push-registration');
 
     const { unmount } = renderHook(() => usePushRegistration());
 
