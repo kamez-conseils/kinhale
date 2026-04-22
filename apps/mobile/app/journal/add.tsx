@@ -64,9 +64,9 @@ export default function AddDoseScreen(): JSX.Element {
       const kp = await getOrCreateDevice();
       const payload = {
         doseId: crypto.randomUUID(),
-        pumpId: 'default-pump',
-        childId: 'default-child',
-        caregiverId: deviceId,
+        pumpId: 'default-pump', // TODO(KIN-035): remplacer par pumpId sélectionné depuis le doc
+        childId: 'default-child', // TODO(KIN-035): remplacer par childId depuis le doc (RM13 un enfant/foyer)
+        caregiverId: deviceId, // TODO(KIN-035): caregiverId = userId, pas deviceId
         administeredAtMs: Date.now(),
         doseType,
         dosesAdministered: 1,
@@ -124,7 +124,7 @@ export default function AddDoseScreen(): JSX.Element {
           <Button
             key={s}
             size="$3"
-            onPress={() => setSymptoms((prev) => toggle(prev, s))}
+            onPress={() => { setSymptoms((prev) => toggle(prev, s)); setError(null); }}
             theme={symptoms.includes(s) ? 'active' : null}
             accessible
             accessibilityRole="button"
@@ -140,7 +140,7 @@ export default function AddDoseScreen(): JSX.Element {
           <Button
             key={c}
             size="$3"
-            onPress={() => setCircumstances((prev) => toggle(prev, c))}
+            onPress={() => { setCircumstances((prev) => toggle(prev, c)); setError(null); }}
             theme={circumstances.includes(c) ? 'active' : null}
             accessible
             accessibilityRole="button"
@@ -153,7 +153,7 @@ export default function AddDoseScreen(): JSX.Element {
       <Text fontWeight="600">{t('journal.freeFormTag')}</Text>
       <Input
         value={freeFormTag}
-        onChangeText={setFreeFormTag}
+        onChangeText={(text) => { setFreeFormTag(text); setError(null); }}
         placeholder={t('journal.freeFormTagPlaceholder')}
         accessible
         accessibilityLabel={t('journal.freeFormTag')}

@@ -25,6 +25,14 @@ export function projectDoses(doc: KinhaleDoc): ProjectedDose[] {
       // payload malformé — ignoré silencieusement (log sans donnée santé)
       continue;
     }
+    if (
+      typeof payload.doseType !== 'string' ||
+      (payload.doseType !== 'maintenance' && payload.doseType !== 'rescue') ||
+      !Array.isArray(payload.symptoms) ||
+      !Array.isArray(payload.circumstances)
+    ) {
+      continue;
+    }
     result.push({
       ...payload,
       eventId: event.id,

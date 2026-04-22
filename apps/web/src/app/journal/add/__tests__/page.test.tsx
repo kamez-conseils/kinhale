@@ -83,12 +83,24 @@ describe('AddDosePage', () => {
     mockAppendDose.mockRejectedValueOnce(new Error('réseau indisponible'));
     const user = userEvent.setup();
     renderWithProviders(<AddDosePage />);
+    await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalled());
     const saveButton = screen.getByRole('button', { name: /enregistrer|save/i });
     await user.click(saveButton);
     await waitFor(() => {
       expect(screen.getByText(/erreur|error/i)).toBeInTheDocument();
     });
     expect(mockPush).not.toHaveBeenCalledWith('/journal');
+  });
+
+  it('appelle sendChanges quand groupKey est disponible', async () => {
+    renderWithProviders(<AddDosePage />);
+    await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByText(/enregistrer|save/i));
+
+    await waitFor(() => {
+      expect(mockSendChanges).toHaveBeenCalled();
+    });
   });
 
   it('affiche une erreur RM4 si rescue sans contexte', async () => {

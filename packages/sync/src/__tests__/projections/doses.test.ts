@@ -78,4 +78,40 @@ describe('projectDoses', () => {
     const result = projectDoses(makeDoc([{ payload: d, occurredAtMs: 9_000 }]));
     expect(result[0]?.occurredAtMs).toBe(9_000);
   });
+
+  it('ignore les événements avec payload structurellement invalide', () => {
+    const doc: KinhaleDoc = {
+      householdId: 'hh-1',
+      events: [
+        {
+          id: 'e1',
+          type: 'DoseAdministered',
+          payloadJson: JSON.stringify({ doseType: 'garbage', symptoms: null }),
+          signerPublicKeyHex: 'a'.repeat(64),
+          signatureHex: 'b'.repeat(128),
+          deviceId: 'dev-1',
+          occurredAtMs: 1000,
+        },
+      ],
+    };
+    expect(projectDoses(doc)).toEqual([]);
+  });
+
+  it('ignore les événements avec JSON invalide', () => {
+    const doc: KinhaleDoc = {
+      householdId: 'hh-1',
+      events: [
+        {
+          id: 'e1',
+          type: 'DoseAdministered',
+          payloadJson: 'not-json{{{',
+          signerPublicKeyHex: 'a'.repeat(64),
+          signatureHex: 'b'.repeat(128),
+          deviceId: 'dev-1',
+          occurredAtMs: 1000,
+        },
+      ],
+    };
+    expect(projectDoses(doc)).toEqual([]);
+  });
 });
