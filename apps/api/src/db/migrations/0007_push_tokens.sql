@@ -9,3 +9,6 @@ CREATE TABLE IF NOT EXISTS "push_tokens" (
 
 CREATE UNIQUE INDEX IF NOT EXISTS "push_tokens_device_token_idx"
   ON "push_tokens" ("device_id", "token");
+
+CREATE INDEX IF NOT EXISTS "push_tokens_household_idx"
+  ON "push_tokens" ("household_id");

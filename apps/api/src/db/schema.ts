@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, bigint, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, bigint, uniqueIndex, index } from 'drizzle-orm/pg-core';
 
 /**
  * Comptes utilisateurs. L'email n'est jamais stocké en clair —
@@ -75,5 +75,8 @@ export const pushTokens = pgTable(
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
-  (t) => [uniqueIndex('push_tokens_device_token_idx').on(t.deviceId, t.token)],
+  (t) => [
+    uniqueIndex('push_tokens_device_token_idx').on(t.deviceId, t.token),
+    index('push_tokens_household_idx').on(t.householdId),
+  ],
 );
