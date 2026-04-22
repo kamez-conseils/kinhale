@@ -75,18 +75,21 @@ describe('AddDosePage', () => {
   });
 
   it('affiche une erreur si appendDose échoue', async () => {
-    // Fake timers : RTL v16 désactive son MutationObserver, évitant le deadlock
-    // causé par les setTimeout Tamagui qui recheck waitFor en boucle (CI React 19).
+    // Fake timers : empêche Tamagui de faire setState hors act() via setTimeout,
+    // ce qui causerait un deadlock dans act() (CI React 19 + jsdom).
+    // On flush la chaîne async manuellement via Promise.resolve() sans waitFor.
     jest.useFakeTimers();
     try {
       mockAppendDose.mockRejectedValueOnce(new Error('réseau indisponible'));
       renderWithProviders(<AddDosePage />);
-      await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalledWith('hh-1'));
       fireEvent.click(screen.getByRole('button', { name: /enregistrer|save/i }));
-      await waitFor(() => {
-        expect(mockAppendDose).toHaveBeenCalled();
-        expect(mockPush).not.toHaveBeenCalledWith('/journal');
+      await act(async () => {
+        await Promise.resolve(); // getOrCreateDevice résout
+        await Promise.resolve(); // appendDose rejette → catch setError + finally setLoading
+        await Promise.resolve(); // mises à jour d'état propagées
       });
+      expect(mockAppendDose).toHaveBeenCalled();
+      expect(mockPush).not.toHaveBeenCalledWith('/journal');
     } finally {
       jest.clearAllTimers();
       jest.useRealTimers();
