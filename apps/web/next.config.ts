@@ -8,7 +8,21 @@ const nextConfig: NextConfig = {
     '@tamagui/core',
     '@tamagui/config',
     '@tamagui/animations-react-native',
+    '@kinhale/crypto',
+    '@kinhale/sync',
+    '@kinhale/i18n',
+    '@kinhale/domain',
+    '@kinhale/ui',
   ],
+  webpack: (config) => {
+    // Les packages monorepo utilisent NodeNext (imports avec extension .js)
+    // mais sont en source TypeScript. On dit à webpack de tenter .ts/.tsx avant .js.
+    config.resolve.extensionAlias = {
+      ...config.resolve.extensionAlias,
+      '.js': ['.ts', '.tsx', '.js', '.jsx'],
+    };
+    return config;
+  },
 };
 
 export default withTamagui({
