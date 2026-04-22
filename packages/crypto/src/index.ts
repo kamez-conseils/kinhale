@@ -18,3 +18,6 @@ export { deriveDeviceKeypair } from './device/keypair.js';
 export type { DeviceKeypair } from './device/keypair.js';
 export { generateInvitationToken } from './invitation/token.js';
 export { generatePin, hashPin, verifyPin } from './invitation/pin.js';
+export { generateStorageKey } from './storage/key.js';
+export type { EncryptedBlob } from './storage/blob.js';
+export { encryptDocBlob, decryptDocBlob } from './storage/blob.js';
