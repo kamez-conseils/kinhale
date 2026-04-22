@@ -43,9 +43,7 @@ export default function JournalPage(): React.JSX.Element {
         >
           <XStack justifyContent="space-between" alignItems="center">
             <Text fontSize="$4" fontWeight="700">
-              {dose.doseType === 'rescue'
-                ? t('journal.rescue')
-                : t('journal.maintenance')}
+              {dose.doseType === 'rescue' ? t('journal.rescue') : t('journal.maintenance')}
             </Text>
             <Text fontSize="$2" color="$color9">
               {new Date(dose.administeredAtMs).toLocaleString()}

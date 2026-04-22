@@ -41,9 +41,7 @@ export default function JournalScreen(): JSX.Element {
         >
           <XStack justifyContent="space-between" alignItems="center">
             <Text fontSize="$4" fontWeight="700">
-              {dose.doseType === 'rescue'
-                ? t('journal.rescue')
-                : t('journal.maintenance')}
+              {dose.doseType === 'rescue' ? t('journal.rescue') : t('journal.maintenance')}
             </Text>
             <Text fontSize="$2" color="$color9">
               {new Date(dose.administeredAtMs).toLocaleString()}
@@ -52,17 +50,13 @@ export default function JournalScreen(): JSX.Element {
 
           {dose.symptoms.length > 0 && (
             <Text fontSize="$3" color="$color10">
-              {dose.symptoms
-                .map((s) => t(`journal.symptom.${s}`))
-                .join(' · ')}
+              {dose.symptoms.map((s) => t(`journal.symptom.${s}`)).join(' · ')}
             </Text>
           )}
 
           {dose.circumstances.length > 0 && (
             <Text fontSize="$3" color="$color10">
-              {dose.circumstances
-                .map((c) => t(`journal.circumstance.${c}`))
-                .join(' · ')}
+              {dose.circumstances.map((c) => t(`journal.circumstance.${c}`)).join(' · ')}
             </Text>
           )}
 

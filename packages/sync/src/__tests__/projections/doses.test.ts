@@ -73,7 +73,7 @@ describe('projectDoses', () => {
     expect(result[1]?.doseId).toBe('old');
   });
 
-  it('préserve occurredAtMs depuis l\'événement signé', () => {
+  it("préserve occurredAtMs depuis l'événement signé", () => {
     const d = dose({ administeredAtMs: 5_000 });
     const result = projectDoses(makeDoc([{ payload: d, occurredAtMs: 9_000 }]));
     expect(result[0]?.occurredAtMs).toBe(9_000);

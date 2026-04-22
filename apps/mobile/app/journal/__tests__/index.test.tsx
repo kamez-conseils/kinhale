@@ -8,9 +8,7 @@ import type { DoseAdministeredPayload } from '@kinhale/sync';
 jest.mock('@kinhale/crypto');
 jest.mock('@kinhale/sync');
 
-const makeDocWithDose = (
-  overrides: Partial<DoseAdministeredPayload> = {},
-): KinhaleDoc => {
+const makeDocWithDose = (overrides: Partial<DoseAdministeredPayload> = {}): KinhaleDoc => {
   const payload: DoseAdministeredPayload = {
     doseId: 'dose-abc',
     pumpId: 'pump-1',

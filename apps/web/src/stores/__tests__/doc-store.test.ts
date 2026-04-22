@@ -79,7 +79,7 @@ describe('doc-store', () => {
         childId: 'child-1',
         caregiverId: 'dev-1',
         administeredAtMs: 1000,
-        doseType: 'maintenance',
+        doseType: 'maintenance' as const,
         dosesAdministered: 1,
         symptoms: [],
         circumstances: [],

@@ -96,14 +96,20 @@ export default function AddDosePage(): React.JSX.Element {
       <XStack gap="$3">
         <Button
           flex={1}
-          onPress={() => { setDoseType('maintenance'); setError(null); }}
+          onPress={() => {
+            setDoseType('maintenance');
+            setError(null);
+          }}
           theme={doseType === 'maintenance' ? 'active' : null}
         >
           {t('journal.maintenance')}
         </Button>
         <Button
           flex={1}
-          onPress={() => { setDoseType('rescue'); setError(null); }}
+          onPress={() => {
+            setDoseType('rescue');
+            setError(null);
+          }}
           theme={doseType === 'rescue' ? 'active' : null}
         >
           {t('journal.rescue')}
