@@ -17,6 +17,7 @@ module.exports = {
     '^expo-device$': '<rootDir>/src/__mocks__/expo-device.ts',
     '^@kinhale/crypto$': '<rootDir>/src/__mocks__/@kinhale/crypto.ts',
     '^@kinhale/sync$': '<rootDir>/src/__mocks__/@kinhale/sync.ts',
+    '^@kinhale/sync/client$': '<rootDir>/src/__mocks__/@kinhale/sync-client.ts',
   },
   transformIgnorePatterns: [
     '/node_modules/(?!\\.pnpm|(jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|react-navigation|@react-navigation/.*|tamagui|@tamagui/.*)',

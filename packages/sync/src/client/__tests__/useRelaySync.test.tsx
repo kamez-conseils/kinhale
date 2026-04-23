@@ -16,9 +16,9 @@ const mockBuildSyncMessage = vi.fn(
   async (_before: unknown, _after: unknown, _key: Uint8Array, _meta: unknown) =>
     '{"mocked":"blob"}',
 );
-const mockConsumeSyncMessage = vi.fn(
-  async (_doc: unknown, _json: string, _key: Uint8Array) => ({ __mocked: true }),
-);
+const mockConsumeSyncMessage = vi.fn(async (_doc: unknown, _json: string, _key: Uint8Array) => ({
+  __mocked: true,
+}));
 const mockCreateCursor = vi.fn(() => ({
   lastSentDoc: null,
   knownHeads: [],
