@@ -8,6 +8,18 @@ export const EnvSchema = z.object({
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('14d'),
   REDIS_URL: z.string().default('redis://:kinhale_redis_dev@localhost:6379'),
+  SMTP_HOST: z.string().default('mailpit'),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(1025),
+  // z.coerce.boolean() traite 'false' comme true (string non-vide = truthy).
+  // On utilise une transformation explicite pour respecter la valeur 'false'.
+  SMTP_SECURE: z
+    .union([z.boolean(), z.string()])
+    .transform((v) => v === true || v === 'true' || v === '1')
+    .default(false),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  MAIL_FROM: z.string().default('no-reply@kinhale.health'),
+  WEB_URL: z.string().default('http://localhost:3000'),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -26,6 +38,13 @@ export function testEnv(overrides: Partial<Env> = {}): Env {
     JWT_ACCESS_TTL: '15m',
     JWT_REFRESH_TTL: '14d',
     REDIS_URL: 'redis://:kinhale_redis_dev@localhost:6379',
+    SMTP_HOST: 'mailpit',
+    SMTP_PORT: 1025,
+    SMTP_SECURE: false,
+    SMTP_USER: undefined,
+    SMTP_PASS: undefined,
+    MAIL_FROM: 'no-reply@kinhale.health',
+    WEB_URL: 'http://localhost:3000',
     ...overrides,
   };
 }

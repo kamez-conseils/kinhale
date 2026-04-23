@@ -31,6 +31,20 @@ export default function JournalPage(): React.JSX.Element {
   return (
     <YStack padding="$4" gap="$4">
       <H1>{t('journal.title')}</H1>
+      <XStack gap="$2" flexWrap="wrap" marginBottom="$3">
+        <Button size="$3" onPress={() => router.push('/onboarding/child')}>
+          {t('nav.child')}
+        </Button>
+        <Button size="$3" onPress={() => router.push('/onboarding/pump')}>
+          {t('nav.pumps')}
+        </Button>
+        <Button size="$3" onPress={() => router.push('/onboarding/plan')}>
+          {t('nav.plan')}
+        </Button>
+        <Button size="$3" onPress={() => router.push('/caregivers')}>
+          {t('nav.caregivers')}
+        </Button>
+      </XStack>
       {doses.length === 0 && <Text color="$color10">{t('journal.empty')}</Text>}
       {doses.map((dose) => (
         <YStack

@@ -111,7 +111,10 @@ export default function AddDosePage(): React.JSX.Element | null {
             setDoseType('maintenance');
             setError(null);
           }}
-          theme={doseType === 'maintenance' ? 'active' : null}
+          backgroundColor={doseType === 'maintenance' ? '$blue9' : '$backgroundStrong'}
+          color={doseType === 'maintenance' ? 'white' : '$color'}
+          borderColor={doseType === 'maintenance' ? '$blue10' : '$borderColor'}
+          borderWidth={2}
         >
           {t('journal.maintenance')}
         </Button>
@@ -121,7 +124,10 @@ export default function AddDosePage(): React.JSX.Element | null {
             setDoseType('rescue');
             setError(null);
           }}
-          theme={doseType === 'rescue' ? 'active' : null}
+          backgroundColor={doseType === 'rescue' ? '$blue9' : '$backgroundStrong'}
+          color={doseType === 'rescue' ? 'white' : '$color'}
+          borderColor={doseType === 'rescue' ? '$blue10' : '$borderColor'}
+          borderWidth={2}
         >
           {t('journal.rescue')}
         </Button>
@@ -137,7 +143,10 @@ export default function AddDosePage(): React.JSX.Element | null {
               setSymptoms((prev) => toggle(prev, s));
               setError(null);
             }}
-            theme={symptoms.includes(s) ? 'active' : null}
+            backgroundColor={symptoms.includes(s) ? '$blue9' : '$backgroundHover'}
+            color={symptoms.includes(s) ? 'white' : '$color'}
+            borderWidth={1}
+            borderColor={symptoms.includes(s) ? '$blue10' : '$borderColor'}
           >
             {t(`journal.symptom.${s}`)}
           </Button>
@@ -154,7 +163,10 @@ export default function AddDosePage(): React.JSX.Element | null {
               setCircumstances((prev) => toggle(prev, c));
               setError(null);
             }}
-            theme={circumstances.includes(c) ? 'active' : null}
+            backgroundColor={circumstances.includes(c) ? '$blue9' : '$backgroundHover'}
+            color={circumstances.includes(c) ? 'white' : '$color'}
+            borderWidth={1}
+            borderColor={circumstances.includes(c) ? '$blue10' : '$borderColor'}
           >
             {t(`journal.circumstance.${c}`)}
           </Button>

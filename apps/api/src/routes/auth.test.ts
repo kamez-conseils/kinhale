@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import type { Transporter } from 'nodemailer';
 import { buildApp } from '../app.js';
 import { testEnv } from '../env.js';
 import type { DrizzleDb } from '../plugins/db.js';
@@ -29,9 +30,16 @@ function makeMockDb(): DrizzleDb {
   } as unknown as DrizzleDb;
 }
 
+function makeMockTransport() {
+  return {
+    sendMail: vi.fn().mockResolvedValue({ messageId: 'test-message-id' }),
+  } as unknown as Transporter;
+}
+
 describe('POST /auth/magic-link', () => {
-  it('retourne 200 avec message de confirmation', async () => {
-    const app = buildApp(testEnv(), { db: makeMockDb() });
+  it('retourne 200 avec message de confirmation et envoie un email', async () => {
+    const mockTransport = makeMockTransport();
+    const app = buildApp(testEnv(), { db: makeMockDb(), mailTransport: mockTransport });
     await app.ready();
     const res = await app.inject({
       method: 'POST',
@@ -40,11 +48,34 @@ describe('POST /auth/magic-link', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json<{ message: string }>().message).toBe('Magic link envoyé');
+    expect(mockTransport.sendMail).toHaveBeenCalledOnce();
+    const callArgs = vi.mocked(mockTransport.sendMail).mock.calls[0]?.[0];
+    expect(callArgs).toMatchObject({
+      to: 'test@example.com',
+      from: 'no-reply@kinhale.health',
+      subject: 'Votre lien de connexion Kinhale',
+    });
+    await app.close();
+  });
+
+  it('retourne 200 même si le transport mail échoue', async () => {
+    const failingTransport = {
+      sendMail: vi.fn().mockRejectedValue(new Error('SMTP unavailable')),
+    } as unknown as Transporter;
+    const app = buildApp(testEnv(), { db: makeMockDb(), mailTransport: failingTransport });
+    await app.ready();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/auth/magic-link',
+      payload: { email: 'test@example.com' },
+    });
+    // L'échec mail ne doit pas bloquer la réponse HTTP
+    expect(res.statusCode).toBe(200);
     await app.close();
   });
 
   it('retourne 400 si email manquant', async () => {
-    const app = buildApp(testEnv(), { db: makeMockDb() });
+    const app = buildApp(testEnv(), { db: makeMockDb(), mailTransport: makeMockTransport() });
     await app.ready();
     const res = await app.inject({
       method: 'POST',
@@ -56,7 +87,7 @@ describe('POST /auth/magic-link', () => {
   });
 
   it('retourne 400 si email invalide', async () => {
-    const app = buildApp(testEnv(), { db: makeMockDb() });
+    const app = buildApp(testEnv(), { db: makeMockDb(), mailTransport: makeMockTransport() });
     await app.ready();
     const res = await app.inject({
       method: 'POST',
@@ -70,7 +101,7 @@ describe('POST /auth/magic-link', () => {
 
 describe('GET /auth/verify', () => {
   it('retourne 400 si token absent', async () => {
-    const app = buildApp(testEnv(), { db: makeMockDb() });
+    const app = buildApp(testEnv(), { db: makeMockDb(), mailTransport: makeMockTransport() });
     await app.ready();
     const res = await app.inject({
       method: 'GET',
@@ -88,7 +119,7 @@ describe('GET /auth/verify', () => {
       }),
     } as ReturnType<typeof db.select>);
 
-    const app = buildApp(testEnv(), { db });
+    const app = buildApp(testEnv(), { db, mailTransport: makeMockTransport() });
     await app.ready();
     const res = await app.inject({
       method: 'GET',
@@ -101,7 +132,7 @@ describe('GET /auth/verify', () => {
 
 describe('POST /auth/register-device', () => {
   it('retourne 401 sans JWT', async () => {
-    const app = buildApp(testEnv(), { db: makeMockDb() });
+    const app = buildApp(testEnv(), { db: makeMockDb(), mailTransport: makeMockTransport() });
     await app.ready();
     const res = await app.inject({
       method: 'POST',
@@ -114,7 +145,7 @@ describe('POST /auth/register-device', () => {
 
   it('retourne 400 si publicKeyHex absent', async () => {
     const env = testEnv();
-    const app = buildApp(env, { db: makeMockDb() });
+    const app = buildApp(env, { db: makeMockDb(), mailTransport: makeMockTransport() });
     await app.ready();
     const token = app.jwt.sign({
       sub: 'account-001',
@@ -134,7 +165,7 @@ describe('POST /auth/register-device', () => {
 
   it("retourne 400 si publicKeyHex n'est pas 64 hex chars", async () => {
     const env = testEnv();
-    const app = buildApp(env, { db: makeMockDb() });
+    const app = buildApp(env, { db: makeMockDb(), mailTransport: makeMockTransport() });
     await app.ready();
     const token = app.jwt.sign({
       sub: 'account-001',
@@ -173,7 +204,7 @@ describe('POST /auth/register-device', () => {
       }),
     } as unknown as DrizzleDb;
 
-    const app = buildApp(env, { db });
+    const app = buildApp(env, { db, mailTransport: makeMockTransport() });
     await app.ready();
     const token = app.jwt.sign({
       sub: 'account-001',

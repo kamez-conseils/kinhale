@@ -80,7 +80,10 @@ export default function OnboardingPlanPage(): React.JSX.Element | null {
           <Text>{t('onboarding.plan.noMaintenancePumpBody')}</Text>
           <Button
             onPress={() => router.push('/onboarding/pump')}
-            theme="active"
+            backgroundColor="$blue9"
+            color="white"
+            borderColor="$blue10"
+            borderWidth={2}
             accessibilityLabel={t('onboarding.plan.goToPumpCta')}
           >
             {t('onboarding.plan.goToPumpCta')}
@@ -102,7 +105,10 @@ export default function OnboardingPlanPage(): React.JSX.Element | null {
               <Button
                 key={p.pumpId}
                 onPress={() => setSelectedPumpId(p.pumpId)}
-                theme={selectedPumpId === p.pumpId ? 'active' : null}
+                backgroundColor={selectedPumpId === p.pumpId ? '$blue9' : '$backgroundStrong'}
+                color={selectedPumpId === p.pumpId ? 'white' : '$color'}
+                borderColor={selectedPumpId === p.pumpId ? '$blue10' : '$borderColor'}
+                borderWidth={2}
               >
                 {p.name}
               </Button>

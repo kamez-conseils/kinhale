@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { sha256HexFromString, randomBytes } from '@kinhale/crypto';
 import { magicLinks, accounts, devices } from '../db/schema.js';
 import { eq, and, gt } from 'drizzle-orm';
+import { sendMagicLink } from '../mail/send-magic-link.js';
 
 const MagicLinkBodySchema = z.object({
   email: z.string().email(),
@@ -40,9 +41,13 @@ const authRoute: FastifyPluginAsync = async (app) => {
       expiresAt,
     });
 
-    if (app.env.NODE_ENV === 'development') {
-      const magicUrl = `http://localhost:${app.env.PORT}/auth/verify?token=${token}`;
-      app.log.info({ magicUrl }, 'Magic link généré (dev only)');
+    try {
+      await sendMagicLink(app.mailTransport, app.env, { to: email, token });
+    } catch (err) {
+      // On ne bloque pas la réponse HTTP — logger l'erreur et continuer.
+      // Sécurité : le token est en DB, si l'envoi échoue, l'utilisateur
+      // peut redemander. On évite aussi d'exposer l'existence d'un compte.
+      app.log.error({ err }, 'Échec envoi magic link (email préservé côté DB)');
     }
 
     return reply.status(200).send({ message: 'Magic link envoyé' });

@@ -7,7 +7,11 @@
   "nav": {
     "home": "Home",
     "journal": "Journal",
-    "settings": "Settings"
+    "settings": "Settings",
+    "child": "Child",
+    "pumps": "Pumps",
+    "plan": "Plan",
+    "caregivers": "Caregivers"
   },
   "auth": {
     "title": "Sign in",

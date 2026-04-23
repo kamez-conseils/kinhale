@@ -66,14 +66,20 @@ export default function OnboardingPumpPage(): React.JSX.Element | null {
         <Button
           flex={1}
           onPress={() => setPumpType('maintenance')}
-          theme={pumpType === 'maintenance' ? 'active' : null}
+          backgroundColor={pumpType === 'maintenance' ? '$blue9' : '$backgroundStrong'}
+          color={pumpType === 'maintenance' ? 'white' : '$color'}
+          borderColor={pumpType === 'maintenance' ? '$blue10' : '$borderColor'}
+          borderWidth={2}
         >
           {t('onboarding.pump.typeMaintenance')}
         </Button>
         <Button
           flex={1}
           onPress={() => setPumpType('rescue')}
-          theme={pumpType === 'rescue' ? 'active' : null}
+          backgroundColor={pumpType === 'rescue' ? '$blue9' : '$backgroundStrong'}
+          color={pumpType === 'rescue' ? 'white' : '$color'}
+          borderColor={pumpType === 'rescue' ? '$blue10' : '$borderColor'}
+          borderWidth={2}
         >
           {t('onboarding.pump.typeRescue')}
         </Button>

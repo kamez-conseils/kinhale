@@ -85,7 +85,8 @@ export default function InviteCaregiverPage(): React.JSX.Element | null {
         <XStack gap="$2">
           <Button
             onPress={() => setRole('contributor')}
-            theme={role === 'contributor' ? 'active' : null}
+            backgroundColor={role === 'contributor' ? '$blue9' : '$backgroundStrong'}
+            color={role === 'contributor' ? 'white' : '$color'}
             borderWidth={2}
             borderColor={role === 'contributor' ? '$blue10' : '$borderColor'}
             flex={1}
@@ -97,7 +98,8 @@ export default function InviteCaregiverPage(): React.JSX.Element | null {
           </Button>
           <Button
             onPress={() => setRole('restricted_contributor')}
-            theme={role === 'restricted_contributor' ? 'active' : null}
+            backgroundColor={role === 'restricted_contributor' ? '$blue9' : '$backgroundStrong'}
+            color={role === 'restricted_contributor' ? 'white' : '$color'}
             borderWidth={2}
             borderColor={role === 'restricted_contributor' ? '$blue10' : '$borderColor'}
             flex={1}
@@ -123,7 +125,10 @@ export default function InviteCaregiverPage(): React.JSX.Element | null {
       <Button
         onPress={() => void handleSubmit()}
         disabled={displayName.trim().length === 0}
-        theme="active"
+        backgroundColor="$blue9"
+        color="white"
+        borderColor="$blue10"
+        borderWidth={2}
         accessibilityLabel={t('invitation.generateCta')}
       >
         {t('invitation.generateCta')}
