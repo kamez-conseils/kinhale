@@ -90,7 +90,11 @@ export type {
   ReminderRetryStep,
   ReminderRetryStepIndex,
 } from './rm25-reminder-retries';
-export { detectMissedReminders, MISSED_ELIGIBLE_STATUSES } from './rm25-missed-dose';
+export {
+  detectMissedReminders,
+  MISSED_DOSE_CLOCK_SKEW_BUFFER_MS,
+  MISSED_ELIGIBLE_STATUSES,
+} from './rm25-missed-dose';
 export type { MissedReminder } from './rm25-missed-dose';
 export {
   DAILY_NOTIFICATION_HARD_CAP,

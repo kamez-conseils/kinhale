@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { Reminder } from '../entities/reminder';
-import { detectMissedReminders, MISSED_ELIGIBLE_STATUSES } from './rm25-missed-dose';
+import {
+  detectMissedReminders,
+  MISSED_DOSE_CLOCK_SKEW_BUFFER_MS,
+  MISSED_ELIGIBLE_STATUSES,
+} from './rm25-missed-dose';
 
 function makeReminder(overrides: Partial<Reminder> = {}): Reminder {
   return {
@@ -87,5 +91,33 @@ describe('RM25 — detectMissedReminders', () => {
 
   it('MISSED_ELIGIBLE_STATUSES = [scheduled, sent]', () => {
     expect(MISSED_ELIGIBLE_STATUSES).toEqual(['scheduled', 'sent']);
+  });
+
+  describe('tolérance dérive d’horloge (MISSED_DOSE_CLOCK_SKEW_BUFFER_MS = 120s)', () => {
+    it('expose un buffer de 120 000 ms', () => {
+      expect(MISSED_DOSE_CLOCK_SKEW_BUFFER_MS).toBe(120_000);
+    });
+
+    it('ne bascule pas missed à windowEnd + 60s (dérive potentielle tolérée)', () => {
+      const reminder = makeReminder({ status: 'scheduled' });
+      const now = new Date(Date.parse(reminder.windowEndUtc) + 60_000);
+      expect(detectMissedReminders([reminder], now)).toEqual([]);
+    });
+
+    it('ne bascule pas missed exactement à windowEnd + buffer (borne stricte)', () => {
+      const reminder = makeReminder({ status: 'scheduled' });
+      const now = new Date(Date.parse(reminder.windowEndUtc) + MISSED_DOSE_CLOCK_SKEW_BUFFER_MS);
+      expect(detectMissedReminders([reminder], now)).toEqual([]);
+    });
+
+    it('bascule missed à windowEnd + buffer + 1s (au-delà du buffer)', () => {
+      const reminder = makeReminder({ status: 'scheduled' });
+      const now = new Date(
+        Date.parse(reminder.windowEndUtc) + MISSED_DOSE_CLOCK_SKEW_BUFFER_MS + 1_000,
+      );
+      const result = detectMissedReminders([reminder], now);
+      expect(result).toHaveLength(1);
+      expect(result[0]?.status).toBe('missed');
+    });
   });
 });
