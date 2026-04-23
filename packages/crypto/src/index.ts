@@ -1,4 +1,5 @@
 export { CRYPTO_UNAVAILABLE_MESSAGE, sha256Hex, sha256HexFromString } from './hash/sha256.js';
+export { blake2bHex, BLAKE2B_DEFAULT_BYTES } from './hash/blake2b.js';
 export { getSodium } from './sodium.js';
 export { generateSigningKeypair, sign, verify } from './sign/ed25519.js';
 export type { SigningKeypair } from './sign/ed25519.js';

@@ -5,6 +5,10 @@ export const sha256Hex = jest.fn().mockResolvedValue('a'.repeat(64));
 export const sha256HexFromString = jest.fn().mockResolvedValue('a'.repeat(64));
 export const CRYPTO_UNAVAILABLE_MESSAGE = 'crypto unavailable';
 
+// KIN-040 : BLAKE2b keyed pour pseudonymisation télémétrie.
+export const BLAKE2B_DEFAULT_BYTES = 8;
+export const blake2bHex = jest.fn().mockResolvedValue('b'.repeat(16));
+
 export const getSodium = jest.fn().mockResolvedValue({});
 
 export const generateSigningKeypair = jest.fn().mockReturnValue({
