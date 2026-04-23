@@ -19,6 +19,16 @@ export type {
   CreateRelayClient,
   UseRelaySyncDeps,
 } from './useRelaySync.js';
+export { usePullDelta } from './usePullDelta.js';
+export type {
+  CatchupMessage,
+  CatchupResponse,
+  FetchCatchup,
+  FetchCatchupArgs,
+  UsePullDeltaDeps,
+  UsePullDeltaResult,
+} from './usePullDelta.js';
+
 export { useReminderScheduler } from './useReminderScheduler.js';
 export type {
   ScheduleLocalNotificationArgs,

@@ -99,13 +99,11 @@ Résumé — détails complets dans `docs/contributing/GITFLOW.md`.
 - Squash-merge sur `feature/*` → `develop` ; merge-commit sur `release/*` → `main`.
 - Linear history forcée sur `main`.
 - Signatures GPG/SSH obligatoires.
-- PR > 400 lignes modifiées = justification ou découpage.
 
 ## Méthodologie
 
 - Tests avant merge. Pas de merge sans CI verte.
 - Review d'au moins 1 pair ; **2 reviews obligatoires** si la PR touche `packages/crypto`, `packages/sync`, ou tout code de sécurité.
-- Aucune PR ne touche plus de ~400 lignes modifiées sauf exception justifiée.
 - Pas de commit direct sur `main` ou `develop`.
 - Un ADR (`docs/architecture/adr/`) pour toute décision architecturale structurante.
 

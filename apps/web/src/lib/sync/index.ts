@@ -3,10 +3,13 @@
 import { useTranslation } from 'react-i18next';
 import {
   useRelaySync as useRelaySyncCore,
+  usePullDelta as usePullDeltaCore,
   useReminderScheduler as useReminderSchedulerCore,
   useMissedDoseWatcher as useMissedDoseWatcherCore,
   getGroupKey,
   type DecryptFailedEvent,
+  type FetchCatchupArgs,
+  type CatchupResponse,
 } from '@kinhale/sync/client';
 import { blake2bHex } from '@kinhale/crypto';
 import { createRelayClient } from '../relay-client';
@@ -162,7 +165,78 @@ export function useRelaySync(): { connected: boolean } {
  */
 export function RelaySyncBootstrap(): null {
   useRelaySync();
+  usePullDelta();
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Pull delta catchup (KIN-70 / E6-S04).
+//
+// Récupère les événements manqués au montage et toutes les 60 s via
+// `GET /relay/catchup?since=<seq>`. Curseur persisté en localStorage,
+// scopé par foyer.
+// ---------------------------------------------------------------------------
+
+const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
+const CURSOR_STORAGE_PREFIX = 'kinhale-sync-cursor:';
+
+function cursorKey(householdId: string): string {
+  return `${CURSOR_STORAGE_PREFIX}${householdId}`;
+}
+
+async function fetchCatchup(args: FetchCatchupArgs): Promise<CatchupResponse> {
+  const url = new URL(`${API_URL}/relay/catchup`);
+  url.searchParams.set('since', String(args.since));
+  const res = await fetch(url.toString(), {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${args.accessToken}` },
+  });
+  if (!res.ok) {
+    // Remonte l'échec au hook — le curseur ne sera pas avancé pour ce tick.
+    throw new Error(`catchup fetch failed: ${res.status}`);
+  }
+  const json = (await res.json()) as CatchupResponse;
+  return json;
+}
+
+function loadCursorFactory(getHouseholdId: () => string | null): () => Promise<number> {
+  return async () => {
+    if (typeof window === 'undefined') return 0;
+    const id = getHouseholdId();
+    if (id === null) return 0;
+    const raw = window.localStorage.getItem(cursorKey(id));
+    if (raw === null) return 0;
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  };
+}
+
+function saveCursorFactory(getHouseholdId: () => string | null): (cursor: number) => Promise<void> {
+  return async (cursor: number) => {
+    if (typeof window === 'undefined') return;
+    const id = getHouseholdId();
+    if (id === null) return;
+    window.localStorage.setItem(cursorKey(id), String(cursor));
+  };
+}
+
+/**
+ * Wrapper applicatif web qui monte le pull delta catchup. Doit être rendu
+ * en parallèle de `useRelaySync()` — les deux se complètent : WS pour le
+ * live, catchup pour rattraper ce qui a été manqué pendant une absence.
+ */
+export function usePullDelta(): { pulling: boolean } {
+  return usePullDeltaCore({
+    useAccessToken: () => useAuthStore((s) => s.accessToken),
+    useHouseholdId: () => useAuthStore((s) => s.householdId),
+    useDoc: () => useDocStore((s) => s.doc),
+    getDocSnapshot: () => useDocStore.getState().doc,
+    useReceiveChanges: () => useDocStore((s) => s.receiveChanges),
+    fetchCatchup,
+    loadCursor: loadCursorFactory(() => useAuthStore.getState().householdId),
+    saveCursor: saveCursorFactory(() => useAuthStore.getState().householdId),
+    deriveGroupKey: getGroupKey,
+  });
 }
 
 // ---------------------------------------------------------------------------
