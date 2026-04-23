@@ -1,7 +1,10 @@
 'use client';
 
+import { useTranslation } from 'react-i18next';
 import {
   useRelaySync as useRelaySyncCore,
+  useReminderScheduler as useReminderSchedulerCore,
+  useMissedDoseWatcher as useMissedDoseWatcherCore,
   getGroupKey,
   type DecryptFailedEvent,
 } from '@kinhale/sync/client';
@@ -159,5 +162,112 @@ export function useRelaySync(): { connected: boolean } {
  */
 export function RelaySyncBootstrap(): null {
   useRelaySync();
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Rappels de dose (KIN-038) : scheduler + watcher missed.
+// ---------------------------------------------------------------------------
+
+/**
+ * État interne minimal : mapping `reminderId → setTimeout handle` pour les
+ * rappels programmés via l'API Web Notifications. Limité à la session
+ * onglet : à la fermeture de l'onglet, les timers sont perdus — c'est
+ * acceptable car un onglet fermé n'a de toute façon pas de notif active.
+ *
+ * Pour la v1.0, le web est secondaire (le vrai moteur de rappels est
+ * mobile natif). L'implémentation web assure une expérience cohérente
+ * quand l'app est ouverte, et reste un no-op silencieux si l'API
+ * Notifications n'est pas disponible (SSR, navigateur désactivé, permission
+ * refusée).
+ */
+const webReminderTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function hasWebNotifications(): boolean {
+  return typeof window !== 'undefined' && 'Notification' in window;
+}
+
+async function ensureWebNotificationPermission(): Promise<boolean> {
+  if (!hasWebNotifications()) return false;
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') return false;
+  const result = await Notification.requestPermission();
+  return result === 'granted';
+}
+
+async function scheduleLocalNotificationWeb(args: {
+  id: string;
+  triggerAtUtc: string;
+  title: string;
+  body: string;
+}): Promise<void> {
+  const granted = await ensureWebNotificationPermission();
+  if (!granted) return;
+
+  const delayMs = Math.max(0, Date.parse(args.triggerAtUtc) - Date.now());
+  const existing = webReminderTimers.get(args.id);
+  if (existing !== undefined) clearTimeout(existing);
+
+  const handle = setTimeout(() => {
+    webReminderTimers.delete(args.id);
+    if (hasWebNotifications() && Notification.permission === 'granted') {
+      // Payload minimal — aucune donnée santé. Conforme RM16 + CLAUDE.md.
+      new Notification(args.title, { body: args.body, tag: args.id });
+    }
+  }, delayMs);
+  webReminderTimers.set(args.id, handle);
+}
+
+async function cancelLocalNotificationWeb(id: string): Promise<void> {
+  const handle = webReminderTimers.get(id);
+  if (handle !== undefined) {
+    clearTimeout(handle);
+    webReminderTimers.delete(id);
+  }
+}
+
+async function notifyMissedDoseNowWeb(args: {
+  id: string;
+  title: string;
+  body: string;
+}): Promise<void> {
+  const granted = await ensureWebNotificationPermission();
+  if (!granted) return;
+  if (hasWebNotifications() && Notification.permission === 'granted') {
+    new Notification(args.title, { body: args.body, tag: args.id });
+  }
+}
+
+/**
+ * Monte le scheduler de rappels (E5-S01 + E5-S02, best-effort côté web) et
+ * le watcher de doses manquées (E5-S03). Le web utilise l'API Web
+ * Notifications quand disponible ; sinon no-op silencieux (le vrai moteur
+ * de rappels est mobile natif, §9 SPECS).
+ */
+export function RemindersBootstrap(): null {
+  const { t } = useTranslation('common');
+
+  useReminderSchedulerCore({
+    useDoc: () => useDocStore((s) => s.doc),
+    scheduleLocalNotification: scheduleLocalNotificationWeb,
+    cancelLocalNotification: cancelLocalNotificationWeb,
+    now: () => new Date(),
+    reminderTitle: t('reminder.title'),
+    reminderBody: t('reminder.body'),
+  });
+
+  useMissedDoseWatcherCore({
+    useDoc: () => useDocStore((s) => s.doc),
+    // v1.0 : pas de persistance du statut `missed` dans le doc Automerge
+    // (pas d'événement `ReminderStatusChanged` défini). La transition reste
+    // en mémoire pour l'instant ; branchement prévu dès que le format
+    // d'événement sera stabilisé (ticket de suivi).
+    markReminderMissed: () => undefined,
+    notifyMissedDose: notifyMissedDoseNowWeb,
+    now: () => new Date(),
+    missedDoseTitle: t('missed_dose.title'),
+    missedDoseBody: t('missed_dose.body'),
+  });
+
   return null;
 }

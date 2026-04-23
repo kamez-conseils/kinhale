@@ -59,6 +59,14 @@
     "loading": "Chargement…",
     "back": "Retour"
   },
+  "reminder": {
+    "title": "Kinhale",
+    "body": "Prise prévue"
+  },
+  "missed_dose": {
+    "title": "Kinhale",
+    "body": "Dose non confirmée"
+  },
   "onboarding": {
     "child": {
       "title": "Votre enfant",

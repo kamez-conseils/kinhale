@@ -1,5 +1,9 @@
+import { useTranslation } from 'react-i18next';
+import * as Notifications from 'expo-notifications';
 import {
   useRelaySync as useRelaySyncCore,
+  useReminderScheduler as useReminderSchedulerCore,
+  useMissedDoseWatcher as useMissedDoseWatcherCore,
   getGroupKey,
   type DecryptFailedEvent,
 } from '@kinhale/sync/client';
@@ -143,5 +147,88 @@ export function useRelaySync(): { connected: boolean } {
  */
 export function RelaySyncBootstrap(): null {
   useRelaySync();
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Rappels de dose (KIN-038) : scheduler + watcher missed.
+// ---------------------------------------------------------------------------
+
+/**
+ * Programme une notification locale Expo au `triggerAtUtc`. Si l'instant est
+ * dans le passé, Expo rejette silencieusement ; on renvoie une Promise
+ * résolue pour ne pas polluer la sync du hook.
+ *
+ * Pas de donnée santé dans `title`/`body` — chaînes déjà traduites passées
+ * par le hook (contrat `UseReminderSchedulerDeps.reminderTitle` / `reminderBody`).
+ */
+async function scheduleLocalNotification(args: {
+  id: string;
+  triggerAtUtc: string;
+  title: string;
+  body: string;
+}): Promise<void> {
+  const seconds = Math.max(1, Math.floor((Date.parse(args.triggerAtUtc) - Date.now()) / 1000));
+  await Notifications.scheduleNotificationAsync({
+    identifier: args.id,
+    content: { title: args.title, body: args.body },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds,
+    },
+  });
+}
+
+async function cancelLocalNotification(id: string): Promise<void> {
+  try {
+    await Notifications.cancelScheduledNotificationAsync(id);
+  } catch {
+    // Identifier inconnu côté Expo : aucun log (pas d'info pertinente à
+    // surveiller ; pas de donnée santé à exfiltrer).
+  }
+}
+
+async function notifyMissedDoseNow(args: {
+  id: string;
+  title: string;
+  body: string;
+}): Promise<void> {
+  await Notifications.scheduleNotificationAsync({
+    identifier: args.id,
+    content: { title: args.title, body: args.body },
+    trigger: null, // immédiat
+  });
+}
+
+/**
+ * Monte le scheduler de rappels (E5-S01 + E5-S02) et le watcher de doses
+ * manquées (E5-S03) en arrière-plan. Dépend de i18next pour les chaînes —
+ * à inclure **sous** le `I18nextProvider`.
+ */
+export function RemindersBootstrap(): null {
+  const { t } = useTranslation('common');
+
+  useReminderSchedulerCore({
+    useDoc: () => useDocStore((s) => s.doc),
+    scheduleLocalNotification,
+    cancelLocalNotification,
+    now: () => new Date(),
+    reminderTitle: t('reminder.title'),
+    reminderBody: t('reminder.body'),
+  });
+
+  useMissedDoseWatcherCore({
+    useDoc: () => useDocStore((s) => s.doc),
+    // v1.0 : pas de persistance du statut `missed` dans le doc Automerge
+    // (pas d'événement `ReminderStatusChanged` défini). La transition est
+    // donc purement en mémoire pour l'instant ; elle sera branchée dès que
+    // le format d'événement sera stabilisé (ticket de suivi).
+    markReminderMissed: () => undefined,
+    notifyMissedDose: notifyMissedDoseNow,
+    now: () => new Date(),
+    missedDoseTitle: t('missed_dose.title'),
+    missedDoseBody: t('missed_dose.body'),
+  });
+
   return null;
 }
