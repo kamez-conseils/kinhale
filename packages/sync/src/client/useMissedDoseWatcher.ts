@@ -7,6 +7,18 @@ import {
 } from '../projections/reminders.js';
 
 /**
+ * TTL d'un id de rappel dans `notifiedIdsRef`. Un rappel missed ne peut
+ * plus re-déclencher de notification 24 h après la fin de sa fenêtre : on
+ * purge les entrées pour éviter une croissance monotone du Set (mémoire
+ * session longue). 24 h > horizon de projection (48 h) n'est pas requis —
+ * seuls les rappels **déjà passés** sont dans le Set, donc 24 h de rétention
+ * post-fenêtre suffisent pour se prémunir d'un tick en retard.
+ *
+ * Refs: KIN-038 (kz-review M2, kz-securite m2).
+ */
+const NOTIFIED_IDS_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
  * Arguments d'émission d'une notification locale `missed_dose`. Même forme
  * que `ScheduleLocalNotificationArgs` (brique 4), mais sans `triggerAtUtc` —
  * on notifie immédiatement.
@@ -86,6 +98,10 @@ export interface UseMissedDoseWatcherDeps {
  */
 export function useMissedDoseWatcher(deps: UseMissedDoseWatcherDeps): void {
   const doc = deps.useDoc();
+  // Clé du foyer — déclenche un reset du Set de dédoublonnage quand elle
+  // change (switch post-invitation / logout-relog). Un rappel d'un autre
+  // foyer ne doit pas apparaître déjà « notifié » pour le nouveau.
+  const householdKey: string | null = doc?.householdId ?? null;
 
   // Latest-ref pattern : stabilise l'identité des callbacks.
   const markRef = React.useRef(deps.markReminderMissed);
@@ -108,8 +124,17 @@ export function useMissedDoseWatcher(deps: UseMissedDoseWatcherDeps): void {
   const horizonMs = deps.horizonMs ?? DEFAULT_REMINDER_HORIZON_MS;
 
   // Ids déjà notifiés — évite la répétition tant que la transition n'est
-  // pas persistée (v1.0).
-  const notifiedIdsRef = React.useRef<Set<string>>(new Set());
+  // pas persistée (v1.0). Map<id, windowEndMs> pour pouvoir purger au-delà
+  // du TTL (cf. `NOTIFIED_IDS_TTL_MS`).
+  const notifiedIdsRef = React.useRef<Map<string, number>>(new Map());
+
+  // Reset du dédoublonnage quand le foyer change. Sans ça, un re-login sur
+  // un autre household marque les nouveaux rappels comme déjà notifiés si
+  // leurs ids collisionnaient (improbable vu le format `r:<planId>:<iso>`
+  // mais défensif — aussi utile si un jour on rejoue un historique).
+  React.useEffect(() => {
+    notifiedIdsRef.current = new Map();
+  }, [householdKey]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -119,12 +144,27 @@ export function useMissedDoseWatcher(deps: UseMissedDoseWatcherDeps): void {
       const currentDoc = docRef.current;
       if (currentDoc === null) return;
 
-      const reminders = projectScheduledReminders(currentDoc, nowRef.current(), horizonMs);
-      const missed = detectMissedReminders(reminders, nowRef.current());
+      const nowDate = nowRef.current();
+      const reminders = projectScheduledReminders(currentDoc, nowDate, horizonMs);
+      const missed = detectMissedReminders(reminders, nowDate);
+
+      // Purge TTL : un rappel dont la fenêtre s'est fermée il y a plus de
+      // 24 h ne peut plus re-émettre (la projection ne le remontera plus
+      // non plus, vu le lookback par défaut de 2 h). Garde le Set borné.
+      const nowMs = nowDate.getTime();
+      for (const [id, windowEndMs] of notifiedIdsRef.current) {
+        if (windowEndMs + NOTIFIED_IDS_TTL_MS < nowMs) {
+          notifiedIdsRef.current.delete(id);
+        }
+      }
 
       for (const r of missed) {
         if (notifiedIdsRef.current.has(r.id)) continue;
-        notifiedIdsRef.current.add(r.id);
+        const endMs = Date.parse(r.windowEndUtc);
+        // Si `windowEndUtc` est non parsable, on mémorise avec `nowMs` —
+        // le rappel n'aurait pas dû franchir `detectMissedReminders`, mais
+        // on reste défensif sans crash.
+        notifiedIdsRef.current.set(r.id, Number.isNaN(endMs) ? nowMs : endMs);
         markRef.current(r.id);
         const notify = notifyRef.current;
         if (notify !== undefined) {
@@ -137,10 +177,11 @@ export function useMissedDoseWatcher(deps: UseMissedDoseWatcherDeps): void {
       }
     }
 
-    // On ne check pas au montage : le watcher est un *timer* — cohérent
-    // avec la signature « toutes les tickMs » et évite un double-fire à
-    // l'ouverture. Si on veut un check immédiat, on peut abaisser tickMs
-    // côté app (déconseillé en prod).
+    // Check immédiat au montage : si l'utilisateur ouvre l'app **juste
+    // après** qu'un rappel a dépassé sa fenêtre, on ne veut pas attendre
+    // jusqu'à `tickMs` pour notifier (O4 cible ≤ 60 s).
+    check();
+
     const handle = setInterval(check, tickMs);
 
     return () => {

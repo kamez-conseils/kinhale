@@ -78,12 +78,17 @@ describe('useMissedDoseWatcher', () => {
     expect(notify).not.toHaveBeenCalled();
   });
 
-  it('ne déclenche rien au montage (timer uniquement)', () => {
+  it('détecte immédiatement un rappel missed au montage (sans attendre tickMs)', async () => {
     doc = makeDoc([planEvent({ scheduledHoursUtc: [8] })]);
+    // Au moment du montage, la fenêtre du 8h est déjà passée (buffer +2 min inclus).
     now = new Date('2026-04-22T10:00:00.000Z');
     renderHook(() => useMissedDoseWatcher(buildDeps()));
-    expect(mark).not.toHaveBeenCalled();
-    expect(notify).not.toHaveBeenCalled();
+    // Laisse une microtâche pour la notification asynchrone.
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(mark).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledTimes(1);
   });
 
   it('à un tick avec un rappel dont la fenêtre est passée, marque missed + émet la notif', async () => {
@@ -181,5 +186,61 @@ describe('useMissedDoseWatcher', () => {
       await Promise.resolve();
     });
     expect(mark).toHaveBeenCalledTimes(1);
+  });
+
+  it('après TTL 24h, un rappel dont la fenêtre réapparaît (collision d’id) est renotifié', async () => {
+    // Scénario défensif : un rappel du 22-04 est notifié, puis un plan
+    // modifié réexpose la MÊME id de rappel (collision improbable mais
+    // couverte). Après 24 h, le Set est purgé et la nouvelle occurrence
+    // redéclenche la notification.
+    doc = makeDoc([planEvent({ scheduledHoursUtc: [8] })]);
+    renderHook(() => useMissedDoseWatcher(buildDeps()));
+
+    now = new Date('2026-04-22T09:00:00.000Z');
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+      await Promise.resolve();
+    });
+    expect(notify).toHaveBeenCalledTimes(1);
+
+    // Avance de > 24 h : le tick purge l'id ; le rappel du 23-04 (08:00)
+    // est une NOUVELLE fenêtre (id différent) → 2e notif attendue.
+    now = new Date('2026-04-23T10:00:00.000Z');
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+      await Promise.resolve();
+    });
+    expect(notify).toHaveBeenCalledTimes(2);
+    // La purge du 22-04 est implicite : à ce stade, notifiedIdsRef ne
+    // contient plus que l'id du 23-04, pas celui du 22-04 (croissance
+    // bornée par TTL — cf. NOTIFIED_IDS_TTL_MS).
+  });
+
+  it('reset le dédoublonnage au changement de householdId (switch de foyer)', async () => {
+    doc = { householdId: 'hh-1', events: [planEvent({ scheduledHoursUtc: [8] })] };
+    const { rerender } = renderHook(() => useMissedDoseWatcher(buildDeps()));
+
+    now = new Date('2026-04-22T09:00:00.000Z');
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+      await Promise.resolve();
+    });
+    expect(notify).toHaveBeenCalledTimes(1);
+
+    // Switch vers un autre foyer qui porte un plan avec le MÊME id de
+    // rappel (collision improbable mais possible si on rejoue un export).
+    doc = { householdId: 'hh-2', events: [planEvent({ scheduledHoursUtc: [8] })] };
+    await act(async () => {
+      rerender();
+      await Promise.resolve();
+    });
+
+    now = new Date('2026-04-22T09:30:00.000Z');
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+      await Promise.resolve();
+    });
+    // Le dédoublonnage a été reset : le rappel est renotifié pour le nouveau foyer.
+    expect(notify).toHaveBeenCalledTimes(2);
   });
 });
