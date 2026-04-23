@@ -7,18 +7,12 @@ import {
   recordReceived,
   getDocChanges,
 } from '@kinhale/sync';
-import type { SyncCursor, createDoc } from '@kinhale/sync';
+import type { SyncCursor } from '@kinhale/sync';
 import { createRelayClient } from '../relay-client';
 import type { RelayClient, RelayMessage } from '../relay-client';
 import { useAuthStore } from '../../stores/auth-store';
 import { useDocStore } from '../../stores/doc-store';
 import { getGroupKey } from './group-key';
-
-/**
- * Type du document Automerge — dérivé de createDoc pour éviter d'importer
- * directement @automerge/automerge qui est une dépendance transitive.
- */
-type KinhaleDocument = ReturnType<typeof createDoc>;
 
 /**
  * Hook qui maintient une connexion WS au relai et synchronise
@@ -51,10 +45,11 @@ export function useRelaySync(): { connected: boolean } {
   const keyRef = React.useRef<Uint8Array | null>(null);
 
   // 1. Ouvre la WS quand l'utilisateur est authentifié et que le doc est chargé.
-  //    Dépendance sur `doc !== null` (valeur booléenne) pour éviter de rouvrir
-  //    la connexion à chaque mutation du doc.
+  //    Dépendance sur `docReady` (valeur booléenne dérivée) pour éviter de
+  //    rouvrir la connexion à chaque mutation du doc.
+  const docReady = doc !== null;
   React.useEffect(() => {
-    if (accessToken === null || deviceId === null || householdId === null || doc === null) {
+    if (accessToken === null || deviceId === null || householdId === null || !docReady) {
       return undefined;
     }
 
@@ -72,11 +67,10 @@ export function useRelaySync(): { connected: boolean } {
         if (currentDoc === null) return;
 
         try {
-          const typedDoc = currentDoc as KinhaleDocument;
-          const newDoc = await consumeSyncMessage(typedDoc, msg.blobJson, keyRef.current);
+          const newDoc = await consumeSyncMessage(currentDoc, msg.blobJson, keyRef.current);
           // Extraire uniquement le delta pour éviter de re-persister des
           // changements déjà présents dans le doc local.
-          const deltaChanges = getDocChanges(typedDoc, newDoc);
+          const deltaChanges = getDocChanges(currentDoc, newDoc);
           if (deltaChanges.length > 0) {
             receiveChanges(deltaChanges);
             cursorRef.current = recordReceived(cursorRef.current, deltaChanges);
@@ -98,7 +92,7 @@ export function useRelaySync(): { connected: boolean } {
       keyRef.current = null;
       setConnected(false);
     };
-  }, [accessToken, deviceId, householdId, doc !== null, receiveChanges]); // doc !== null intentionnel : on ne veut pas rouvrir la WS à chaque mutation du doc
+  }, [accessToken, deviceId, householdId, docReady, receiveChanges]);
 
   // 2. Sur chaque mutation du doc local, construire et pousser le delta au relai.
   React.useEffect(() => {
@@ -113,22 +107,21 @@ export function useRelaySync(): { connected: boolean } {
     }
 
     // Calcule le delta depuis le dernier envoi (ou doc complet si jamais envoyé).
-    const typedDoc = doc as KinhaleDocument;
-    const before = cursorRef.current.lastSentDoc ?? typedDoc;
+    const before = cursorRef.current.lastSentDoc ?? doc;
 
     const localKey = keyRef.current;
     const localClient = clientRef.current;
     const localSeq = ++seqRef.current;
 
     void (async () => {
-      const msg = await buildSyncMessage(before, typedDoc, localKey, {
+      const msg = await buildSyncMessage(before, doc, localKey, {
         mailboxId: householdId,
         deviceId,
         seq: localSeq,
       });
       if (msg !== null) {
         localClient.send(msg);
-        cursorRef.current = recordSent(cursorRef.current, typedDoc);
+        cursorRef.current = recordSent(cursorRef.current, doc);
       }
     })();
   }, [doc, deviceId, householdId]);
