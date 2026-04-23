@@ -100,4 +100,46 @@ describe('createRelayClient', () => {
     client.close();
     expect(mockWs.closed).toBe(true);
   });
+
+  // ---------------------------------------------------------------------------
+  // Propagation du signal de déconnexion vers le hook (KIN-69 / E6-S03).
+  // ---------------------------------------------------------------------------
+
+  it("appelle onClose quand le WebSocket émet 'close'", () => {
+    const onClose = jest.fn();
+    createRelayClient('tok', jest.fn(), onClose);
+    mockWs.emit('close', '');
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("appelle onClose quand le WebSocket émet 'error'", () => {
+    const onClose = jest.fn();
+    createRelayClient('tok', jest.fn(), onClose);
+    mockWs.emit('error', '');
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("dédoublonne error puis close pour ne déclencher onClose qu'une fois", () => {
+    const onClose = jest.fn();
+    createRelayClient('tok', jest.fn(), onClose);
+    mockWs.emit('error', '');
+    mockWs.emit('close', '');
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("n'appelle pas onClose après un close volontaire côté client", () => {
+    const onClose = jest.fn();
+    const client = createRelayClient('tok', jest.fn(), onClose);
+    client.close();
+    // Les stacks réelles émettent `close` après ws.close() — simulation.
+    mockWs.emit('close', '');
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('fonctionne sans onClose (paramètre optionnel rétrocompatible)', () => {
+    expect(() => {
+      createRelayClient('tok', jest.fn());
+      mockWs.emit('close', '');
+    }).not.toThrow();
+  });
 });

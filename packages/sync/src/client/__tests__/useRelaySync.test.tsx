@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Mock } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import type { KinhaleDoc } from '../../doc/schema.js';
@@ -67,11 +67,15 @@ const mockRelayClient: RelayClient & { send: Mock; close: Mock } = {
 };
 
 let capturedOnMessage: RelayMessageHandler | null = null;
+let capturedOnClose: (() => void) | null = null;
 
-const mockCreateRelayClient = vi.fn((_token: string, onMessage: RelayMessageHandler) => {
-  capturedOnMessage = onMessage;
-  return mockRelayClient;
-});
+const mockCreateRelayClient = vi.fn(
+  (_token: string, onMessage: RelayMessageHandler, onClose?: () => void) => {
+    capturedOnMessage = onMessage;
+    capturedOnClose = onClose ?? null;
+    return mockRelayClient;
+  },
+);
 
 const mockDeriveGroupKey = vi.fn(async (_householdId: string) => new Uint8Array(32).fill(1));
 
@@ -130,6 +134,7 @@ describe('useRelaySync (package client)', () => {
     fakeDoc = null;
     fakeReceiveChanges = vi.fn();
     capturedOnMessage = null;
+    capturedOnClose = null;
     mockRelayClient.send.mockClear();
     mockRelayClient.close.mockClear();
     mockBuildSyncMessage.mockClear();
@@ -170,7 +175,11 @@ describe('useRelaySync (package client)', () => {
       await flushPromises();
     });
 
-    expect(mockCreateRelayClient).toHaveBeenCalledWith('tok-test', expect.any(Function));
+    expect(mockCreateRelayClient).toHaveBeenCalledWith(
+      'tok-test',
+      expect.any(Function),
+      expect.any(Function),
+    );
   });
 
   it('retourne connected:true après que la WS est ouverte', async () => {
@@ -403,5 +412,215 @@ describe('useRelaySync (package client)', () => {
 
     expect(mockReportDecryptFailed).not.toHaveBeenCalled();
     expect(fakeReceiveChanges).not.toHaveBeenCalled();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Reconnexion avec backoff exponentiel (KIN-69 / E6-S03).
+  //
+  // Séquence des délais : 1s, 2s, 5s, 15s, 60s, puis 60s en boucle.
+  // Une connexion restée stable plus de 30s remet le compteur à zéro.
+  // ---------------------------------------------------------------------------
+  describe('reconnexion avec backoff exponentiel', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: false });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    /**
+     * Avance les timers fake de `ms` millisecondes tout en laissant les
+     * micro-tâches (Promise.resolve) progresser. Wrappé dans `act` pour
+     * que React traite les effets déclenchés par la reconnexion.
+     */
+    async function advanceBy(ms: number): Promise<void> {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(ms);
+      });
+    }
+
+    /**
+     * Ouvre une session synchronisée prête à encaisser un disconnect :
+     * renderHook + attente de la 1re connexion WS.
+     */
+    async function connectFully() {
+      setAuthenticated();
+      setDocLoaded();
+      const handle = renderHook(() => useRelaySync(buildDeps()));
+      await advanceBy(0);
+      return handle;
+    }
+
+    it('passe un callback onClose à createRelayClient pour que la factory puisse signaler la déconnexion', async () => {
+      await connectFully();
+      expect(mockCreateRelayClient).toHaveBeenCalledTimes(1);
+      const call = mockCreateRelayClient.mock.calls[0];
+      expect(call?.[2]).toEqual(expect.any(Function));
+    });
+
+    it('repasse connected:false dès que onClose est appelé', async () => {
+      setAuthenticated();
+      setDocLoaded();
+      const { result } = renderHook(() => useRelaySync(buildDeps()));
+      await advanceBy(0);
+
+      expect(result.current.connected).toBe(true);
+
+      act(() => {
+        capturedOnClose?.();
+      });
+
+      expect(result.current.connected).toBe(false);
+    });
+
+    it('reconnecte après 1s lors de la première déconnexion', async () => {
+      await connectFully();
+      expect(mockCreateRelayClient).toHaveBeenCalledTimes(1);
+
+      act(() => {
+        capturedOnClose?.();
+      });
+
+      // 999 ms avant l'échéance : pas encore de reconnexion.
+      await advanceBy(999);
+      expect(mockCreateRelayClient).toHaveBeenCalledTimes(1);
+
+      // À 1000 ms exactement : nouvelle tentative.
+      await advanceBy(1);
+      expect(mockCreateRelayClient).toHaveBeenCalledTimes(2);
+    });
+
+    it('applique la séquence 1s, 2s, 5s, 15s, 60s sur des déconnexions successives', async () => {
+      await connectFully();
+      const delays = [1000, 2000, 5000, 15000, 60000];
+
+      for (let i = 0; i < delays.length; i++) {
+        const delayMs = delays[i] ?? 0;
+        act(() => {
+          capturedOnClose?.();
+        });
+        await advanceBy(delayMs - 1);
+        // Pas encore reconnecté.
+        expect(mockCreateRelayClient).toHaveBeenCalledTimes(i + 1);
+        await advanceBy(1);
+        // Reconnecté → nouvelle entrée dans mockCreateRelayClient.
+        expect(mockCreateRelayClient).toHaveBeenCalledTimes(i + 2);
+      }
+    });
+
+    it('plafonne les tentatives suivantes à 60s (boucle)', async () => {
+      await connectFully();
+      // Épuise la rampe : 5 déconnexions → on est au palier 60s.
+      const delays = [1000, 2000, 5000, 15000, 60000];
+      for (const d of delays) {
+        act(() => {
+          capturedOnClose?.();
+        });
+        await advanceBy(d);
+      }
+      const callsAfterRamp = mockCreateRelayClient.mock.calls.length;
+
+      // 6e déconnexion → doit aussi retenter après 60s (pas plus, pas moins).
+      act(() => {
+        capturedOnClose?.();
+      });
+      await advanceBy(59999);
+      expect(mockCreateRelayClient).toHaveBeenCalledTimes(callsAfterRamp);
+      await advanceBy(1);
+      expect(mockCreateRelayClient).toHaveBeenCalledTimes(callsAfterRamp + 1);
+    });
+
+    it('remet le compteur à zéro après une connexion restée stable plus de 30s', async () => {
+      await connectFully();
+
+      // 1re déconnexion → backoff 1s → reconnexion à t+1s.
+      act(() => {
+        capturedOnClose?.();
+      });
+      await advanceBy(1000);
+      expect(mockCreateRelayClient).toHaveBeenCalledTimes(2);
+
+      // 2e déconnexion immédiate → si le compteur n'était pas reset, on
+      // attendrait 2s. On laisse d'abord la connexion stable 30s pour
+      // déclencher le reset.
+      await advanceBy(30_000);
+
+      act(() => {
+        capturedOnClose?.();
+      });
+      // Après reset, on repart de 1s (pas 2s).
+      await advanceBy(999);
+      expect(mockCreateRelayClient).toHaveBeenCalledTimes(2);
+      await advanceBy(1);
+      expect(mockCreateRelayClient).toHaveBeenCalledTimes(3);
+    });
+
+    it('ne tente plus de reconnexion après unmount', async () => {
+      setAuthenticated();
+      setDocLoaded();
+      const { unmount } = renderHook(() => useRelaySync(buildDeps()));
+      await advanceBy(0);
+      expect(mockCreateRelayClient).toHaveBeenCalledTimes(1);
+
+      act(() => {
+        capturedOnClose?.();
+      });
+
+      act(() => {
+        unmount();
+      });
+
+      // Laisse largement passer 60s — aucun reconnect ne doit survenir.
+      await advanceBy(120_000);
+      expect(mockCreateRelayClient).toHaveBeenCalledTimes(1);
+    });
+
+    it('abandonne après 15 tentatives consécutives (plafond anti-boucle sur JWT expiré)', async () => {
+      await connectFully();
+
+      // Scénario modélisé : le handshake échoue immédiatement à chaque
+      // reconnexion (cas JWT expiré rejeté en 401 HTTP par le serveur,
+      // indistinguable d'un flap réseau côté browser). On avance strictement
+      // du délai de backoff — jamais plus — pour que le timer de stabilité
+      // (30 s) ne tire jamais et que le compteur progresse sans reset.
+      const backoffSteps = [1000, 2000, 5000, 15000];
+      for (let i = 0; i < 15; i++) {
+        act(() => {
+          capturedOnClose?.();
+        });
+        const delay = i < backoffSteps.length ? (backoffSteps[i] ?? 60000) : 60000;
+        await advanceBy(delay);
+      }
+
+      // 1 connexion initiale + 15 reconnexions = 16 appels à createRelayClient.
+      expect(mockCreateRelayClient).toHaveBeenCalledTimes(16);
+
+      // 16e déconnexion → le plafond est atteint, aucune nouvelle tentative
+      // ne doit être schedulée, même après plusieurs minutes d'attente.
+      act(() => {
+        capturedOnClose?.();
+      });
+      await advanceBy(10 * 60_000);
+
+      expect(mockCreateRelayClient).toHaveBeenCalledTimes(16);
+    });
+
+    it('ferme le client courant à chaque tentative pour éviter les fuites de handles', async () => {
+      await connectFully();
+
+      act(() => {
+        capturedOnClose?.();
+      });
+      await advanceBy(1000);
+
+      act(() => {
+        capturedOnClose?.();
+      });
+      await advanceBy(2000);
+
+      // 2 déconnexions → 2 close() accumulés (hors démontage final).
+      expect(mockRelayClient.close).toHaveBeenCalledTimes(2);
+    });
   });
 });

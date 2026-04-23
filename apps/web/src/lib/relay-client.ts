@@ -17,9 +17,24 @@ export interface RelayClient {
   close(): void;
 }
 
-export function createRelayClient(token: string, onMessage: RelayMessageHandler): RelayClient {
+export function createRelayClient(
+  token: string,
+  onMessage: RelayMessageHandler,
+  onClose?: () => void,
+): RelayClient {
   const url = `${toWsUrl(API_URL)}/relay?token=${encodeURIComponent(token)}`;
   const ws = new WebSocket(url);
+
+  // Garde-fou contre les doubles signaux : certains navigateurs émettent
+  // `error` puis `close` pour une même rupture. Un `client.close()` explicite
+  // doit également inhiber `onClose`, sinon le hook relancerait une boucle
+  // de reconnexion pour une fermeture voulue côté app.
+  let closedSignaled = false;
+  const signalClose = (): void => {
+    if (closedSignaled) return;
+    closedSignaled = true;
+    onClose?.();
+  };
 
   ws.addEventListener('message', (event) => {
     try {
@@ -37,6 +52,9 @@ export function createRelayClient(token: string, onMessage: RelayMessageHandler)
     }
   });
 
+  ws.addEventListener('close', signalClose);
+  ws.addEventListener('error', signalClose);
+
   return {
     send(blobJson: string): void {
       // 1 === WebSocket.OPEN — comparaison sur la constante numérique pour compatibilité test/mock
@@ -45,6 +63,9 @@ export function createRelayClient(token: string, onMessage: RelayMessageHandler)
       }
     },
     close(): void {
+      // Inhibe `onClose` avant d'appeler `ws.close()` : une fermeture
+      // volontaire n'est pas une déconnexion à réparer.
+      closedSignaled = true;
       ws.close();
     },
   };
