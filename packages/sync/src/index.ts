@@ -50,3 +50,9 @@ export type { ProjectedPlan } from './projections/plan.js';
 export { projectPlan } from './projections/plan.js';
 export type { ProjectedPump } from './projections/pumps.js';
 export { projectPumps } from './projections/pumps.js';
+export {
+  DEFAULT_REMINDER_HORIZON_MS,
+  projectScheduledReminders,
+  REMINDER_WINDOW_AFTER_MS,
+  REMINDER_WINDOW_BEFORE_MS,
+} from './projections/reminders.js';

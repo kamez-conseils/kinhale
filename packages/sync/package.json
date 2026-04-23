@@ -19,7 +19,8 @@
   },
   "dependencies": {
     "@automerge/automerge": "^2.2.0",
-    "@kinhale/crypto": "workspace:*"
+    "@kinhale/crypto": "workspace:*",
+    "@kinhale/domain": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=18.0.0"

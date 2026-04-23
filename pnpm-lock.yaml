@@ -418,6 +418,9 @@ importers:
       '@kinhale/crypto':
         specifier: workspace:*
         version: link:../crypto
+      '@kinhale/domain':
+        specifier: workspace:*
+        version: link:../domain
     devDependencies:
       '@kinhale/eslint-config':
         specifier: workspace:*
