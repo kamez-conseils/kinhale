@@ -188,6 +188,45 @@ async function cancelLocalNotification(id: string): Promise<void> {
   }
 }
 
+/**
+ * Préfixe déterministe des identifiants de rappels projetés depuis le doc
+ * (`r:<planId>:<targetIso>` — cf. `packages/sync/src/projections/reminders.ts`).
+ * Utilisé pour filtrer les notifications Expo au moment de l'hydratation :
+ * on ne veut repeupler `scheduledIdsRef` qu'avec des ids de ce canal, pas
+ * d'autres notifs OS (pushs, locales hors rappels) qui pourraient exister.
+ */
+const REMINDER_ID_PREFIX = 'r:';
+
+/**
+ * Hydratation cross-session côté mobile : au montage, reconstruit la liste
+ * des ids de rappels déjà programmés côté OS. Essentiel car
+ * `scheduledIdsRef` côté React est vide après un redémarrage du process
+ * RN ou un logout/re-login, alors que les notifs Expo persistent — sans
+ * ça, on (re)programmerait par-dessus, risquant des doublons Android sur
+ * expo-notifications < 0.29.
+ *
+ * Échec silencieux : `getAllScheduledNotificationsAsync` peut rejeter si
+ * le module natif n'est pas encore prêt (cold start). On retourne `[]` et
+ * on laisse le hook continuer best-effort.
+ *
+ * Refs: KIN-038 (kz-securite M1).
+ */
+async function hydrateScheduledReminderIds(): Promise<ReadonlyArray<string>> {
+  try {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    const ids: string[] = [];
+    for (const entry of scheduled) {
+      const id = entry.identifier;
+      if (typeof id === 'string' && id.startsWith(REMINDER_ID_PREFIX)) {
+        ids.push(id);
+      }
+    }
+    return ids;
+  } catch {
+    return [];
+  }
+}
+
 async function notifyMissedDoseNow(args: {
   id: string;
   title: string;
@@ -212,6 +251,7 @@ export function RemindersBootstrap(): null {
     useDoc: () => useDocStore((s) => s.doc),
     scheduleLocalNotification,
     cancelLocalNotification,
+    hydrateScheduledIds: hydrateScheduledReminderIds,
     now: () => new Date(),
     reminderTitle: t('reminder.title'),
     reminderBody: t('reminder.body'),

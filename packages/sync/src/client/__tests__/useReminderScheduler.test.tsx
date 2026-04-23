@@ -216,4 +216,51 @@ describe('useReminderScheduler', () => {
     // Sur 24h : 08:00 + 20:00 = 2 créneaux.
     expect(schedule).toHaveBeenCalledTimes(2);
   });
+
+  it('hydrate scheduledIds depuis l’OS au montage et ne reprogramme pas ces ids', async () => {
+    // Simule un remount : 2 des 3 ids projetés sont déjà programmés côté OS.
+    doc = makeDoc([planEvent({ scheduledHoursUtc: [8] })]);
+    // Calcule les ids projetés manuellement pour pouvoir en pré-remplir l'OS.
+    const alreadyScheduled = ['r:plan-1:2026-04-22T08:00:00.000Z'];
+    const hydrate = vi.fn(async () => alreadyScheduled);
+
+    renderHook(() =>
+      useReminderScheduler({
+        ...buildDeps(),
+        hydrateScheduledIds: hydrate,
+      }),
+    );
+    // Laisse le Promise d'hydratation se résoudre + la prochaine passe de diff.
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(hydrate).toHaveBeenCalledTimes(1);
+    // 48h × 1 créneau = 2 notifs projetées ; 1 déjà en OS → 1 seule à programmer.
+    expect(schedule).toHaveBeenCalledTimes(1);
+    const scheduledId = schedule.mock.calls[0]?.[0] as { id: string };
+    expect(scheduledId.id).toBe('r:plan-1:2026-04-23T08:00:00.000Z');
+  });
+
+  it('continue best-effort si hydrateScheduledIds rejette', async () => {
+    doc = makeDoc([planEvent({ scheduledHoursUtc: [8] })]);
+    const hydrate = vi.fn(async () => {
+      throw new Error('native module not ready');
+    });
+
+    renderHook(() =>
+      useReminderScheduler({
+        ...buildDeps(),
+        hydrateScheduledIds: hydrate,
+      }),
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Set vide en cas d'échec → toutes les notifs sont programmées (2 sur 48h).
+    expect(schedule).toHaveBeenCalledTimes(2);
+  });
 });

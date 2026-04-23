@@ -31,6 +31,24 @@ export interface UseReminderSchedulerDeps {
   /** Annule une notification locale précédemment programmée. No-op si inconnue. */
   readonly cancelLocalNotification: (id: string) => Promise<void>;
   /**
+   * Hydratation cross-session (optionnel, recommandé côté mobile) : au
+   * montage, réinjecte les identifiants des notifications **déjà
+   * programmées côté OS** par une session précédente. Permet d'éviter les
+   * doublons quand le process RN redémarre (scheduledIdsRef vide mais
+   * notifs persistantes iOS/Android). La plateforme filtre elle-même sur
+   * le préfixe `r:` pour ne pas capturer d'autres canaux de notifs.
+   *
+   * Non pertinent pour le web (Web Notifications API ne persiste pas les
+   * timers cross-session — un refresh de l'onglet repart de zéro, la
+   * programmation reprendra à la projection suivante).
+   *
+   * Si fourni, appelé une fois au montage ; le Set est peuplé avec les ids
+   * retournés avant la 1re passe de diff.
+   *
+   * Refs: KIN-038 (kz-securite M1).
+   */
+  readonly hydrateScheduledIds?: () => Promise<ReadonlyArray<string>>;
+  /**
    * Horloge injectée. Doit retourner un `Date` représentant le temps UTC
    * courant. Injectable pour tests.
    */
@@ -83,20 +101,58 @@ export function useReminderScheduler(deps: UseReminderSchedulerDeps): void {
   const nowRef = React.useRef(deps.now);
   const titleRef = React.useRef(deps.reminderTitle);
   const bodyRef = React.useRef(deps.reminderBody);
+  const hydrateRef = React.useRef(deps.hydrateScheduledIds);
   scheduleRef.current = deps.scheduleLocalNotification;
   cancelRef.current = deps.cancelLocalNotification;
   nowRef.current = deps.now;
   titleRef.current = deps.reminderTitle;
   bodyRef.current = deps.reminderBody;
+  hydrateRef.current = deps.hydrateScheduledIds;
 
   const horizonMs = deps.horizonMs ?? DEFAULT_REMINDER_HORIZON_MS;
 
   // État local persistant : ids de notifications programmées par ce hook.
   // Stocké dans une ref pour ne pas déclencher de re-render.
   const scheduledIdsRef = React.useRef<Set<string>>(new Set());
+  // Flag : true tant que l'hydratation cross-session n'est pas terminée.
+  // Bloque le diff tant qu'on n'a pas repeuplé `scheduledIdsRef` depuis
+  // l'OS ; sinon on (re)programmerait par-dessus des notifs déjà posées.
+  const hydratedRef = React.useRef<boolean>(deps.hydrateScheduledIds === undefined);
+  // Bump à chaque fin d'hydratation pour relancer le useEffect principal.
+  const [hydrationTick, setHydrationTick] = React.useState(0);
+
+  // Hydratation cross-session au montage : on appelle la plateforme UNE
+  // fois pour récupérer les ids déjà programmés côté OS (ex. Expo après
+  // redémarrage du process). Voir JSDoc de `hydrateScheduledIds`.
+  React.useEffect(() => {
+    const hydrate = hydrateRef.current;
+    if (hydrate === undefined) return undefined;
+    let cancelled = false;
+    void hydrate()
+      .then((ids) => {
+        if (cancelled) return;
+        for (const id of ids) scheduledIdsRef.current.add(id);
+        hydratedRef.current = true;
+        setHydrationTick((t) => t + 1);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // L'hydratation est best-effort : si la plateforme échoue (OS
+        // indisponible, permissions perdues), on continue avec un Set
+        // vide — les éventuels doublons sont un moindre mal vs un refus
+        // total de programmer. Pas de log (contient pas de donnée santé,
+        // mais reste silencieux pour cohérence avec cancelLocalNotification).
+        hydratedRef.current = true;
+        setHydrationTick((t) => t + 1);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   React.useEffect(() => {
     if (doc === null) return undefined;
+    if (!hydratedRef.current) return undefined;
 
     const nowDate = nowRef.current();
     const nowMs = nowDate.getTime();
@@ -130,7 +186,7 @@ export function useReminderScheduler(deps: UseReminderSchedulerDeps): void {
     }
 
     return undefined;
-  }, [doc, horizonMs]);
+  }, [doc, horizonMs, hydrationTick]);
 
   // Au démontage, annule toutes les notifs programmées par ce hook. Évite
   // les notifs « orphelines » si l'utilisateur se déconnecte.
