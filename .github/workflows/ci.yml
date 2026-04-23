@@ -14,7 +14,7 @@ jobs:
   lint-typecheck-test:
     name: Lint · Typecheck · Test
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,8 +30,27 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
+      - name: Get pnpm store directory
+        id: pnpm-store
+        shell: bash
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        timeout-minutes: 8
+        run: pnpm install --frozen-lockfile --prefer-offline
+        env:
+          NPM_CONFIG_FETCH_RETRIES: '5'
+          NPM_CONFIG_FETCH_RETRY_MINTIMEOUT: '15000'
+          NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT: '120000'
+          NPM_CONFIG_NETWORK_CONCURRENCY: '16'
 
       - name: Format check
         run: pnpm format:check
@@ -57,9 +76,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Cache pnpm store (Alpine)
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/pnpm-store
+          key: pnpm-store-alpine-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-alpine-
+
       - name: Verify scaffold on Alpine (musl libc)
+        timeout-minutes: 8
         run: |
+          mkdir -p "${RUNNER_TEMP}/pnpm-store"
           docker run --rm \
+            -v "${RUNNER_TEMP}/pnpm-store:/root/.local/share/pnpm/store" \
             -v "$GITHUB_WORKSPACE:/ws:ro" \
             node:20-alpine sh -c '
               set -eu
@@ -67,7 +97,7 @@ jobs:
               cd /tmp/work
               corepack enable
               corepack prepare pnpm@10.33.0 --activate
-              pnpm install --frozen-lockfile
+              pnpm install --frozen-lockfile --prefer-offline
               pnpm format:check
               pnpm lint:root
               pnpm typecheck
