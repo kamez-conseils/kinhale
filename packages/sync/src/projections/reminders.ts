@@ -134,7 +134,9 @@ export function projectScheduledReminders(
     }
   }
 
-  reminders.sort((a, b) => (a.targetAtUtc < b.targetAtUtc ? -1 : a.targetAtUtc > b.targetAtUtc ? 1 : 0));
+  reminders.sort((a, b) =>
+    a.targetAtUtc < b.targetAtUtc ? -1 : a.targetAtUtc > b.targetAtUtc ? 1 : 0,
+  );
   return reminders;
 }
 

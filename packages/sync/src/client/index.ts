@@ -25,10 +25,7 @@ export type {
   UseReminderSchedulerDeps,
 } from './useReminderScheduler.js';
 export { useMissedDoseWatcher } from './useMissedDoseWatcher.js';
-export type {
-  NotifyMissedDoseArgs,
-  UseMissedDoseWatcherDeps,
-} from './useMissedDoseWatcher.js';
+export type { NotifyMissedDoseArgs, UseMissedDoseWatcherDeps } from './useMissedDoseWatcher.js';
 export { classifyDecryptError, createDecryptFailedReporter } from './telemetry.js';
 export type {
   DecryptErrorClass,

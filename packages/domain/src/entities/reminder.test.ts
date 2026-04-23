@@ -34,9 +34,9 @@ describe('Reminder — isReminder (garde-fou structurel)', () => {
   });
 
   it('accepte un rappel confirmé avec confirmedByDoseId', () => {
-    expect(
-      isReminder({ ...validReminder, status: 'confirmed', confirmedByDoseId: 'dose-7' }),
-    ).toBe(true);
+    expect(isReminder({ ...validReminder, status: 'confirmed', confirmedByDoseId: 'dose-7' })).toBe(
+      true,
+    );
   });
 
   it('rejette un objet null ou non-objet', () => {
