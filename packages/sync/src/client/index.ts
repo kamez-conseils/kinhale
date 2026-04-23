@@ -1,0 +1,13 @@
+/**
+ * Sous-module framework-agnostique : helpers de synchronisation E2EE
+ * consommables par apps/web (Next.js) et apps/mobile (React Native / Expo).
+ *
+ * Ce sous-module est exposé via `@kinhale/sync/client` (exports map du package).
+ * Il ne doit contenir aucun pragma `'use client'`, aucun import DOM-only, aucun
+ * import RN-only : les dépendances plateforme (WebSocket, stores, doc) sont
+ * injectées par chaque app.
+ *
+ * Refs: KIN-039, ADR-D9
+ */
+
+export { getGroupKey, _resetGroupKeyCache } from './group-key.js';
