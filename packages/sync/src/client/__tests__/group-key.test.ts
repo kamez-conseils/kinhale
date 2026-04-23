@@ -1,11 +1,9 @@
-import { getGroupKey, _resetGroupKeyCache } from '../group-key';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-// On mock @kinhale/crypto uniquement pour la fonction deriveKey afin de
-// conserver une dérivation déterministe et rapide dans les tests (l'Argon2id
-// réel serait trop lent et non déterministe).
-jest.mock('@kinhale/crypto', () => ({
-  deriveKey: jest.fn(async (password: string, _salt: Uint8Array, outputLen: number) => {
-    // Retourne un tableau déterministe basé sur le charCode du password.
+// Mock @kinhale/crypto — dérivation déterministe à partir du password uniquement.
+// L'Argon2id réel serait trop lent et dépendrait de libsodium initialisé.
+vi.mock('@kinhale/crypto', () => ({
+  deriveKey: vi.fn(async (password: string, _salt: Uint8Array, outputLen: number) => {
     const result = new Uint8Array(outputLen);
     for (let i = 0; i < outputLen; i++) {
       result[i] = (password.charCodeAt(i % password.length) ?? 0) & 0xff;
@@ -14,7 +12,9 @@ jest.mock('@kinhale/crypto', () => ({
   }),
 }));
 
-describe('getGroupKey (mobile)', () => {
+import { getGroupKey, _resetGroupKeyCache } from '../group-key.js';
+
+describe('getGroupKey', () => {
   beforeEach(() => {
     _resetGroupKeyCache();
   });
@@ -39,9 +39,8 @@ describe('getGroupKey (mobile)', () => {
   });
 
   it('utilise le cache : deriveKey appelé une seule fois par householdId', async () => {
-    const { deriveKey } = jest.requireMock('@kinhale/crypto') as {
-      deriveKey: jest.Mock;
-    };
+    const cryptoModule = await import('@kinhale/crypto');
+    const deriveKey = vi.mocked(cryptoModule.deriveKey);
     deriveKey.mockClear();
 
     await getGroupKey('household-cached');

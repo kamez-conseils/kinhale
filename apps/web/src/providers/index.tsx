@@ -6,7 +6,7 @@ import { I18nextProvider } from 'react-i18next';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import config from '../lib/tamagui.config';
 import i18n from '../lib/i18n';
-import { RelaySyncBootstrap } from '../lib/sync/RelaySyncBootstrap';
+import { RelaySyncBootstrap } from '../lib/sync';
 
 export function Providers({ children }: { children: ReactNode }): JSX.Element {
   const [queryClient] = useState(() => new QueryClient());

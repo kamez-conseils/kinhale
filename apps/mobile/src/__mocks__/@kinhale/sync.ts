@@ -1,3 +1,16 @@
+/**
+ * Stub Jest mobile du package racine `@kinhale/sync`.
+ *
+ * - Désactive le pipeline E2EE réel (Automerge + libsodium) pour le code
+ *   applicatif mobile qui importe directement `@kinhale/sync` (ex: doc-store,
+ *   use-relay et leurs tests via `jest.mock('@kinhale/sync')`).
+ * - La logique réelle est couverte par les tests vitest du package
+ *   (packages/sync/src sous-dossiers __tests__), pas rejouée ici.
+ * - Cette désactivation évite la complexité de mocker WebSocket / crypto /
+ *   stores en environnement jsdom côté mobile.
+ * - Couverture d'intégration RN réelle à compenser en e2e Maestro (ticket de
+ *   suivi Sprint 5-6).
+ */
 export const createDoc = jest.fn().mockReturnValue({ householdId: 'hh-1', events: [] });
 export const loadDoc = jest.fn().mockReturnValue({ householdId: 'hh-1', events: [] });
 export const saveDoc = jest.fn().mockReturnValue(new Uint8Array(10));

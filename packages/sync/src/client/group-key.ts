@@ -11,12 +11,11 @@ import { deriveKey } from '@kinhale/crypto';
  * (deux devices d'un même foyer retrouvent la même clé via leur DB commune),
  * mais n'est pas production-grade.
  *
- * Migration prévue post-v1.0 : utiliser MLS ou une enveloppe key-wrap
- * transmise via le protocole d'invitation E2EE (ADR à ouvrir, Refs: KIN-038).
+ * Migration prévue post-v1.0 : MLS ou enveloppe key-wrap transmise via le
+ * protocole d'invitation E2EE (Refs: ADR-D9 ; KIN-038).
  *
- * Ce module est une duplication fidèle de apps/web/src/lib/sync/group-key.ts.
- * Une dette technique est actée pour mutualiser les deux implémentations
- * dans packages/sync (Refs: KIN-038).
+ * Ce module est la source unique — il remplace les duplications précédemment
+ * présentes dans apps/web/src/lib/sync/group-key.ts et apps/mobile/src/lib/sync/group-key.ts.
  */
 const GROUP_KEY_SALT = new Uint8Array([
   0x6b, 0x69, 0x6e, 0x68, 0x61, 0x6c, 0x65, 0x2d, 0x67, 0x72, 0x6f, 0x75, 0x70, 0x2d, 0x76, 0x31,
@@ -28,6 +27,8 @@ let cache = new Map<string, Uint8Array>();
 /**
  * Retourne la clé de groupe (32 octets) pour un foyer donné.
  * La clé est mise en cache en mémoire pour éviter le coût Argon2id répété.
+ *
+ * Zero-knowledge : la clé ne quitte jamais la mémoire du device.
  *
  * @param householdId - Identifiant du foyer (UUID).
  * @returns Clé de groupe 32 octets pour XChaCha20-Poly1305.
