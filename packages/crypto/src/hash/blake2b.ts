@@ -27,10 +27,17 @@ export const BLAKE2B_DEFAULT_BYTES = 8;
  * @param message - Donnée à hasher (string UTF-8 ou Uint8Array).
  * @param key - Clé / sel applicatif (string UTF-8 ou Uint8Array, ou `null`
  *   pour un hash sans clé). La clé n'est **jamais** loggée ni émise.
+ *   Note : `key = null` donne un hash non-keyed, utile pour du hashing de
+ *   déduplication mais **inadéquat pour la pseudonymisation** — un attaquant
+ *   connaissant l'espace des pré-images peut rainbow-tabler un hash non-keyed.
  * @param outputLen - Longueur du digest en octets. Par défaut 8 octets
  *   (16 caractères hex) — suffisant pour corréler côté ops sans permettre
  *   d'énumération par rainbow table.
  * @returns Digest hex-encodé en minuscules.
+ *
+ * @remarks Entropie minimale conseillée de la pré-image : ≥ 64 bits (ex. UUID
+ * v4, random 8+ bytes). En dessous, même avec une clé, la sortie reste
+ * énumérable par force brute sur l'espace des pré-images possibles.
  */
 export async function blake2bHex(
   message: Uint8Array | string,

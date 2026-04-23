@@ -76,6 +76,24 @@ describe('classifyDecryptError', () => {
     const cls = classifyDecryptError(err);
     expect(cls).toBe('decrypt');
   });
+
+  it('classifie une erreur cross-realm (nom préservé, instanceof KO) comme "parse"', () => {
+    // Simule une erreur venue d'un autre realm JS (WebWorker, iframe,
+    // bridge React Native) : instanceof SyntaxError renverrait false car le
+    // constructeur SyntaxError est distinct d'un realm à l'autre, mais
+    // err.name === 'SyntaxError' reste fiable (string sérialisée tel quel
+    // à travers les bridges).
+    const crossRealm = Object.create(Error.prototype) as Error;
+    Object.defineProperty(crossRealm, 'name', { value: 'SyntaxError' });
+    Object.defineProperty(crossRealm, 'message', { value: 'unexpected token <' });
+
+    // Sanity : l'objet n'est pas instance de SyntaxError mais reste instance
+    // d'Error (via Error.prototype) — sans ça le test ne valide rien.
+    expect(crossRealm instanceof SyntaxError).toBe(false);
+    expect(crossRealm instanceof Error).toBe(true);
+
+    expect(classifyDecryptError(crossRealm)).toBe('parse');
+  });
 });
 
 describe('createDecryptFailedReporter', () => {

@@ -122,12 +122,12 @@ export function useRelaySync(deps: UseRelaySyncDeps): { connected: boolean } {
 
   // Reporter de télémétrie `sync.decrypt_failed` (KIN-040). Stable pour la
   // durée de vie du hook — le rate-limiter vit dans la closure du reporter.
-  // La plateforme, le hashHousehold et reportDecryptFailed sont relus via
-  // refs ci-dessous pour ne jamais invalider l'effet WS.
-  const platformRef = React.useRef(deps.platform);
+  // `platform` est capturé une seule fois à la première création (valeur
+  // immuable côté wrappers web/mobile). `hashHousehold` et `reportDecryptFailed`
+  // sont relus via refs pour ne jamais invalider l'effet WS tout en captant
+  // la dernière valeur injectée par les wrappers.
   const hashHouseholdRef = React.useRef(deps.hashHousehold);
   const reportDecryptFailedRef = React.useRef(deps.reportDecryptFailed);
-  platformRef.current = deps.platform;
   hashHouseholdRef.current = deps.hashHousehold;
   reportDecryptFailedRef.current = deps.reportDecryptFailed;
 
@@ -136,7 +136,7 @@ export function useRelaySync(deps: UseRelaySyncDeps): { connected: boolean } {
   );
   if (telemetryReporterRef.current === null) {
     telemetryReporterRef.current = createDecryptFailedReporter({
-      platform: platformRef.current,
+      platform: deps.platform,
       hashHousehold: (id) => hashHouseholdRef.current(id),
       report: (event) => reportDecryptFailedRef.current?.(event),
     });

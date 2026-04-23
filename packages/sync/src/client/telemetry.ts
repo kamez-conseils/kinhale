@@ -78,19 +78,25 @@ interface WindowState {
  *
  * Heuristique : on inspecte **uniquement** `err.name` (valeur connue du code)
  * et le type de l'objet. On ne lit jamais `err.message`.
+ *
+ * Robustesse cross-realm : le check `instanceof SyntaxError` casse si l'erreur
+ * provient d'un autre realm JS (WebWorker, iframe, bridge React Native) car le
+ * constructeur `SyntaxError` est distinct d'un realm à l'autre. On ajoute un
+ * fallback sur `err.name === 'SyntaxError'` qui est préservé au travers des
+ * bridges (simple string, sérialisée tel quel).
  */
 export function classifyDecryptError(err: unknown): DecryptErrorClass {
-  if (err instanceof SyntaxError) {
+  if (!(err instanceof Error)) {
+    return 'unknown';
+  }
+  if (err instanceof SyntaxError || err.name === 'SyntaxError') {
     // JSON.parse côté consumeSyncMessage → payload mal formé.
     return 'parse';
   }
-  if (err instanceof Error) {
-    // Tout le reste tombe sous "decrypt" : MAC invalide, clé incorrecte,
-    // nonce rejoué, etc. — comportement attendu en cas d'attaque MITM ou
-    // de désynchronisation de clé.
-    return 'decrypt';
-  }
-  return 'unknown';
+  // Tout le reste tombe sous "decrypt" : MAC invalide, clé incorrecte,
+  // nonce rejoué, etc. — comportement attendu en cas d'attaque MITM ou
+  // de désynchronisation de clé.
+  return 'decrypt';
 }
 
 /** Arrondit un timestamp à la minute (réduction d'entropie). */
@@ -137,7 +143,10 @@ export function createDecryptFailedReporter(deps: {
       timestamp: isoMinute(state.windowStartMs),
       platform: deps.platform,
       errorClass: 'unknown',
-      seq: 0,
+      // `seq: -1` sentinelle explicite : un storm agrège N événements dont les
+      // `seq` individuels ont été volontairement omis. Ne jamais confondre avec
+      // un vrai numéro de séquence (qui est toujours >= 0 côté buildSyncMessage).
+      seq: -1,
       householdPseudonym: pseudonym,
       count: suppressed,
     });

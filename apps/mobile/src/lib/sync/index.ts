@@ -21,12 +21,19 @@ import { useDocStore } from '../../stores/doc-store';
  *
  * Refs: KIN-040.
  */
-const APP_SECRET = process.env['EXPO_PUBLIC_KINHALE_APP_SECRET'] ?? 'dev-secret-v1';
+const APP_SECRET_FALLBACK_DEV = 'dev-secret-v1';
+const APP_SECRET = process.env['EXPO_PUBLIC_KINHALE_APP_SECRET'] ?? APP_SECRET_FALLBACK_DEV;
 
 if (typeof process !== 'undefined' && process.env['NODE_ENV'] === 'production') {
   if (process.env['EXPO_PUBLIC_KINHALE_APP_SECRET'] === undefined) {
     console.warn(
       '[kinhale.sync] EXPO_PUBLIC_KINHALE_APP_SECRET absent en prod — pseudonymisation avec fallback dev.',
+    );
+  } else if (APP_SECRET === APP_SECRET_FALLBACK_DEV) {
+    // Détecte un APP_SECRET défini mais laissé à la valeur dev : pseudonymes
+    // corrélables entre environnements (dev/preview/prod partagent le même sel).
+    console.warn(
+      '[kinhale.sync] APP_SECRET not configured in production, pseudonyms are correlable across environments',
     );
   }
 }
@@ -39,6 +46,9 @@ if (typeof process !== 'undefined' && process.env['NODE_ENV'] === 'production') 
 const pseudonymCache = new Map<string, string>();
 const pendingPromises = new Map<string, Promise<string>>();
 
+// FNV-1a 32 bits : ~65k collisions attendues sur 1M foyers. Suffisant comme
+// identifiant corrélant court (fenêtre < 1ms avant BLAKE2b async). Non utilisé
+// pour du contrôle d'intégrité.
 function fnv1aHash(input: string): string {
   let h = 0x811c9dc5;
   for (let i = 0; i < input.length; i++) {
@@ -53,11 +63,24 @@ export function hashHousehold(householdId: string): string {
   if (cached !== undefined) return cached;
 
   if (!pendingPromises.has(householdId)) {
-    const promise = blake2bHex(householdId, APP_SECRET).then((digest) => {
-      pseudonymCache.set(householdId, digest);
-      pendingPromises.delete(householdId);
-      return digest;
-    });
+    const promise = blake2bHex(householdId, APP_SECRET)
+      .then((digest) => {
+        pseudonymCache.set(householdId, digest);
+        pendingPromises.delete(householdId);
+        return digest;
+      })
+      .catch((err: unknown) => {
+        // Si libsodium échoue à charger, on reste sur le placeholder FNV-1a.
+        // On log uniquement le nom d'erreur (pas .message ni .stack) pour
+        // éviter toute fuite de contexte sensible dans les logs.
+        const name = err instanceof Error ? err.name : 'UnknownError';
+        console.warn(
+          '[kinhale.sync] blake2b async load failed, staying on FNV-1a placeholder',
+          name,
+        );
+        pendingPromises.delete(householdId);
+        return `pending-${fnv1aHash(householdId)}`;
+      });
     pendingPromises.set(householdId, promise);
   }
 
