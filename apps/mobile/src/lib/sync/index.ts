@@ -32,6 +32,9 @@ export function useRelaySync(): { connected: boolean } {
   });
 }
 
+// Composant shell applicatif (3 lignes). Intentionnellement dupliqué web/mobile
+// — le pragma 'use client' côté web diverge structurellement, factoriser
+// apporterait du sur-nivelage sans gain. Voir KIN-039 (commit df5fa5f).
 /**
  * Composant sans rendu visible qui monte la sync WS bidirectionnelle E2EE
  * en arrière-plan dès que l'utilisateur est authentifié et que le doc est

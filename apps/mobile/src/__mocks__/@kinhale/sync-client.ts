@@ -1,10 +1,14 @@
 /**
- * Mock du sous-chemin `@kinhale/sync/client` pour les tests Jest côté mobile.
+ * Stub Jest mobile du sous-chemin `@kinhale/sync/client`.
  *
- * Le pipeline E2EE réel (libsodium + Automerge) est lent et dépendant du
- * runtime natif. Les tests applicatifs se contentent d'un stub qui retourne
- * un hook inerte : c'est le package `@kinhale/sync` lui-même qui couvre la
- * logique du hook via ses propres tests vitest (KIN-039).
+ * - Désactive `useRelaySync` en test Jest mobile : renvoie `{ connected: false }`.
+ * - La logique du hook est entièrement testée dans
+ *   `packages/sync/src/client/__tests__/` (vitest + jsdom), donc inutile de la
+ *   rejouer ici.
+ * - Cette désactivation évite la complexité de mocker WebSocket / crypto /
+ *   stores en environnement jsdom côté mobile.
+ * - Couverture d'intégration RN réelle à compenser en e2e Maestro (ticket de
+ *   suivi Sprint 5-6).
  */
 export const getGroupKey = jest.fn(async () => new Uint8Array(32).fill(1));
 export const _resetGroupKeyCache = jest.fn();

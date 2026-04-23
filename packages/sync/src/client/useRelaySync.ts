@@ -101,9 +101,10 @@ export function useRelaySync(deps: UseRelaySyncDeps): { connected: boolean } {
   // passent du non-prêt au prêt (ou inversement).
   const docReady = doc !== null;
 
-  // On doit référencer `createRelayClient` et `deriveGroupKey` via une ref pour
-  // éviter de re-déclencher l'effect si la factory change d'identité à chaque
-  // render côté app consommatrice (wrapper qui capture le store).
+  // Pattern "latest ref" : les deps ci-dessous sont recopiées dans des refs pour
+  // stabiliser l'identité vue par le useEffect et éviter une reconnexion WS à
+  // chaque render (les wrappers apps recréent ces closures à chaque appel).
+  // Les refs sont relues *dans* l'effet pour toujours capturer la dernière valeur.
   const createRelayClientRef = React.useRef(deps.createRelayClient);
   const deriveGroupKeyRef = React.useRef(deps.deriveGroupKey);
   const getDocSnapshotRef = React.useRef(deps.getDocSnapshot);
