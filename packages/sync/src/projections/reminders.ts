@@ -7,6 +7,19 @@ import { projectDoses } from './doses.js';
 export const DEFAULT_REMINDER_HORIZON_MS = 48 * 60 * 60 * 1000;
 
 /**
+ * Rétro-visibilité par défaut : la projection conserve les créneaux dont
+ * `targetAtUtc` est au plus 2 h dans le passé. Deux motivations :
+ * - **Scheduler** (brique 4) : filtre ensuite par `targetAtUtc >= now` côté
+ *   plateforme (l'OS refuserait un trigger passé de toute façon).
+ * - **Watcher dose manquée** (brique 5) : a besoin des créneaux dont la
+ *   fenêtre vient d'expirer pour détecter la transition → missed (RM25).
+ *
+ * 2 h couvre largement : fenêtre de confirmation = 30 min → un watcher
+ * qui tick toutes les 60 s rattrape n'importe quel missed dans la marge.
+ */
+export const DEFAULT_REMINDER_LOOKBACK_MS = 2 * 60 * 60 * 1000;
+
+/**
  * Tolérance **amont** sur la fenêtre de confirmation : un aidant peut
  * administrer la dose jusqu'à 5 min avant l'heure cible sans être pénalisé.
  * Aligné sur SPECS §9 (tolérance de déclenchement) et W2.
@@ -52,12 +65,14 @@ export function projectScheduledReminders(
   doc: KinhaleDoc,
   now: Date,
   horizonMs: number = DEFAULT_REMINDER_HORIZON_MS,
+  lookbackMs: number = DEFAULT_REMINDER_LOOKBACK_MS,
 ): Reminder[] {
   const plan = projectPlan(doc);
   if (plan === null) return [];
 
   const nowMs = now.getTime();
   const horizonEndMs = nowMs + horizonMs;
+  const lookbackStartMs = nowMs - lookbackMs;
 
   // Plan expiré (endAt strictement antérieur à now) : aucun rappel à émettre.
   if (plan.endAtMs !== null && plan.endAtMs < nowMs) {
@@ -70,9 +85,9 @@ export function projectScheduledReminders(
   }
 
   const planStartMs = Math.max(plan.startAtMs, 0);
-  // Effective start : max(plan.startAtMs, now - 1 jour) pour itérer les jours
+  // Effective start : max(plan.startAtMs, lookbackStart) pour itérer les jours
   // UTC pertinents sans produire une liste énorme pour les plans anciens.
-  const iterStartMs = Math.max(planStartMs, nowMs - DAY_MS);
+  const iterStartMs = Math.max(planStartMs, lookbackStartMs - DAY_MS);
   // Effective end : min(plan.endAtMs, now + horizon).
   const iterEndMs = plan.endAtMs !== null ? Math.min(plan.endAtMs, horizonEndMs) : horizonEndMs;
 
@@ -94,7 +109,7 @@ export function projectScheduledReminders(
     for (const hour of plan.scheduledHoursUtc) {
       if (!Number.isFinite(hour) || hour < 0 || hour > 23) continue;
       const targetMs = dayMs + Math.floor(hour) * 60 * 60 * 1000;
-      if (targetMs < nowMs || targetMs > horizonEndMs) continue;
+      if (targetMs < lookbackStartMs || targetMs > horizonEndMs) continue;
       if (plan.endAtMs !== null && targetMs > plan.endAtMs) continue;
 
       const windowStartMs = targetMs - REMINDER_WINDOW_BEFORE_MS;

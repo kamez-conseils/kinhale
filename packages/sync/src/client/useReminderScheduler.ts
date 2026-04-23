@@ -98,7 +98,13 @@ export function useReminderScheduler(deps: UseReminderSchedulerDeps): void {
   React.useEffect(() => {
     if (doc === null) return undefined;
 
-    const reminders = projectScheduledReminders(doc, nowRef.current(), horizonMs);
+    const nowDate = nowRef.current();
+    const nowMs = nowDate.getTime();
+    // Lookback 0 : le scheduler n'a pas besoin des créneaux passés. L'OS
+    // refuserait un trigger antérieur ; autant ne pas tenter.
+    const reminders = projectScheduledReminders(doc, nowDate, horizonMs, 0).filter(
+      (r) => Date.parse(r.targetAtUtc) >= nowMs,
+    );
     const desiredIds = new Set(reminders.map((r) => r.id));
     const currentIds = scheduledIdsRef.current;
 

@@ -115,17 +115,27 @@ describe('projectScheduledReminders', () => {
     expect(targets).toEqual(sorted);
   });
 
-  it('filtre les créneaux passés (antérieurs à now)', () => {
-    // now = 10:00 → les créneaux 8h du jour courant ne doivent pas sortir.
+  it('conserve les créneaux récents (lookback par défaut 2h) pour la détection missed', () => {
+    // now = 10:00 → 08:00 est dans la rétro-fenêtre (2h) : on le garde.
     const now = new Date('2026-04-22T10:00:00.000Z');
     const doc = makeDoc([planEvent({ scheduledHoursUtc: [8, 20] })]);
     const result = projectScheduledReminders(doc, now);
     const targets = result.map((r) => r.targetAtUtc);
-    // L'index 2026-04-22T08 doit être exclu.
-    expect(targets).not.toContain('2026-04-22T08:00:00.000Z');
-    // 20h du jour présent et 8/20h du lendemain restent.
+    // Le 08h reste visible pour que le watcher puisse détecter le missed.
+    expect(targets).toContain('2026-04-22T08:00:00.000Z');
+    // 20h du jour présent et 8/20h du lendemain aussi.
     expect(targets).toContain('2026-04-22T20:00:00.000Z');
     expect(targets).toContain('2026-04-23T08:00:00.000Z');
+  });
+
+  it('filtre les créneaux antérieurs à la rétro-fenêtre (lookbackMs=0)', () => {
+    // Avec lookbackMs=0 le comportement strict « aucun passé » est rétabli.
+    const now = new Date('2026-04-22T10:00:00.000Z');
+    const doc = makeDoc([planEvent({ scheduledHoursUtc: [8, 20] })]);
+    const result = projectScheduledReminders(doc, now, DAY_MS * 2, 0);
+    const targets = result.map((r) => r.targetAtUtc);
+    expect(targets).not.toContain('2026-04-22T08:00:00.000Z');
+    expect(targets).toContain('2026-04-22T20:00:00.000Z');
   });
 
   it('respecte un horizonMs personnalisé (24 h)', () => {

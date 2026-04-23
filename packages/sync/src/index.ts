@@ -52,6 +52,7 @@ export type { ProjectedPump } from './projections/pumps.js';
 export { projectPumps } from './projections/pumps.js';
 export {
   DEFAULT_REMINDER_HORIZON_MS,
+  DEFAULT_REMINDER_LOOKBACK_MS,
   projectScheduledReminders,
   REMINDER_WINDOW_AFTER_MS,
   REMINDER_WINDOW_BEFORE_MS,
