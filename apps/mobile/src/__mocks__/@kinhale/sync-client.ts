@@ -13,3 +13,11 @@
 export const getGroupKey = jest.fn(async () => new Uint8Array(32).fill(1));
 export const _resetGroupKeyCache = jest.fn();
 export const useRelaySync = jest.fn(() => ({ connected: false }));
+
+// KIN-040 : helpers télémétrie exposés par `@kinhale/sync/client`.
+// Stubs inertes : la logique réelle est testée dans packages/sync.
+export const classifyDecryptError = jest.fn(() => 'unknown');
+export const createDecryptFailedReporter = jest.fn(() => ({
+  track: jest.fn(),
+  flush: jest.fn(),
+}));
