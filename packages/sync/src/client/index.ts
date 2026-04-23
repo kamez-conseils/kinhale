@@ -11,3 +11,11 @@
  */
 
 export { getGroupKey, _resetGroupKeyCache } from './group-key.js';
+export { useRelaySync } from './useRelaySync.js';
+export type {
+  RelayClient,
+  RelayIncomingMessage,
+  RelayMessageHandler,
+  CreateRelayClient,
+  UseRelaySyncDeps,
+} from './useRelaySync.js';
