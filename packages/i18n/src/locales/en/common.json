@@ -59,6 +59,14 @@
     "loading": "Loading…",
     "back": "Back"
   },
+  "reminder": {
+    "title": "Kinhale",
+    "body": "Dose reminder"
+  },
+  "missed_dose": {
+    "title": "Kinhale",
+    "body": "Dose not confirmed"
+  },
   "onboarding": {
     "child": {
       "title": "Your child",
