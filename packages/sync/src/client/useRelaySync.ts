@@ -10,6 +10,12 @@ import {
 } from '../index.js';
 import type { SyncCursor } from '../index.js';
 import type { KinhaleDoc } from '../doc/schema.js';
+import {
+  classifyDecryptError,
+  createDecryptFailedReporter,
+  type HashHousehold,
+  type ReportDecryptFailed,
+} from './telemetry.js';
 
 /** Document Automerge d'un foyer (alias pour lisibilité). */
 type KinhaleDocument = A.Doc<KinhaleDoc>;
@@ -60,6 +66,24 @@ export interface UseRelaySyncDeps {
   readonly createRelayClient: CreateRelayClient;
   /** Dérive la groupKey (Argon2id, cachée) pour un foyer. */
   readonly deriveGroupKey: (householdId: string) => Promise<Uint8Array>;
+  /**
+   * Identifiant de plateforme émettrice, utilisé uniquement dans la
+   * télémétrie pseudonymisée (champ `platform`).
+   */
+  readonly platform: 'web' | 'mobile';
+  /**
+   * Pseudonymise un `householdId` (BLAKE2b keyed avec l'app_secret de l'app).
+   * **Obligatoire** — la fonction doit toujours produire une sortie non
+   * réversible (voir `blake2bHex` dans `@kinhale/crypto`). Jamais d'identité.
+   */
+  readonly hashHousehold: HashHousehold;
+  /**
+   * Rapporteur d'événements `sync.decrypt_failed` / `_storm`. Optionnel :
+   * si omis, le hook fonctionne exactement comme avant (no-op silencieux).
+   * Aucune donnée santé ne doit transiter par cette fonction — le schéma
+   * d'événement est figé par le type `DecryptFailedEvent`.
+   */
+  readonly reportDecryptFailed?: ReportDecryptFailed;
 }
 
 /**
@@ -95,6 +119,28 @@ export function useRelaySync(deps: UseRelaySyncDeps): { connected: boolean } {
   const cursorRef = React.useRef<SyncCursor>(createCursor());
   const seqRef = React.useRef(0);
   const keyRef = React.useRef<Uint8Array | null>(null);
+
+  // Reporter de télémétrie `sync.decrypt_failed` (KIN-040). Stable pour la
+  // durée de vie du hook — le rate-limiter vit dans la closure du reporter.
+  // La plateforme, le hashHousehold et reportDecryptFailed sont relus via
+  // refs ci-dessous pour ne jamais invalider l'effet WS.
+  const platformRef = React.useRef(deps.platform);
+  const hashHouseholdRef = React.useRef(deps.hashHousehold);
+  const reportDecryptFailedRef = React.useRef(deps.reportDecryptFailed);
+  platformRef.current = deps.platform;
+  hashHouseholdRef.current = deps.hashHousehold;
+  reportDecryptFailedRef.current = deps.reportDecryptFailed;
+
+  const telemetryReporterRef = React.useRef<ReturnType<typeof createDecryptFailedReporter> | null>(
+    null,
+  );
+  if (telemetryReporterRef.current === null) {
+    telemetryReporterRef.current = createDecryptFailedReporter({
+      platform: platformRef.current,
+      hashHousehold: (id) => hashHouseholdRef.current(id),
+      report: (event) => reportDecryptFailedRef.current?.(event),
+    });
+  }
 
   // Dépendance sur `docReady` (booléen dérivé) pour éviter de rouvrir la WS à
   // chaque mutation du doc. La connexion ne se (re)crée que quand auth ou doc
@@ -140,10 +186,17 @@ export function useRelaySync(deps: UseRelaySyncDeps): { connected: boolean } {
             receiveChanges(deltaChanges);
             cursorRef.current = recordReceived(cursorRef.current, deltaChanges);
           }
-        } catch {
-          // Message invalide, corrompu ou clé incorrecte — ignoré silencieusement.
-          // Aucune donnée santé dans les logs (principe zero-knowledge).
-          // Refs: KIN-040 (télémétrie sync.decrypt_failed à ajouter post-KIN-039).
+        } catch (err: unknown) {
+          // Message invalide, corrompu ou clé incorrecte — la sync continue.
+          // Aucune donnée santé n'est loggée : on n'émet qu'un événement de
+          // télémétrie pseudonymisé (payload figé par `DecryptFailedEvent`),
+          // jamais `err.message` ni `err.stack`.
+          // Refs: KIN-040, kz-securite-KIN-038.md §M2.
+          telemetryReporterRef.current?.track({
+            householdId,
+            errorClass: classifyDecryptError(err),
+            seq: msg.seq,
+          });
         }
       });
 
@@ -157,6 +210,8 @@ export function useRelaySync(deps: UseRelaySyncDeps): { connected: boolean } {
       clientRef.current = null;
       keyRef.current = null;
       setConnected(false);
+      // Flush le storm en cours avant de perdre la fenêtre rate-limit.
+      telemetryReporterRef.current?.flush();
     };
   }, [accessToken, deviceId, householdId, docReady, receiveChanges]);
 

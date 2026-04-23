@@ -19,3 +19,11 @@ export type {
   CreateRelayClient,
   UseRelaySyncDeps,
 } from './useRelaySync.js';
+export { classifyDecryptError, createDecryptFailedReporter } from './telemetry.js';
+export type {
+  DecryptErrorClass,
+  DecryptFailedEvent,
+  DecryptFailedEventName,
+  HashHousehold,
+  ReportDecryptFailed,
+} from './telemetry.js';
