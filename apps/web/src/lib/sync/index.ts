@@ -187,7 +187,38 @@ function hasWebNotifications(): boolean {
   return typeof window !== 'undefined' && 'Notification' in window;
 }
 
-async function ensureWebNotificationPermission(): Promise<boolean> {
+/**
+ * Vérifie si la permission Web Notifications est déjà accordée. **Ne
+ * déclenche jamais `Notification.requestPermission()`** — les navigateurs
+ * (Chrome, Firefox) recommandent fortement d'exiger un geste utilisateur
+ * avant la demande, sous peine de refus définitif (UX pattern browser).
+ *
+ * La demande est portée par {@link enableWebReminders}, qui doit être
+ * appelée depuis un handler de bouton UI (ticket de suivi : onboarding
+ * « Activer les rappels »).
+ */
+function isWebNotificationPermissionGranted(): boolean {
+  if (!hasWebNotifications()) return false;
+  return Notification.permission === 'granted';
+}
+
+/**
+ * Active explicitement les rappels web en demandant la permission à
+ * l'utilisateur. **DOIT être appelée depuis un event handler UI (clic
+ * d'un toggle réglages)** pour respecter le contrat Chrome/Firefox :
+ * `requestPermission` hors gesture est ignorée ou bloquée, et peut
+ * pousser le navigateur à poser `denied` de façon permanente.
+ *
+ * Retourne `true` si la permission est (ou vient d'être) accordée,
+ * `false` sinon (permission refusée, API indisponible, SSR). L'UI peut
+ * utiliser cette valeur pour afficher un état désactivé.
+ *
+ * TODO (ticket de suivi « Onboarding permission notifications web ») :
+ * brancher un toggle dans les réglages web ; tant que ce toggle n'est
+ * pas posé, le web reste no-op silencieux si l'utilisateur n'a pas
+ * activé la permission dans le navigateur par un autre canal.
+ */
+export async function enableWebReminders(): Promise<boolean> {
   if (!hasWebNotifications()) return false;
   if (Notification.permission === 'granted') return true;
   if (Notification.permission === 'denied') return false;
@@ -201,8 +232,9 @@ async function scheduleLocalNotificationWeb(args: {
   title: string;
   body: string;
 }): Promise<void> {
-  const granted = await ensureWebNotificationPermission();
-  if (!granted) return;
+  // Pas de demande intempestive de permission : si le user n'a pas encore
+  // activé les rappels web via `enableWebReminders`, no-op silencieux.
+  if (!isWebNotificationPermissionGranted()) return;
 
   const delayMs = Math.max(0, Date.parse(args.triggerAtUtc) - Date.now());
   const existing = webReminderTimers.get(args.id);
@@ -210,7 +242,7 @@ async function scheduleLocalNotificationWeb(args: {
 
   const handle = setTimeout(() => {
     webReminderTimers.delete(args.id);
-    if (hasWebNotifications() && Notification.permission === 'granted') {
+    if (isWebNotificationPermissionGranted()) {
       // Payload minimal — aucune donnée santé. Conforme RM16 + CLAUDE.md.
       new Notification(args.title, { body: args.body, tag: args.id });
     }
@@ -231,11 +263,11 @@ async function notifyMissedDoseNowWeb(args: {
   title: string;
   body: string;
 }): Promise<void> {
-  const granted = await ensureWebNotificationPermission();
-  if (!granted) return;
-  if (hasWebNotifications() && Notification.permission === 'granted') {
-    new Notification(args.title, { body: args.body, tag: args.id });
-  }
+  // Même contrat que `scheduleLocalNotificationWeb` : aucune demande
+  // implicite de permission. L'utilisateur doit l'avoir activée
+  // explicitement via `enableWebReminders`.
+  if (!isWebNotificationPermissionGranted()) return;
+  new Notification(args.title, { body: args.body, tag: args.id });
 }
 
 /**
