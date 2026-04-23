@@ -39,8 +39,46 @@ export interface RelayClient {
   close(): void;
 }
 
-/** Factory plateforme qui ouvre une connexion WS et renvoie un client relai. */
-export type CreateRelayClient = (token: string, onMessage: RelayMessageHandler) => RelayClient;
+/**
+ * Factory plateforme qui ouvre une connexion WS et renvoie un client relai.
+ *
+ * `onClose` est optionnel pour compatibilité ascendante ; quand il est fourni,
+ * la factory doit l'invoquer dès que la connexion est fermée ou en erreur,
+ * afin que le hook puisse déclencher une reconnexion avec backoff (E6-S03).
+ */
+export type CreateRelayClient = (
+  token: string,
+  onMessage: RelayMessageHandler,
+  onClose?: () => void,
+) => RelayClient;
+
+/**
+ * Séquence des délais de reconnexion (ms) : 1s, 2s, 5s, 15s, puis 60s
+ * répétés pour toutes les tentatives suivantes. Plafonner à 60s évite
+ * de noyer un relai déjà en difficulté. Refs: E6-S03.
+ */
+const BACKOFF_DELAYS_MS = [1000, 2000, 5000, 15000, 60000];
+
+/**
+ * Plafond absolu du nombre de tentatives consécutives. Atteint, le hook
+ * abandonne la reconnexion et laisse `connected:false` jusqu'à la prochaine
+ * bascule d'auth ou de doc (qui recrée l'effet et redémarre le compteur).
+ *
+ * Dimensionnement : 15 tentatives ≈ 1+2+5+15 + 60×11 = 683s ≈ 11 min,
+ * proche du TTL du JWT d'accès (15 min). Protège contre une boucle infinie
+ * si le handshake échoue durablement (token expiré rejeté en 401 HTTP,
+ * invisible comme close code côté client). Le palliatif est minimal — une
+ * propagation propre des close codes 4401/4403 est suivie dans un ticket
+ * dédié (voir PR body et `kz-securite-KIN-069.md` §M1).
+ */
+const MAX_RECONNECT_ATTEMPTS = 15;
+
+/**
+ * Durée pendant laquelle une connexion doit rester stable avant que le
+ * compteur de tentatives soit remis à zéro. Empêche un flap
+ * connect/disconnect rapide de consommer toute la rampe de backoff.
+ */
+const STABILITY_RESET_MS = 30000;
 
 /**
  * Dépendances injectées du hook `useRelaySync`.
@@ -119,6 +157,11 @@ export function useRelaySync(deps: UseRelaySyncDeps): { connected: boolean } {
   const cursorRef = React.useRef<SyncCursor>(createCursor());
   const seqRef = React.useRef(0);
   const keyRef = React.useRef<Uint8Array | null>(null);
+  // Compteur de déconnexions consécutives. Reset à 0 après
+  // STABILITY_RESET_MS de connexion stable. Refs: E6-S03.
+  const failuresCountRef = React.useRef(0);
+  const reconnectTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stabilityTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Reporter de télémétrie `sync.decrypt_failed` (KIN-040). Stable pour la
   // durée de vie du hook — le rate-limiter vit dans la closure du reporter.
@@ -159,6 +202,10 @@ export function useRelaySync(deps: UseRelaySyncDeps): { connected: boolean } {
   getDocSnapshotRef.current = deps.getDocSnapshot;
 
   // 1. Ouvre la WS quand l'utilisateur est authentifié et que le doc est chargé.
+  //    Gère aussi la reconnexion automatique avec backoff exponentiel (E6-S03)
+  //    via le callback `onClose` injecté à la factory plateforme. La séquence
+  //    de délais est 1s, 2s, 5s, 15s, 60s puis 60s en boucle. Une connexion
+  //    restée stable plus de STABILITY_RESET_MS remet le compteur à zéro.
   React.useEffect(() => {
     if (accessToken === null || deviceId === null || householdId === null || !docReady) {
       return undefined;
@@ -166,49 +213,123 @@ export function useRelaySync(deps: UseRelaySyncDeps): { connected: boolean } {
 
     let cancelled = false;
 
-    void (async () => {
-      const groupKey = await deriveGroupKeyRef.current(householdId);
+    const clearReconnectTimer = (): void => {
+      if (reconnectTimerRef.current !== null) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+    };
+    const clearStabilityTimer = (): void => {
+      if (stabilityTimerRef.current !== null) {
+        clearTimeout(stabilityTimerRef.current);
+        stabilityTimerRef.current = null;
+      }
+    };
+
+    const handleDisconnect = (): void => {
       if (cancelled) return;
 
-      keyRef.current = groupKey;
+      setConnected(false);
+      clearStabilityTimer();
 
-      const client = createRelayClientRef.current(accessToken, async (msg) => {
-        if (keyRef.current === null) return;
-        const currentDoc = getDocSnapshotRef.current();
-        if (currentDoc === null) return;
+      // Toujours fermer le client courant avant d'en recréer un :
+      // évite d'accumuler des handles WS en cas de déconnexions répétées.
+      clientRef.current?.close();
+      clientRef.current = null;
 
-        try {
-          const newDoc = await consumeSyncMessage(currentDoc, msg.blobJson, keyRef.current);
-          // Extraire uniquement le delta pour éviter de re-persister des
-          // changements déjà présents dans le doc local.
-          const deltaChanges = getDocChanges(currentDoc, newDoc);
-          if (deltaChanges.length > 0) {
-            receiveChanges(deltaChanges);
-            cursorRef.current = recordReceived(cursorRef.current, deltaChanges);
+      const attempt = failuresCountRef.current;
+
+      // Stop après MAX_RECONNECT_ATTEMPTS : évite une boucle infinie si la
+      // cause racine est non-résolvable côté client (ex. JWT expiré rejeté
+      // en 401 HTTP au handshake, indistinguable d'un flap réseau côté
+      // browser). Une bascule d'auth/doc recréera l'effet et remettra le
+      // compteur à zéro.
+      if (attempt >= MAX_RECONNECT_ATTEMPTS) {
+        clearReconnectTimer();
+        return;
+      }
+
+      failuresCountRef.current = attempt + 1;
+      const delay = BACKOFF_DELAYS_MS[Math.min(attempt, BACKOFF_DELAYS_MS.length - 1)] ?? 60000;
+
+      clearReconnectTimer();
+      reconnectTimerRef.current = setTimeout(() => {
+        reconnectTimerRef.current = null;
+        void connect();
+      }, delay);
+    };
+
+    const connect = async (): Promise<void> => {
+      if (cancelled) return;
+
+      // La groupKey est Argon2id-dérivée (coûteux, ~100ms) : on la garde
+      // entre deux tentatives pour que la reconnexion soit quasi immédiate.
+      if (keyRef.current === null) {
+        const groupKey = await deriveGroupKeyRef.current(householdId);
+        if (cancelled) return;
+        keyRef.current = groupKey;
+      }
+
+      const client = createRelayClientRef.current(
+        accessToken,
+        async (msg) => {
+          if (keyRef.current === null) return;
+          const currentDoc = getDocSnapshotRef.current();
+          if (currentDoc === null) return;
+
+          try {
+            const newDoc = await consumeSyncMessage(currentDoc, msg.blobJson, keyRef.current);
+            // Extraire uniquement le delta pour éviter de re-persister des
+            // changements déjà présents dans le doc local.
+            const deltaChanges = getDocChanges(currentDoc, newDoc);
+            if (deltaChanges.length > 0) {
+              receiveChanges(deltaChanges);
+              cursorRef.current = recordReceived(cursorRef.current, deltaChanges);
+            }
+          } catch (err: unknown) {
+            // Message invalide, corrompu ou clé incorrecte — la sync continue.
+            // Aucune donnée santé n'est loggée : on n'émet qu'un événement de
+            // télémétrie pseudonymisé (payload figé par `DecryptFailedEvent`),
+            // jamais `err.message` ni `err.stack`.
+            // Refs: KIN-040, kz-securite-KIN-038.md §M2.
+            telemetryReporterRef.current?.track({
+              householdId,
+              errorClass: classifyDecryptError(err),
+              seq: msg.seq,
+            });
           }
-        } catch (err: unknown) {
-          // Message invalide, corrompu ou clé incorrecte — la sync continue.
-          // Aucune donnée santé n'est loggée : on n'émet qu'un événement de
-          // télémétrie pseudonymisé (payload figé par `DecryptFailedEvent`),
-          // jamais `err.message` ni `err.stack`.
-          // Refs: KIN-040, kz-securite-KIN-038.md §M2.
-          telemetryReporterRef.current?.track({
-            householdId,
-            errorClass: classifyDecryptError(err),
-            seq: msg.seq,
-          });
-        }
-      });
+        },
+        handleDisconnect,
+      );
+
+      if (cancelled) {
+        client.close();
+        return;
+      }
 
       clientRef.current = client;
       setConnected(true);
-    })();
+
+      // Reset du compteur si la connexion reste stable ≥ STABILITY_RESET_MS.
+      // Un flap avant cette échéance laisse le compteur intact → la rampe
+      // de backoff continue de s'appliquer.
+      clearStabilityTimer();
+      stabilityTimerRef.current = setTimeout(() => {
+        stabilityTimerRef.current = null;
+        failuresCountRef.current = 0;
+      }, STABILITY_RESET_MS);
+    };
+
+    void connect();
 
     return () => {
       cancelled = true;
+      clearReconnectTimer();
+      clearStabilityTimer();
       clientRef.current?.close();
       clientRef.current = null;
       keyRef.current = null;
+      failuresCountRef.current = 0;
       setConnected(false);
       // Flush le storm en cours avant de perdre la fenêtre rate-limit.
       telemetryReporterRef.current?.flush();
