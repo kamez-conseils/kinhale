@@ -77,6 +77,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     environment:
       NODE_ENV: development
       PORT: 3002
@@ -85,6 +87,11 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev-secret-minimum-32-characters-long-for-local-testing}
       JWT_ACCESS_TTL: 15m
       JWT_REFRESH_TTL: 14d
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_SECURE: 'false'
+      MAIL_FROM: no-reply@kinhale.health
+      WEB_URL: http://localhost:3000
     ports:
       - '3002:3002'
     volumes:

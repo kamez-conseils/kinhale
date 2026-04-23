@@ -1,10 +1,12 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import fastifyCors from '@fastify/cors';
 import fastifyWebsocket from '@fastify/websocket';
+import type { Transporter } from 'nodemailer';
 import type { Env } from './env.js';
 import dbPlugin, { type DrizzleDb } from './plugins/db.js';
 import jwtPlugin from './plugins/jwt.js';
 import redisPlugin, { type RedisClients } from './plugins/redis.js';
+import { createMailTransport } from './mail/transport.js';
 import healthRoute from './routes/health.js';
 import authRoute from './routes/auth.js';
 import relayRoute from './routes/relay.js';
@@ -16,6 +18,7 @@ declare module 'fastify' {
   interface FastifyInstance {
     env: Env;
     db: DrizzleDb;
+    mailTransport: Transporter;
   }
 }
 
@@ -28,6 +31,8 @@ export interface BuildAppOverrides {
   db?: DrizzleDb;
   /** Redis mock pour les tests unitaires. Si fourni, skip le plugin redisPlugin. */
   redis?: RedisClients;
+  /** Transport mail mocké pour les tests unitaires. */
+  mailTransport?: Transporter;
 }
 
 export function buildApp(env: Env, overrides: BuildAppOverrides = {}): FastifyInstance {
@@ -55,6 +60,13 @@ export function buildApp(env: Env, overrides: BuildAppOverrides = {}): FastifyIn
     app.decorate('redis', overrides.redis);
   } else {
     void app.register(redisPlugin);
+  }
+
+  // Mail transport
+  if (overrides.mailTransport !== undefined) {
+    app.decorate('mailTransport', overrides.mailTransport);
+  } else {
+    app.decorate('mailTransport', createMailTransport(env));
   }
 
   // Routes
