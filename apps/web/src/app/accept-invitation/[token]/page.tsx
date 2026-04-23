@@ -66,7 +66,10 @@ export default function AcceptInvitationPage(): React.JSX.Element {
         <Text color="$red10">{lookupError}</Text>
         <Button
           onPress={() => router.push('/auth')}
-          theme="active"
+          backgroundColor="$blue9"
+          color="white"
+          borderColor="$blue10"
+          borderWidth={2}
           accessibilityRole="button"
           accessibilityLabel={t('invitation.backToAuth')}
         >
@@ -103,7 +106,10 @@ export default function AcceptInvitationPage(): React.JSX.Element {
 
       <Button
         onPress={() => setConsent((c) => !c)}
-        theme={consent ? 'active' : null}
+        backgroundColor={consent ? '$blue9' : '$backgroundStrong'}
+        color={consent ? 'white' : '$color'}
+        borderColor={consent ? '$blue10' : '$borderColor'}
+        borderWidth={2}
         accessibilityLabel={t('invitation.consentLabel')}
         testID="consent-toggle"
       >
@@ -114,7 +120,10 @@ export default function AcceptInvitationPage(): React.JSX.Element {
       <Button
         onPress={() => void handleSubmit()}
         disabled={pin.length !== 6 || !consent}
-        theme="active"
+        backgroundColor="$blue9"
+        color="white"
+        borderColor="$blue10"
+        borderWidth={2}
         accessibilityLabel={t('invitation.acceptCta')}
       >
         {t('invitation.acceptCta')}

@@ -93,7 +93,10 @@ export default function CaregiversPage(): React.JSX.Element | null {
 
       <Button
         onPress={() => router.push('/caregivers/invite')}
-        theme="active"
+        backgroundColor="$blue9"
+        color="white"
+        borderColor="$blue10"
+        borderWidth={2}
         accessibilityLabel={t('invitation.createCta')}
       >
         {t('invitation.createCta')}
