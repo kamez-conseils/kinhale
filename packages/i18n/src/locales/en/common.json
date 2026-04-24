@@ -198,5 +198,21 @@
         "description": "Notification when you are removed from a household."
       }
     }
+  },
+  "quietHours": {
+    "title": "Quiet hours",
+    "description": "During this window, non-critical notifications arrive without sound or vibration. Missed dose and security alerts remain active.",
+    "enabledLabel": "Enable quiet hours",
+    "startLabel": "Start",
+    "endLabel": "End",
+    "timezoneLabel": "Time zone",
+    "timezoneAutoDetected": "Auto-detected: {{timezone}}",
+    "save": "Save",
+    "saving": "Saving…",
+    "saveSuccess": "Preferences saved.",
+    "saveError": "Could not save. Please try again.",
+    "loadError": "Could not load quiet hours.",
+    "invalidFormat": "Invalid format. Use HH:MM (e.g. 22:00).",
+    "safetyNote": "Missed-dose notifications are still delivered even during quiet hours (safety rule)."
   }
 }

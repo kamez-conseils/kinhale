@@ -12,6 +12,20 @@ jest.mock('../../../src/lib/notification-preferences/client', () => ({
   updateNotificationPreference: jest.fn(),
 }));
 
+// Mock du client quiet hours — l'écran Notifications intègre désormais la
+// section « Heures silencieuses » (E5-S08) qui ferait un appel réseau réel
+// dans jsdom sans mock.
+jest.mock('../../../src/lib/quiet-hours/client', () => ({
+  getQuietHours: jest.fn().mockResolvedValue({
+    enabled: false,
+    startLocalTime: '22:00',
+    endLocalTime: '07:00',
+    timezone: 'America/Toronto',
+  }),
+  updateQuietHours: jest.fn().mockResolvedValue(undefined),
+  detectLocalTimezone: () => 'America/Toronto',
+}));
+
 const mockList = listNotificationPreferences as jest.MockedFunction<
   typeof listNotificationPreferences
 >;

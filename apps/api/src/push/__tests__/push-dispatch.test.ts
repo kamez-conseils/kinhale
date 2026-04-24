@@ -12,7 +12,12 @@ vi.mock('expo-server-sdk', () => {
   return { Expo: MockExpo };
 });
 
-import { dispatchPush, type NotificationPreferenceStore } from '../push-dispatch.js';
+import {
+  dispatchPush,
+  type NotificationPreferenceStore,
+  type QuietHoursStore,
+} from '../push-dispatch.js';
+import type { QuietHours } from '@kinhale/domain/quiet-hours';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -168,5 +173,195 @@ describe('dispatchPush — filtrage granulaire E5-S07', () => {
     });
 
     expect(mockExpo.sendPushNotificationsAsync).not.toHaveBeenCalled();
+  });
+});
+
+describe('dispatchPush — quiet hours E5-S08', () => {
+  const makeQuietStore = (map: Map<string, QuietHours> = new Map()): QuietHoursStore => ({
+    findQuietHoursByAccount: vi.fn().mockResolvedValue(map),
+  });
+
+  const NIGHT_QH: QuietHours = {
+    enabled: true,
+    startLocalTime: '22:00',
+    endLocalTime: '07:00',
+    timezone: 'America/Toronto',
+  };
+
+  // 03:00 UTC = 22:00 Toronto (EST = UTC-5) ; pile dans la plage nuit.
+  const INSIDE_NIGHT = new Date('2026-01-16T03:00:00Z');
+  // 15:00 UTC = 10:00 Toronto ; hors plage.
+  const DAYTIME = new Date('2026-01-15T15:00:00Z');
+
+  it('silence (sound:null, priority:normal, interruptionLevel:passive) le push si le compte est en quiet hours', async () => {
+    const mockExpo = new Expo();
+    const quietStore = makeQuietStore(new Map([['acc-1', NIGHT_QH]]));
+    const targets = [{ token: 'ExponentPushToken[a]', accountId: 'acc-1' }];
+
+    await dispatchPush(mockExpo, targets, undefined, undefined, {
+      type: 'peer_dose_recorded',
+      quietStore,
+      now: INSIDE_NIGHT,
+    });
+
+    const calls = (mockExpo.sendPushNotificationsAsync as ReturnType<typeof vi.fn>).mock.calls;
+    const msg = calls[0][0][0] as {
+      priority?: string;
+      sound?: unknown;
+      interruptionLevel?: string;
+    };
+    expect(msg.priority).toBe('normal');
+    expect(msg.sound).toBeNull();
+    expect(msg.interruptionLevel).toBe('passive');
+  });
+
+  it('envoie en payload normal (priority par défaut) hors quiet hours', async () => {
+    const mockExpo = new Expo();
+    const quietStore = makeQuietStore(new Map([['acc-1', NIGHT_QH]]));
+    const targets = [{ token: 'ExponentPushToken[a]', accountId: 'acc-1' }];
+
+    await dispatchPush(mockExpo, targets, undefined, undefined, {
+      type: 'peer_dose_recorded',
+      quietStore,
+      now: DAYTIME,
+    });
+
+    const calls = (mockExpo.sendPushNotificationsAsync as ReturnType<typeof vi.fn>).mock.calls;
+    const msg = calls[0][0][0] as { priority?: string; sound?: unknown };
+    expect(msg.priority).toBeUndefined();
+    expect(msg.sound).toBeUndefined();
+  });
+
+  it('missed_dose : push normal MÊME dans la plage quiet hours (exception RM25)', async () => {
+    const mockExpo = new Expo();
+    const quietStore = makeQuietStore(new Map([['acc-1', NIGHT_QH]]));
+    const targets = [{ token: 'ExponentPushToken[a]', accountId: 'acc-1' }];
+
+    await dispatchPush(mockExpo, targets, undefined, undefined, {
+      type: 'missed_dose',
+      quietStore,
+      now: INSIDE_NIGHT,
+    });
+
+    const calls = (mockExpo.sendPushNotificationsAsync as ReturnType<typeof vi.fn>).mock.calls;
+    const msg = calls[0][0][0] as { priority?: string; sound?: unknown };
+    expect(msg.priority).toBeUndefined();
+    expect(msg.sound).toBeUndefined();
+    // Le store ne doit même pas être consulté pour les types override.
+    expect(quietStore.findQuietHoursByAccount).not.toHaveBeenCalled();
+  });
+
+  it('security_alert : push normal MÊME dans la plage quiet hours (exception sécurité)', async () => {
+    const mockExpo = new Expo();
+    const quietStore = makeQuietStore(new Map([['acc-1', NIGHT_QH]]));
+    const targets = [{ token: 'ExponentPushToken[a]', accountId: 'acc-1' }];
+
+    await dispatchPush(mockExpo, targets, undefined, undefined, {
+      type: 'security_alert',
+      quietStore,
+      now: INSIDE_NIGHT,
+    });
+
+    const calls = (mockExpo.sendPushNotificationsAsync as ReturnType<typeof vi.fn>).mock.calls;
+    const msg = calls[0][0][0] as { priority?: string; sound?: unknown };
+    expect(msg.priority).toBeUndefined();
+    expect(msg.sound).toBeUndefined();
+    expect(quietStore.findQuietHoursByAccount).not.toHaveBeenCalled();
+  });
+
+  it('mixte : un compte silencié, un compte normal dans le même lot', async () => {
+    const mockExpo = new Expo();
+    const quietStore = makeQuietStore(new Map([['acc-1', NIGHT_QH]]));
+    const targets = [
+      { token: 'ExponentPushToken[a]', accountId: 'acc-1' }, // en plage nuit → silencié
+      { token: 'ExponentPushToken[b]', accountId: 'acc-2' }, // pas de config → normal
+    ];
+
+    await dispatchPush(mockExpo, targets, undefined, undefined, {
+      type: 'reminder',
+      quietStore,
+      now: INSIDE_NIGHT,
+    });
+
+    const calls = (mockExpo.sendPushNotificationsAsync as ReturnType<typeof vi.fn>).mock.calls;
+    const messages = calls[0][0] as Array<{ to: string; priority?: string; sound?: unknown }>;
+    const byTo = new Map(messages.map((m) => [m.to, m]));
+    expect(byTo.get('ExponentPushToken[a]')?.priority).toBe('normal');
+    expect(byTo.get('ExponentPushToken[a]')?.sound).toBeNull();
+    expect(byTo.get('ExponentPushToken[b]')?.priority).toBeUndefined();
+    expect(byTo.get('ExponentPushToken[b]')?.sound).toBeUndefined();
+  });
+
+  it('ne silence pas si quiet hours est enabled=false (désactivé)', async () => {
+    const mockExpo = new Expo();
+    const disabledQH: QuietHours = { ...NIGHT_QH, enabled: false };
+    const quietStore = makeQuietStore(new Map([['acc-1', disabledQH]]));
+    const targets = [{ token: 'ExponentPushToken[a]', accountId: 'acc-1' }];
+
+    await dispatchPush(mockExpo, targets, undefined, undefined, {
+      type: 'peer_dose_recorded',
+      quietStore,
+      now: INSIDE_NIGHT,
+    });
+
+    const calls = (mockExpo.sendPushNotificationsAsync as ReturnType<typeof vi.fn>).mock.calls;
+    const msg = calls[0][0][0] as { priority?: string; sound?: unknown };
+    expect(msg.priority).toBeUndefined();
+    expect(msg.sound).toBeUndefined();
+  });
+
+  it("fail-safe : si le store lève, on n'écrase pas l'envoi (push normal + log warn)", async () => {
+    const mockExpo = new Expo();
+    const quietStore: QuietHoursStore = {
+      findQuietHoursByAccount: vi.fn().mockRejectedValue(new Error('DB down')),
+    };
+    const logger = { warn: vi.fn() };
+    const targets = [{ token: 'ExponentPushToken[a]', accountId: 'acc-1' }];
+
+    await dispatchPush(mockExpo, targets, logger, undefined, {
+      type: 'peer_dose_recorded',
+      quietStore,
+      now: INSIDE_NIGHT,
+    });
+
+    // Envoi normal (pas silencié).
+    const calls = (mockExpo.sendPushNotificationsAsync as ReturnType<typeof vi.fn>).mock.calls;
+    const msg = calls[0][0][0] as { priority?: string };
+    expect(msg.priority).toBeUndefined();
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ err: expect.any(Error) }),
+      expect.stringContaining('quiet hours'),
+    );
+  });
+
+  it('combinaison préférences granulaires + quiet hours : accounts désactivés écartés AVANT silenciage', async () => {
+    const mockExpo = new Expo();
+    const prefsStore: NotificationPreferenceStore = {
+      findDisabledAccountIds: vi.fn().mockResolvedValue(new Set(['acc-1'])),
+    };
+    const quietStore = makeQuietStore(new Map([['acc-2', NIGHT_QH]]));
+    const targets = [
+      { token: 'ExponentPushToken[a]', accountId: 'acc-1' }, // désactivé → écarté
+      { token: 'ExponentPushToken[b]', accountId: 'acc-2' }, // silencié
+      { token: 'ExponentPushToken[c]', accountId: 'acc-3' }, // normal
+    ];
+
+    await dispatchPush(
+      mockExpo,
+      targets,
+      undefined,
+      { type: 'peer_dose_recorded', prefsStore },
+      { type: 'peer_dose_recorded', quietStore, now: INSIDE_NIGHT },
+    );
+
+    const calls = (mockExpo.sendPushNotificationsAsync as ReturnType<typeof vi.fn>).mock.calls;
+    const messages = calls[0][0] as Array<{ to: string; priority?: string }>;
+    // Seulement acc-2 (silencié) et acc-3 (normal) — acc-1 est hors du lot.
+    expect(messages.map((m) => m.to).sort()).toEqual(
+      ['ExponentPushToken[b]', 'ExponentPushToken[c]'].sort(),
+    );
+    const byTo = new Map(messages.map((m) => [m.to, m]));
+    expect(byTo.get('ExponentPushToken[b]')?.priority).toBe('normal');
+    expect(byTo.get('ExponentPushToken[c]')?.priority).toBeUndefined();
   });
 });

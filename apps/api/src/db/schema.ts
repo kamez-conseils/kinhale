@@ -123,3 +123,40 @@ export const userNotificationPreferences = pgTable(
   },
   (t) => [uniqueIndex('user_notif_prefs_account_type_idx').on(t.accountId, t.notificationType)],
 );
+
+/**
+ * Quiet hours par aidant (E5-S08).
+ *
+ * Une seule ligne par `accountId` (unicité stricte — un PUT écrase via
+ * `onConflictDoUpdate`). L'absence de ligne équivaut à des quiet hours
+ * désactivées (défaut implicite). Les colonnes `startLocalTime` et
+ * `endLocalTime` stockent un format `"HH:mm"` (24h, zéro padding) dans un
+ * `text` plutôt qu'un `time` Postgres pour :
+ * - garder la sémantique locale **indépendante du fuseau** (le `time`
+ *   Postgres serait converti en UTC au stockage dans certains drivers),
+ * - garantir un round-trip exact sans tronquer à la minute via `TIME(0)`.
+ *
+ * `timezone` : IANA (ex: `America/Toronto`). Validé côté API par Zod +
+ * `Intl.DateTimeFormat`. Pas de FK vers un référentiel séparé — Node 20
+ * full ICU connaît l'intégralité de la base tz officielle.
+ *
+ * Aucune donnée santé ici — seulement des préférences utilisateur. Le
+ * dispatcher push lit cette table pour filtrer les notifications non
+ * critiques (les `missed_dose` et `security_alert` passent toujours,
+ * cf. SPECS §9 + RM25 : exception sécurité).
+ */
+export const userQuietHours = pgTable(
+  'user_quiet_hours',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    enabled: boolean('enabled').notNull(),
+    startLocalTime: text('start_local_time').notNull(),
+    endLocalTime: text('end_local_time').notNull(),
+    timezone: text('timezone').notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex('user_quiet_hours_account_idx').on(t.accountId)],
+);
