@@ -1,4 +1,13 @@
-import { pgTable, uuid, text, timestamp, bigint, uniqueIndex, index } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  uuid,
+  text,
+  timestamp,
+  bigint,
+  boolean,
+  uniqueIndex,
+  index,
+} from 'drizzle-orm/pg-core';
 
 /**
  * Comptes utilisateurs. L'email n'est jamais stocké en clair —
@@ -79,4 +88,38 @@ export const pushTokens = pgTable(
     uniqueIndex('push_tokens_device_token_idx').on(t.deviceId, t.token),
     index('push_tokens_household_idx').on(t.householdId),
   ],
+);
+
+/**
+ * Préférences granulaires de notifications par compte (E5-S07).
+ *
+ * Les `missed_dose` et `security_alert` ne sont **jamais** persistés ici :
+ * ils sont toujours actifs (SPECS §9 + RM25), et l'endpoint PUT refuse
+ * toute tentative de les désactiver.
+ *
+ * Les types **absents** de cette table sont considérés `enabled = true` par
+ * défaut (convention ergonomique : l'utilisateur n'a qu'à matérialiser les
+ * refus, les acceptations étant silencieuses).
+ *
+ * Contrainte d'unicité (`accountId`, `notificationType`) : une seule entrée
+ * par paire — un PUT réémis écrase proprement via `onConflictDoUpdate`.
+ *
+ * Granularité : **par compte** (et non par device). L'intention utilisateur
+ * est partagée entre ses devices ; rien n'empêche une évolution future vers
+ * une granularité device si le besoin émerge (ADR séparé).
+ *
+ * Aucune donnée santé ici — seulement une métadonnée de préférence.
+ */
+export const userNotificationPreferences = pgTable(
+  'user_notification_preferences',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    notificationType: text('notification_type').notNull(),
+    enabled: boolean('enabled').notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex('user_notif_prefs_account_type_idx').on(t.accountId, t.notificationType)],
 );

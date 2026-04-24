@@ -12,13 +12,13 @@ vi.mock('expo-server-sdk', () => {
   return { Expo: MockExpo };
 });
 
-import { dispatchPush } from '../push-dispatch.js';
+import { dispatchPush, type NotificationPreferenceStore } from '../push-dispatch.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('dispatchPush', () => {
+describe('dispatchPush — API rétrocompatible (tokens simples)', () => {
   it('envoie une notification opaque à chaque token valide', async () => {
     const mockExpo = new Expo();
     const tokens = ['ExponentPushToken[aaa]', 'ExponentPushToken[bbb]'];
@@ -79,5 +79,94 @@ describe('dispatchPush', () => {
       expect.objectContaining({ err: sendError }),
       'Échec envoi push chunk (ignoré)',
     );
+  });
+});
+
+describe('dispatchPush — filtrage granulaire E5-S07', () => {
+  const makeStore = (disabled: Set<string> = new Set()): NotificationPreferenceStore => ({
+    findDisabledAccountIds: vi.fn().mockResolvedValue(disabled),
+  });
+
+  it("n'envoie pas de push aux comptes ayant désactivé le type", async () => {
+    const mockExpo = new Expo();
+    const store = makeStore(new Set(['acc-2']));
+    const targets = [
+      { token: 'ExponentPushToken[a]', accountId: 'acc-1' },
+      { token: 'ExponentPushToken[b]', accountId: 'acc-2' },
+      { token: 'ExponentPushToken[c]', accountId: 'acc-3' },
+    ];
+
+    await dispatchPush(mockExpo, targets, undefined, {
+      type: 'peer_dose_recorded',
+      prefsStore: store,
+    });
+
+    const calls = (mockExpo.sendPushNotificationsAsync as ReturnType<typeof vi.fn>).mock.calls;
+    const sent = (calls[0][0] as Array<{ to: string }>).map((m) => m.to);
+    expect(sent).toEqual(['ExponentPushToken[a]', 'ExponentPushToken[c]']);
+    expect(store.findDisabledAccountIds).toHaveBeenCalledWith(
+      ['acc-1', 'acc-2', 'acc-3'],
+      'peer_dose_recorded',
+    );
+  });
+
+  it('envoie quand même les types sanctuarisés missed_dose même si désactivés (défense en profondeur)', async () => {
+    const mockExpo = new Expo();
+    const store = makeStore(new Set(['acc-1', 'acc-2']));
+    const targets = [
+      { token: 'ExponentPushToken[a]', accountId: 'acc-1' },
+      { token: 'ExponentPushToken[b]', accountId: 'acc-2' },
+    ];
+
+    await dispatchPush(mockExpo, targets, undefined, {
+      type: 'missed_dose',
+      prefsStore: store,
+    });
+
+    const calls = (mockExpo.sendPushNotificationsAsync as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls[0][0]).toHaveLength(2);
+    // Le store ne doit même pas être consulté pour les types sanctuarisés.
+    expect(store.findDisabledAccountIds).not.toHaveBeenCalled();
+  });
+
+  it('envoie quand même les security_alert même si désactivés', async () => {
+    const mockExpo = new Expo();
+    const store = makeStore(new Set(['acc-1']));
+    const targets = [{ token: 'ExponentPushToken[a]', accountId: 'acc-1' }];
+
+    await dispatchPush(mockExpo, targets, undefined, {
+      type: 'security_alert',
+      prefsStore: store,
+    });
+
+    expect(mockExpo.sendPushNotificationsAsync).toHaveBeenCalledOnce();
+    expect(store.findDisabledAccountIds).not.toHaveBeenCalled();
+  });
+
+  it('ne consulte pas le store quand tous les accountIds sont vides (rétrocompat)', async () => {
+    const mockExpo = new Expo();
+    const store = makeStore(new Set());
+    await dispatchPush(mockExpo, ['ExponentPushToken[a]'], undefined, {
+      type: 'reminder',
+      prefsStore: store,
+    });
+    expect(store.findDisabledAccountIds).not.toHaveBeenCalled();
+    expect(mockExpo.sendPushNotificationsAsync).toHaveBeenCalledOnce();
+  });
+
+  it('écarte tous les tokens si tous les comptes ont désactivé le type', async () => {
+    const mockExpo = new Expo();
+    const store = makeStore(new Set(['acc-1', 'acc-2']));
+    const targets = [
+      { token: 'ExponentPushToken[a]', accountId: 'acc-1' },
+      { token: 'ExponentPushToken[b]', accountId: 'acc-2' },
+    ];
+
+    await dispatchPush(mockExpo, targets, undefined, {
+      type: 'pump_low',
+      prefsStore: store,
+    });
+
+    expect(mockExpo.sendPushNotificationsAsync).not.toHaveBeenCalled();
   });
 });

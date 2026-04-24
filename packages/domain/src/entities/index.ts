@@ -3,6 +3,7 @@ export * from './child';
 export * from './dose';
 export * from './household';
 export * from './invitation';
+export * from './notification-type';
 export * from './plan';
 export * from './pump';
 export * from './reminder';

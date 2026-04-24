@@ -11,7 +11,8 @@
     ".": "./src/index.ts",
     "./entities": "./src/entities/index.ts",
     "./rules": "./src/rules/index.ts",
-    "./errors": "./src/errors.ts"
+    "./errors": "./src/errors.ts",
+    "./notifications": "./src/entities/notification-type.ts"
   },
   "scripts": {
     "lint": "eslint --max-warnings=0 .",
