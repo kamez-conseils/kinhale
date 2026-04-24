@@ -5,12 +5,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   useRelaySync as useRelaySyncCore,
   usePullDelta as usePullDeltaCore,
+  useSyncBatchFallback as useSyncBatchFallbackCore,
   useReminderScheduler as useReminderSchedulerCore,
   useMissedDoseWatcher as useMissedDoseWatcherCore,
   getGroupKey,
   type DecryptFailedEvent,
   type FetchCatchupArgs,
   type CatchupResponse,
+  type FetchBatchArgs,
+  type FetchBatchResult,
 } from '@kinhale/sync/client';
 import { blake2bHex } from '@kinhale/crypto';
 import { createRelayClient } from '../relay-client';
@@ -161,6 +164,7 @@ export function useRelaySync(): { connected: boolean } {
 export function RelaySyncBootstrap(): null {
   useRelaySync();
   usePullDelta();
+  useSyncBatchFallback();
   return null;
 }
 
@@ -237,6 +241,49 @@ export function usePullDelta(): { pulling: boolean } {
     setPulling(result.pulling);
   }, [result.pulling, setPulling]);
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// Sync batch HTTP fallback (KIN-72 / E7-S02).
+//
+// Activé quand la WS reste indisponible > 60 s : envoie en HTTP les changes
+// Automerge locaux accumulés, avec retry exponentiel long (60s → 1h) et
+// Idempotency-Key régénéré à chaque tentative.
+// ---------------------------------------------------------------------------
+
+async function fetchBatch(args: FetchBatchArgs): Promise<FetchBatchResult> {
+  const url = new URL(`${API_URL}/sync/batch`);
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${args.accessToken}`,
+      'Idempotency-Key': args.idempotencyKey,
+    },
+    body: JSON.stringify({ messages: args.messages }),
+  });
+  if (!res.ok) {
+    throw new Error(`sync batch failed: ${res.status}`);
+  }
+  const json = (await res.json()) as FetchBatchResult;
+  return json;
+}
+
+/**
+ * Wrapper applicatif mobile qui monte le fallback HTTP `POST /sync/batch`.
+ * Lit le statut `connected` du store sync-status alimenté par `useRelaySync()`.
+ */
+export function useSyncBatchFallback(): void {
+  useSyncBatchFallbackCore({
+    useAccessToken: () => useAuthStore((s) => s.accessToken),
+    useDeviceId: () => useAuthStore((s) => s.deviceId),
+    useHouseholdId: () => useAuthStore((s) => s.householdId),
+    useDoc: () => useDocStore((s) => s.doc),
+    getDocSnapshot: () => useDocStore.getState().doc,
+    useConnected: () => useSyncStatusStore((s) => s.connected),
+    fetchBatch,
+    deriveGroupKey: getGroupKey,
+  });
 }
 
 // ---------------------------------------------------------------------------
