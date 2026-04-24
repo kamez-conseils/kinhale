@@ -11,6 +11,7 @@ import healthRoute from './routes/health.js';
 import authRoute from './routes/auth.js';
 import relayRoute from './routes/relay.js';
 import catchupRoute from './routes/catchup.js';
+import syncBatchRoute from './routes/sync-batch.js';
 import pushRoute from './routes/push.js';
 import invitationsRoute from './routes/invitations.js';
 
@@ -74,6 +75,7 @@ export function buildApp(env: Env, overrides: BuildAppOverrides = {}): FastifyIn
   void app.register(authRoute, { prefix: '/auth' });
   void app.register(relayRoute, { prefix: '/relay' });
   void app.register(catchupRoute, { prefix: '/relay' });
+  void app.register(syncBatchRoute, { prefix: '/sync' });
   void app.register(pushRoute, { prefix: '/push' });
   void app.register(invitationsRoute, { prefix: '/invitations' });
 

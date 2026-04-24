@@ -29,6 +29,15 @@ export type {
   UsePullDeltaResult,
 } from './usePullDelta.js';
 
+export { useSyncBatchFallback } from './useSyncBatchFallback.js';
+export type {
+  FetchBatch,
+  FetchBatchArgs,
+  FetchBatchResult,
+  SyncBatchMessage,
+  UseSyncBatchFallbackDeps,
+} from './useSyncBatchFallback.js';
+
 export { useReminderScheduler } from './useReminderScheduler.js';
 export type {
   ScheduleLocalNotificationArgs,
