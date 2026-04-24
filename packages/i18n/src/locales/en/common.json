@@ -149,5 +149,54 @@
   },
   "offlineGuard": {
     "message": "This action requires an internet connection. It will be available again once you are back online."
+  },
+  "notificationPreferences": {
+    "title": "Notifications",
+    "description": "Choose which notification types you want to receive. Security and missed dose alerts are always on.",
+    "saveError": "Could not update preference. Please try again.",
+    "loadError": "Could not load preferences.",
+    "alwaysEnabledTooltip": "This notification type is always enabled for your safety.",
+    "types": {
+      "reminder": {
+        "label": "Dose reminders",
+        "description": "Local notifications at times scheduled by the treatment plan."
+      },
+      "missed_dose": {
+        "label": "Missed dose",
+        "description": "Alert when a dose has not been confirmed. Always on."
+      },
+      "peer_dose_recorded": {
+        "label": "Peer dose recorded",
+        "description": "Notification when another caregiver records a dose."
+      },
+      "pump_low": {
+        "label": "Inhaler running low",
+        "description": "Alert when an inhaler reaches the low-dose threshold."
+      },
+      "pump_expiring": {
+        "label": "Inhaler expiring",
+        "description": "Alert 30 days before an inhaler's expiry date."
+      },
+      "dispute_detected": {
+        "label": "Duplicate entry detected",
+        "description": "Alert when two caregivers record a dose very close in time."
+      },
+      "admin_handover": {
+        "label": "Admin handover",
+        "description": "Alert when an Admin role transfer is pending."
+      },
+      "consent_update_required": {
+        "label": "Terms update",
+        "description": "Notification when a new Terms version requires your acceptance."
+      },
+      "security_alert": {
+        "label": "Security alert",
+        "description": "Suspicious login, device revocation, key rotation. Always on."
+      },
+      "caregiver_revoked": {
+        "label": "Caregiver revoked",
+        "description": "Notification when you are removed from a household."
+      }
+    }
   }
 }

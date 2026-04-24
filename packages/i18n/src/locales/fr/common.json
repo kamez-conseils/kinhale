@@ -149,5 +149,54 @@
   },
   "offlineGuard": {
     "message": "Cette action nécessite une connexion internet. Elle sera disponible dès que vous serez de nouveau en ligne."
+  },
+  "notificationPreferences": {
+    "title": "Notifications",
+    "description": "Choisissez les types de notifications que vous souhaitez recevoir. Les notifications de sécurité et de dose manquée sont toujours actives.",
+    "saveError": "Impossible de mettre à jour la préférence. Réessayez.",
+    "loadError": "Impossible de charger les préférences.",
+    "alwaysEnabledTooltip": "Ce type de notification est toujours activé pour votre sécurité.",
+    "types": {
+      "reminder": {
+        "label": "Rappels de prise",
+        "description": "Notifications locales aux heures prévues par le plan de traitement."
+      },
+      "missed_dose": {
+        "label": "Dose manquée",
+        "description": "Alerte quand une prise n'a pas été confirmée. Toujours activée."
+      },
+      "peer_dose_recorded": {
+        "label": "Prise d'un autre aidant",
+        "description": "Notification quand un autre aidant enregistre une prise."
+      },
+      "pump_low": {
+        "label": "Pompe bientôt vide",
+        "description": "Alerte quand une pompe atteint le seuil d'alerte."
+      },
+      "pump_expiring": {
+        "label": "Pompe expirant",
+        "description": "Alerte 30 jours avant la date de péremption d'une pompe."
+      },
+      "dispute_detected": {
+        "label": "Double saisie détectée",
+        "description": "Alerte quand deux aidants enregistrent une prise très proche."
+      },
+      "admin_handover": {
+        "label": "Transfert d'administration",
+        "description": "Alerte en cas de transfert de droits Admin en attente."
+      },
+      "consent_update_required": {
+        "label": "Mise à jour CGU",
+        "description": "Notification quand une nouvelle version des CGU nécessite votre acceptation."
+      },
+      "security_alert": {
+        "label": "Alerte de sécurité",
+        "description": "Login suspect, révocation de device, rotation de clé. Toujours activée."
+      },
+      "caregiver_revoked": {
+        "label": "Révocation d'un aidant",
+        "description": "Notification quand vous êtes retiré d'un foyer."
+      }
+    }
   }
 }
