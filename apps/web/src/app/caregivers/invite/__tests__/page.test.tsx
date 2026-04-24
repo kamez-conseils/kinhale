@@ -21,12 +21,14 @@ jest.mock('../../../../stores/auth-store', () => ({
   ),
 }));
 
-// Par défaut : en ligne, pour que les tests existants ne butent pas sur le
-// guard E7-S08 (disabled quand hors-ligne). Un test dédié vérifie le guard.
+// Statut sync — mutable pour que les tests du guard E7-S08 puissent le
+// basculer. Par défaut : en ligne, pour que les tests existants ne butent
+// pas sur le `disabled` du bouton.
+let mockConnected = true;
 jest.mock('../../../../stores/sync-status-store', () => ({
   useSyncStatusStore: jest.fn(
     (selector: (s: { connected: boolean; pulling: boolean }) => unknown) =>
-      selector({ connected: true, pulling: false }),
+      selector({ connected: mockConnected, pulling: false }),
   ),
 }));
 
@@ -47,6 +49,7 @@ describe('InviteCaregiverPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAccessToken = 'tok-valid';
+    mockConnected = true;
     mockCreateInvitation.mockResolvedValue({
       token: 'tok-abc',
       pin: '123456',
@@ -180,6 +183,40 @@ describe('InviteCaregiverPage', () => {
 
       // Message d'erreur quota
       expect(screen.getByText(/limite.*10|active invitations limit/i)).toBeTruthy();
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
+  });
+
+  it('hors-ligne : affiche le message du guard et ne déclenche pas createInvitation', async () => {
+    jest.useFakeTimers();
+    try {
+      mockConnected = false;
+      renderWithProviders(<InviteCaregiverPage />);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      // Message explicatif visible (testID dédié sur la page).
+      expect(screen.getByTestId('offline-guard-message')).toBeTruthy();
+
+      // Même si l'utilisateur réussissait à cliquer (ex. réactivation DOM),
+      // le handler est protégé par `if (!online) return;` — createInvitation
+      // ne doit pas être appelé.
+      const input = screen.getByPlaceholderText(/maman|mom|garderie|daycare/i);
+      fireEvent.change(input, { target: { value: 'Maman' } });
+      fireEvent.click(screen.getByText(/générer|generate/i));
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(mockCreateInvitation).not.toHaveBeenCalled();
     } finally {
       jest.clearAllTimers();
       jest.useRealTimers();
