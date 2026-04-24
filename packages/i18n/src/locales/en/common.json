@@ -138,5 +138,12 @@
     "errorConsent": "Please accept sharing to continue.",
     "cameraPermissionDenied": "Camera permission denied. Enable it in settings.",
     "backToAuth": "Back to login"
+  },
+  "sync": {
+    "offline": "Offline",
+    "syncing": "Syncing…"
+  },
+  "offlineGuard": {
+    "message": "This action requires an internet connection. It will be available again once you are back online."
   }
 }

@@ -21,6 +21,15 @@ jest.mock('../../../../stores/auth-store', () => ({
   ),
 }));
 
+// Par défaut : en ligne, pour que les tests existants ne butent pas sur le
+// guard E7-S08 (disabled quand hors-ligne). Un test dédié vérifie le guard.
+jest.mock('../../../../stores/sync-status-store', () => ({
+  useSyncStatusStore: jest.fn(
+    (selector: (s: { connected: boolean; pulling: boolean }) => unknown) =>
+      selector({ connected: true, pulling: false }),
+  ),
+}));
+
 const mockCreateInvitation = jest.fn().mockResolvedValue({
   token: 'tok-abc',
   pin: '123456',

@@ -6,10 +6,12 @@ import { projectPumps } from '@kinhale/sync';
 import { useAuthStore } from '../../src/stores/auth-store';
 import { useDocStore } from '../../src/stores/doc-store';
 import { getOrCreateDevice } from '../../src/lib/device';
+import { useOnlineGuard } from '../../src/hooks/useOnlineGuard';
 
 export default function OnboardingPlanScreen(): JSX.Element {
   const { t } = useTranslation('common');
   const router = useRouter();
+  const { online } = useOnlineGuard();
   const deviceId = useAuthStore((s) => s.deviceId) ?? '';
   const appendPlan = useDocStore((s) => s.appendPlan);
   const doc = useDocStore((s) => s.doc);
@@ -25,6 +27,8 @@ export default function OnboardingPlanScreen(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
 
   const handleSave = async (): Promise<void> => {
+    // Défense en profondeur : cf. kz-securite-075-078 §m1.
+    if (!online) return;
     setError(null);
     if (selectedPumpId === null) {
       setError(t('onboarding.plan.saveError'));
@@ -95,9 +99,14 @@ export default function OnboardingPlanScreen(): JSX.Element {
           {error}
         </Text>
       )}
+      {!online ? (
+        <Text color="$orange10" testID="offline-guard-message">
+          {t('offlineGuard.message')}
+        </Text>
+      ) : null}
       <Button
         onPress={() => void handleSave()}
-        disabled={loading || maintenancePumps.length === 0}
+        disabled={loading || maintenancePumps.length === 0 || !online}
         marginTop="$2"
         accessible
         accessibilityRole="button"

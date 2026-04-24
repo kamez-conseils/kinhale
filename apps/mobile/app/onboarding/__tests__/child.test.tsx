@@ -36,6 +36,15 @@ jest.mock('../../../src/lib/device', () => ({
   getOrCreateDevice: (...args: unknown[]) => mockGetOrCreateDevice(...args),
 }));
 
+// Par défaut : en ligne, pour que les tests existants ne butent pas sur le
+// guard E7-S08. Un test dédié couvrira la branche hors-ligne plus tard.
+jest.mock('../../../src/stores/sync-status-store', () => ({
+  useSyncStatusStore: jest.fn(
+    (selector: (s: { connected: boolean; pulling: boolean }) => unknown) =>
+      selector({ connected: true, pulling: false }),
+  ),
+}));
+
 describe('OnboardingChildScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();

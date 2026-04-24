@@ -4,11 +4,13 @@ import * as Clipboard from 'expo-clipboard';
 import { YStack, Text, Button, Input } from 'tamagui';
 import QRCode from 'react-native-qrcode-svg';
 import { createInvitation, type CreatedInvitation } from '../../src/lib/invitations/client';
+import { useOnlineGuard } from '../../src/hooks/useOnlineGuard';
 
 type TargetRole = 'contributor' | 'restricted_contributor';
 
 export default function InviteCaregiverScreen(): React.JSX.Element {
   const { t } = useTranslation('common');
+  const { online } = useOnlineGuard();
   const [role, setRole] = React.useState<TargetRole>('restricted_contributor');
   const [displayName, setDisplayName] = React.useState('');
   const [created, setCreated] = React.useState<CreatedInvitation | null>(null);
@@ -26,6 +28,8 @@ export default function InviteCaregiverScreen(): React.JSX.Element {
   const qrPayload = created !== null ? `kinhale://accept/${created.token}?pin=${created.pin}` : '';
 
   const handleSubmit = async (): Promise<void> => {
+    // Défense en profondeur : cf. kz-securite-075-078 §m1.
+    if (!online) return;
     setError(null);
     try {
       const result = await createInvitation({ targetRole: role, displayName });
@@ -110,13 +114,19 @@ export default function InviteCaregiverScreen(): React.JSX.Element {
 
       <Button
         onPress={() => void handleSubmit()}
-        disabled={displayName.trim().length === 0}
+        disabled={displayName.trim().length === 0 || !online}
         theme="active"
         accessibilityRole="button"
         accessibilityLabel={t('invitation.generateCta')}
       >
         {t('invitation.generateCta')}
       </Button>
+
+      {!online ? (
+        <Text color="$orange10" testID="offline-guard-message">
+          {t('offlineGuard.message')}
+        </Text>
+      ) : null}
 
       {error !== null ? <Text color="$red10">{error}</Text> : null}
     </YStack>

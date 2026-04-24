@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import config from '../lib/tamagui.config';
 import i18n from '../lib/i18n';
 import { RelaySyncBootstrap, RemindersBootstrap } from '../lib/sync';
+import { SyncStatusBadge } from '../components/SyncStatusBadge';
 
 export function Providers({ children }: { children: ReactNode }): JSX.Element {
   const [queryClient] = useState(() => new QueryClient());
@@ -19,6 +20,8 @@ export function Providers({ children }: { children: ReactNode }): JSX.Element {
           <RelaySyncBootstrap />
           {/* Programme les rappels de dose + surveille les doses manquées */}
           <RemindersBootstrap />
+          {/* Badge statut de sync (hors-ligne / en synchronisation) — E7-S05 */}
+          <SyncStatusBadge />
           {children}
         </TamaguiProvider>
       </I18nextProvider>
