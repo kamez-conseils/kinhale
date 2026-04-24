@@ -204,6 +204,58 @@
       }
     }
   },
+  "report": {
+    "title": "Kinhale care report",
+    "header": {
+      "child": "Child",
+      "range": "Range",
+      "generator": "Generator",
+      "generatedAt": "Generated on",
+      "birthYear": "Born in"
+    },
+    "sections": {
+      "adherence": "Controller plan adherence",
+      "rescueFrequency": "Rescue doses per week",
+      "symptomTimeline": "Symptoms & circumstances timeline"
+    },
+    "labels": {
+      "scheduled": "Scheduled slots",
+      "confirmed": "Recorded doses",
+      "ratio": "Adherence ratio",
+      "pending": "Pending review",
+      "week": "Week of",
+      "none": "None"
+    },
+    "disclaimer": "This document is a journal provided by the child's caregivers. It contains no medical interpretation, no dose recommendation, no diagnosis. It is intended to support the discussion with the healthcare professional.",
+    "integrity": {
+      "label": "Document integrity",
+      "hashLabel": "SHA-256 hash",
+      "generatorLabel": "Generator",
+      "timestampLabel": "Timestamp"
+    },
+    "ui": {
+      "pageTitle": "Medical report",
+      "description": "Generate a locally-encrypted PDF summarising your child's doses and symptoms, ready to share with their doctor.",
+      "presetLabel": "Range",
+      "preset30d": "Last 30 days",
+      "preset90d": "Last 90 days",
+      "presetCustom": "Custom",
+      "startLabel": "Start",
+      "endLabel": "End",
+      "generateCta": "Generate report",
+      "generating": "Generating…",
+      "downloadCta": "Download PDF",
+      "shareCta": "Share",
+      "generationError": "Could not generate the report. Please try again.",
+      "errors": {
+        "invalid_timestamp": "Invalid dates.",
+        "invalid_order": "End date must be after start date.",
+        "range_too_large": "Range cannot exceed 24 months."
+      },
+      "auditNotice": "Generation is logged locally. Only the SHA-256 hash and the date range are sent to the server for audit (no health data).",
+      "auditFailed": "Report generated locally. Audit log sync will retry once online."
+    }
+  },
   "quietHours": {
     "title": "Quiet hours",
     "description": "During this window, non-critical notifications arrive without sound or vibration. Missed dose and security alerts remain active.",

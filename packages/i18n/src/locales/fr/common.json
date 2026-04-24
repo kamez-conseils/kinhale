@@ -204,6 +204,58 @@
       }
     }
   },
+  "report": {
+    "title": "Rapport de suivi Kinhale",
+    "header": {
+      "child": "Enfant",
+      "range": "Plage",
+      "generator": "Générateur",
+      "generatedAt": "Généré le",
+      "birthYear": "Né(e) en"
+    },
+    "sections": {
+      "adherence": "Observance du plan de fond",
+      "rescueFrequency": "Fréquence prises de secours (par semaine)",
+      "symptomTimeline": "Timeline symptômes & circonstances"
+    },
+    "labels": {
+      "scheduled": "Créneaux prévus",
+      "confirmed": "Prises enregistrées",
+      "ratio": "Ratio observance",
+      "pending": "En attente de revue",
+      "week": "Semaine du",
+      "none": "Aucun"
+    },
+    "disclaimer": "Ce document est un journal fourni par les aidants. Il ne contient aucune interprétation médicale, aucune recommandation de dose, aucun diagnostic. Il est destiné à faciliter le dialogue avec le professionnel de santé.",
+    "integrity": {
+      "label": "Intégrité du document",
+      "hashLabel": "Hash SHA-256",
+      "generatorLabel": "Générateur",
+      "timestampLabel": "Horodatage"
+    },
+    "ui": {
+      "pageTitle": "Rapport médecin",
+      "description": "Générez un PDF chiffré localement résumant les prises et symptômes de votre enfant, à remettre au médecin.",
+      "presetLabel": "Plage",
+      "preset30d": "30 derniers jours",
+      "preset90d": "90 derniers jours",
+      "presetCustom": "Personnalisée",
+      "startLabel": "Début",
+      "endLabel": "Fin",
+      "generateCta": "Générer le rapport",
+      "generating": "Génération…",
+      "downloadCta": "Télécharger le PDF",
+      "shareCta": "Partager",
+      "generationError": "Impossible de générer le rapport. Réessayez.",
+      "errors": {
+        "invalid_timestamp": "Dates invalides.",
+        "invalid_order": "La date de fin doit être postérieure à la date de début.",
+        "range_too_large": "Plage maximum 24 mois."
+      },
+      "auditNotice": "La génération est tracée localement. Seul un hash SHA-256 et la plage sont transmis au serveur pour l'audit (aucune donnée de santé).",
+      "auditFailed": "Rapport généré localement. Synchronisation de l'audit en attente de connexion."
+    }
+  },
   "quietHours": {
     "title": "Heures silencieuses",
     "description": "Pendant cette plage, les notifications non critiques arrivent sans son ni vibration. Les alertes de dose manquée et de sécurité restent actives.",

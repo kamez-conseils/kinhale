@@ -5,6 +5,7 @@ import {
   timestamp,
   bigint,
   boolean,
+  jsonb,
   uniqueIndex,
   index,
 } from 'drizzle-orm/pg-core';
@@ -159,4 +160,48 @@ export const userQuietHours = pgTable(
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
   (t) => [uniqueIndex('user_quiet_hours_account_idx').on(t.accountId)],
+);
+
+/**
+ * Audit trail des événements de conformité (E8-S05 : génération rapport
+ * médecin, et futurs événements `report_downloaded`, `account_deletion_requested`,
+ * etc.).
+ *
+ * **Zero-knowledge strict** (ADR-D12) — `event_data` ne contient **JAMAIS** :
+ * - de contenu santé (prise, symptôme, plan, dose, prénom enfant),
+ * - d'identifiant santé côté client (pumpId, doseId, childId),
+ * - le PDF lui-même ni son HTML source.
+ *
+ * Seules autorisées pour `event_type = 'report_generated'` :
+ * - `reportHash` : hash SHA-256 opaque (RM24) du contenu PDF, non réversible.
+ * - `rangeStartMs`, `rangeEndMs` : plage de dates (métadonnée temporelle, pas
+ *   une donnée santé selon PRD §4).
+ * - `generatedAtMs` : timestamp de génération.
+ *
+ * Le format exact de `event_data` par type est validé en amont par un schéma
+ * Zod côté route (défense en profondeur : la DB accepte un JSONB quelconque).
+ *
+ * **Index `account_type_idx`** : permet de lister les événements d'un compte
+ * filtrés par type (UI future "historique de mes exports"). Pas un unique
+ * — plusieurs `report_generated` par compte sont attendus (un par rapport).
+ *
+ * **Rétention** : non purgé automatiquement en v1.0 (audit réglementaire
+ * Loi 25/RGPD — conservation 5 ans cf. §3.12 specs). Une purge cron sera
+ * ajoutée quand la rétention légale deviendra contraignante.
+ */
+export const auditEvents = pgTable(
+  'audit_events',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    eventType: text('event_type').notNull(),
+    eventData: jsonb('event_data').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [
+    index('audit_events_account_type_idx').on(t.accountId, t.eventType),
+    index('audit_events_created_idx').on(t.createdAt),
+  ],
 );
