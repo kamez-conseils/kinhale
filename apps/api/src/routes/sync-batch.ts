@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { mailboxMessages } from '../db/schema.js';
-import type { JwtPayload } from '../plugins/jwt.js';
+import type { SessionJwtPayload } from '../plugins/jwt.js';
 
 /**
  * Max 100 messages / batch (cf. §7.2 SPECS). Au-delà, le client doit
@@ -41,7 +41,7 @@ const idempotencyCacheKey = (deviceId: string, key: string): string =>
 
 const syncBatchRoute: FastifyPluginAsync = async (app) => {
   app.post('/batch', { preHandler: [app.authenticate] }, async (request, reply) => {
-    const payload = request.user as JwtPayload;
+    const payload = request.user as SessionJwtPayload;
     const { householdId, deviceId } = payload;
 
     // 1. Idempotency-Key obligatoire (cf. §7.1 SPECS).

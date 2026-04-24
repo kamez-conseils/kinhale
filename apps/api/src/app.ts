@@ -14,6 +14,7 @@ import catchupRoute from './routes/catchup.js';
 import syncBatchRoute from './routes/sync-batch.js';
 import pushRoute from './routes/push.js';
 import invitationsRoute from './routes/invitations.js';
+import notificationsRoute from './routes/notifications.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -78,6 +79,7 @@ export function buildApp(env: Env, overrides: BuildAppOverrides = {}): FastifyIn
   void app.register(syncBatchRoute, { prefix: '/sync' });
   void app.register(pushRoute, { prefix: '/push' });
   void app.register(invitationsRoute, { prefix: '/invitations' });
+  void app.register(notificationsRoute, { prefix: '/notifications' });
 
   return app;
 }

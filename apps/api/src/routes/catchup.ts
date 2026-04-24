@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { mailboxMessages } from '../db/schema.js';
 import { eq, and, gt, asc } from 'drizzle-orm';
-import type { JwtPayload } from '../plugins/jwt.js';
+import type { SessionJwtPayload } from '../plugins/jwt.js';
 
 const CatchupQuerySchema = z.object({
   since: z.coerce.number().int().min(0).default(0),
@@ -21,7 +21,7 @@ const catchupRoute: FastifyPluginAsync = async (app) => {
       }
 
       const { since } = result.data;
-      const payload = request.user as JwtPayload;
+      const payload = request.user as SessionJwtPayload;
 
       let rows: Array<typeof mailboxMessages.$inferSelect>;
       try {

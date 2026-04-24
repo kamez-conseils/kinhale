@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { pushTokens } from '../db/schema.js';
 import { eq, and } from 'drizzle-orm';
-import type { JwtPayload } from '../plugins/jwt.js';
+import type { SessionJwtPayload } from '../plugins/jwt.js';
 
 const EXPO_TOKEN_RE = /^ExponentPushToken\[.{1,200}\]$/;
 
@@ -16,7 +16,7 @@ const pushRoute: FastifyPluginAsync = async (app) => {
     if (!parse.success) {
       return reply.status(400).send({ error: 'pushToken requis' });
     }
-    const { deviceId, householdId } = request.user as JwtPayload;
+    const { deviceId, householdId } = request.user as SessionJwtPayload;
     const { pushToken } = parse.data;
     await app.db
       .insert(pushTokens)
@@ -33,7 +33,7 @@ const pushRoute: FastifyPluginAsync = async (app) => {
     if (!parse.success) {
       return reply.status(400).send({ error: 'pushToken requis' });
     }
-    const { deviceId } = request.user as JwtPayload;
+    const { deviceId } = request.user as SessionJwtPayload;
     const { pushToken } = parse.data;
     await app.db
       .delete(pushTokens)
