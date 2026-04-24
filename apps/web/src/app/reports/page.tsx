@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { YStack, XStack, H1, H2, Text, Button, Label, Card } from 'tamagui';
 import {
+  aggregateReportData,
+  buildCsvDoses,
   buildReportStrings,
+  generateMedicalCsv,
   generateMedicalReport,
   MS_PER_DAY,
   presetRange,
@@ -13,10 +16,16 @@ import {
   type DateRange,
   type RangePreset,
 } from '@kinhale/reports';
+import { projectDoses, type KinhaleDoc } from '@kinhale/sync';
 import { useAuthStore } from '../../stores/auth-store';
 import { useDocStore } from '../../stores/doc-store';
 import { ApiError } from '../../lib/api-client';
-import { postReportGeneratedAudit } from '../../lib/reports/audit-client';
+import {
+  postReportGeneratedAudit,
+  postReportSharedAudit,
+  type ShareMethod,
+  type SystemShareMethod,
+} from '../../lib/reports/audit-client';
 
 /** Version du générateur — lue depuis `NEXT_PUBLIC_APP_VERSION` si fournie. */
 const GENERATOR_LABEL = `Kinhale ${process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'v1.0.0-preview'}`;
@@ -24,20 +33,30 @@ const GENERATOR_LABEL = `Kinhale ${process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'v1
 type UiState =
   | { kind: 'idle' }
   | { kind: 'generating' }
-  | { kind: 'ready'; pdfBlobUrl: string; audit: 'synced' | 'pending' }
+  | {
+      kind: 'ready';
+      pdfBlobUrl: string;
+      csvBlobUrl: string;
+      csvFilename: string;
+      pdfFilename: string;
+      reportHash: string;
+      audit: 'synced' | 'pending';
+    }
   | { kind: 'error'; messageKey: string };
 
 /**
- * Écran « Rapport médecin » (E8-S01 + E8-S02 + E8-S05, UI web).
+ * Écran « Rapport médecin » — E8-S01+S02+S05 (PDF) **+ E8-S03+S04 (KIN-084)**.
  *
- * Flux :
- * 1. Choix plage (presets 30/90 j ou custom).
- * 2. Validation via `validateDateRange` — message d'erreur i18n immédiat.
- * 3. `generateMedicalReport` (doc Automerge local → HTML + hash SHA-256).
- * 4. Impression navigateur via `window.print()` d'une iframe détachée qui
- *    charge le HTML (génère le PDF via le moteur d'impression natif —
- *    aucune dépendance JS supplémentaire ; zero-knowledge préservé).
- * 5. Appel audit trail `POST /audit/report-generated` (best-effort).
+ * Nouveautés KIN-084 :
+ * - Ajout d'une génération CSV brut parallèle (toutes les prises, incluant
+ *   `pending_review`), côté 100% client.
+ * - Trois modes de partage par format :
+ *   - Télécharger (blob local + `<a download>`),
+ *   - Envoyer (via `navigator.share` si dispo, sinon instruction explicite),
+ *   - Lien signé 7 j **désactivé** (tooltip « v1.1 », cf. ADR-D13).
+ * - Audit `POST /audit/report-shared` pour chaque partage réussi.
+ *
+ * Refs: ADR-D12, ADR-D13, E8-S03, E8-S04.
  */
 export default function ReportsPage(): React.JSX.Element {
   const { t } = useTranslation('common');
@@ -66,7 +85,10 @@ export default function ReportsPage(): React.JSX.Element {
   React.useEffect(
     () => (): void => {
       setState((prev) => {
-        if (prev.kind === 'ready') URL.revokeObjectURL(prev.pdfBlobUrl);
+        if (prev.kind === 'ready') {
+          URL.revokeObjectURL(prev.pdfBlobUrl);
+          URL.revokeObjectURL(prev.csvBlobUrl);
+        }
         return prev;
       });
     },
@@ -82,7 +104,10 @@ export default function ReportsPage(): React.JSX.Element {
       return;
     }
     setState((prev) => {
-      if (prev.kind === 'ready') URL.revokeObjectURL(prev.pdfBlobUrl);
+      if (prev.kind === 'ready') {
+        URL.revokeObjectURL(prev.pdfBlobUrl);
+        URL.revokeObjectURL(prev.csvBlobUrl);
+      }
       return { kind: 'generating' };
     });
     try {
@@ -114,10 +139,21 @@ export default function ReportsPage(): React.JSX.Element {
         };
       }
 
-      // Génère aussi un blob URL téléchargement brut (fallback téléchargement
-      // HTML si le user ne veut pas passer par la boîte d'impression).
-      const blob = new Blob([result.html], { type: 'text/html;charset=utf-8' });
-      const pdfBlobUrl = URL.createObjectURL(blob);
+      // Blob URL téléchargement brut (fallback téléchargement HTML si
+      // l'utilisateur ne veut pas passer par la boîte d'impression).
+      const pdfBlob = new Blob([result.html], { type: 'text/html;charset=utf-8' });
+      const pdfBlobUrl = URL.createObjectURL(pdfBlob);
+
+      // Génère aussi le CSV en parallèle (E8-S03).
+      const reportData = aggregateReportData(doc, range);
+      const csvDoses = buildCsvDoses(reportData, buildLookup(doc));
+      const csv = generateMedicalCsv(csvDoses);
+      const csvBlob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const csvBlobUrl = URL.createObjectURL(csvBlob);
+
+      const iso = new Date(now).toISOString().slice(0, 10);
+      const csvFilename = `kinhale-report-${iso}.csv`;
+      const pdfFilename = `kinhale-report-${iso}.html`;
 
       // Audit trail (best-effort).
       let auditStatus: 'synced' | 'pending' = 'synced';
@@ -136,10 +172,67 @@ export default function ReportsPage(): React.JSX.Element {
         }
       }
 
-      setState({ kind: 'ready', pdfBlobUrl, audit: auditStatus });
+      setState({
+        kind: 'ready',
+        pdfBlobUrl,
+        csvBlobUrl,
+        csvFilename,
+        pdfFilename,
+        reportHash: result.contentHash,
+        audit: auditStatus,
+      });
     } catch {
       setState({ kind: 'error', messageKey: 'report.ui.generationError' });
     }
+  };
+
+  /**
+   * Logge un partage côté audit trail (best-effort). En cas d'erreur, le
+   * partage a déjà eu lieu côté client — on ne bloque pas l'UX.
+   */
+  const logShare = async (reportHash: string, method: ShareMethod): Promise<void> => {
+    try {
+      await postReportSharedAudit({
+        reportHash,
+        shareMethod: method,
+        sharedAtMs: Date.now(),
+      });
+    } catch {
+      // Best-effort : un échec d'audit ne doit pas remonter en UI.
+    }
+  };
+
+  /**
+   * Partage système via `navigator.share` si dispo + support de `files`.
+   * Fallback : déclenche un téléchargement (comportement identique au bouton
+   * Télécharger mais avec audit `system_share` pour distinguer l'intention).
+   */
+  const handleShareFile = async (
+    blobUrl: string,
+    filename: string,
+    mimeType: string,
+    auditMethod: SystemShareMethod,
+    reportHash: string,
+  ): Promise<void> => {
+    const blob = await fetch(blobUrl).then((r) => r.blob());
+    const file = new File([blob], filename, { type: mimeType });
+    const nav = navigator as Navigator & {
+      canShare?: (data: { files?: File[] }) => boolean;
+      share?: (data: { files?: File[]; title?: string; text?: string }) => Promise<void>;
+    };
+    if (typeof nav.share === 'function' && nav.canShare?.({ files: [file] }) === true) {
+      try {
+        await nav.share({ files: [file], title: t('report.ui.pageTitle') });
+        await logShare(reportHash, auditMethod);
+      } catch {
+        // L'utilisateur a annulé le picker — pas d'audit.
+      }
+      return;
+    }
+    triggerDownload(blobUrl, filename);
+    const downloadMethod: ShareMethod =
+      auditMethod === 'system_share' ? 'download' : 'csv_download';
+    await logShare(reportHash, downloadMethod);
   };
 
   return (
@@ -178,8 +271,6 @@ export default function ReportsPage(): React.JSX.Element {
             <XStack gap="$3" flexWrap="wrap">
               <YStack>
                 <Label htmlFor="report-start">{t('report.ui.startLabel')}</Label>
-                {/* Tamagui `Input` ne supporte pas `type="date"` côté web — on rend
-                    un input HTML natif pour bénéficier du date picker navigateur. */}
                 <input
                   id="report-start"
                   type="date"
@@ -201,7 +292,12 @@ export default function ReportsPage(): React.JSX.Element {
             </XStack>
           ) : null}
 
-          <Button onPress={handleGenerate} disabled={state.kind === 'generating' || doc === null}>
+          <Button
+            onPress={() => {
+              void handleGenerate();
+            }}
+            disabled={state.kind === 'generating' || doc === null}
+          >
             {state.kind === 'generating' ? t('report.ui.generating') : t('report.ui.generateCta')}
           </Button>
 
@@ -212,17 +308,70 @@ export default function ReportsPage(): React.JSX.Element {
           ) : null}
 
           {state.kind === 'ready' ? (
-            <YStack gap="$2">
-              <H2>{t('report.ui.downloadCta')}</H2>
-              <XStack gap="$2">
-                <Button
-                  tag="a"
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  {...({ href: state.pdfBlobUrl, download: 'kinhale-report.html' } as any)}
-                >
-                  {t('report.ui.downloadCta')}
-                </Button>
-              </XStack>
+            <YStack gap="$4">
+              {/* Section PDF */}
+              <YStack gap="$2">
+                <H2>{t('report.ui.pdf.sectionTitle')}</H2>
+                <XStack gap="$2" flexWrap="wrap">
+                  <Button
+                    onPress={() => {
+                      triggerDownload(state.pdfBlobUrl, state.pdfFilename);
+                      void logShare(state.reportHash, 'download');
+                    }}
+                  >
+                    {t('report.ui.pdf.downloadCta')}
+                  </Button>
+                  <Button
+                    onPress={() => {
+                      void handleShareFile(
+                        state.pdfBlobUrl,
+                        state.pdfFilename,
+                        'text/html',
+                        'system_share',
+                        state.reportHash,
+                      );
+                    }}
+                  >
+                    {t('report.ui.pdf.shareCta')}
+                  </Button>
+                  <Button disabled accessibilityLabel={t('report.ui.signedLink.comingSoonTooltip')}>
+                    {t('report.ui.signedLink.cta')}
+                  </Button>
+                </XStack>
+                <Text color="$color9" fontSize="$2">
+                  {t('report.ui.signedLink.comingSoonTooltip')}
+                </Text>
+              </YStack>
+
+              {/* Section CSV */}
+              <YStack gap="$2">
+                <H2>{t('report.ui.csv.sectionTitle')}</H2>
+                <Text fontSize="$2">{t('report.ui.csv.description')}</Text>
+                <XStack gap="$2" flexWrap="wrap">
+                  <Button
+                    onPress={() => {
+                      triggerDownload(state.csvBlobUrl, state.csvFilename);
+                      void logShare(state.reportHash, 'csv_download');
+                    }}
+                  >
+                    {t('report.ui.csv.downloadCta')}
+                  </Button>
+                  <Button
+                    onPress={() => {
+                      void handleShareFile(
+                        state.csvBlobUrl,
+                        state.csvFilename,
+                        'text/csv',
+                        'csv_system_share',
+                        state.reportHash,
+                      );
+                    }}
+                  >
+                    {t('report.ui.csv.shareCta')}
+                  </Button>
+                </XStack>
+              </YStack>
+
               <Text color={state.audit === 'synced' ? '$color10' : '$orange10'}>
                 {state.audit === 'synced' ? t('report.ui.auditNotice') : t('report.ui.auditFailed')}
               </Text>
@@ -244,10 +393,23 @@ export default function ReportsPage(): React.JSX.Element {
 }
 
 /**
+ * Déclenche un téléchargement navigateur via un `<a download>` éphémère.
+ * Factorisé pour éviter les `as any` dans le JSX.
+ */
+function triggerDownload(blobUrl: string, filename: string): void {
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+/**
  * Calcule la `DateRange` effective en fonction du preset choisi et des
  * champs custom. Pour les dates custom, on lit les valeurs `YYYY-MM-DD`
- * et on les interprète en UTC minuit/fin de journée (borne `endMs` =
- * 23:59:59.999 pour inclure toutes les prises du jour de fin).
+ * et on les interprète en UTC minuit/fin de journée.
  */
 function computeRange(
   preset: RangePreset | 'custom',
@@ -261,6 +423,27 @@ function computeRange(
   const endMs = customEnd !== '' ? Date.parse(`${customEnd}T23:59:59.999Z`) : Number.NaN;
   return { startMs, endMs };
 }
-// Pre-calcule MS_PER_DAY à l'export pour éviter un tree-shake trop agressif
-// côté bundler — inutilisé localement mais référencé par d'autres consumers.
+
+/**
+ * Construit un lookup `doseId → {pumpId, caregiverId, dosesAdministered}`
+ * à partir du document Automerge, pour enrichir les lignes CSV avec les
+ * identifiants opaques absents de `ReportData` (minimisation RM8 côté PDF).
+ *
+ * Le lookup reste **pur** (pas d'effet de bord) et n'expose aucun nom de
+ * pompe ni prénom d'aidant — uniquement les UUID opaques.
+ */
+function buildLookup(
+  doc: KinhaleDoc,
+): (doseId: string) => { pumpId: string; caregiverId: string; dosesAdministered: number } | null {
+  const map = new Map<string, { pumpId: string; caregiverId: string; dosesAdministered: number }>();
+  for (const d of projectDoses(doc)) {
+    map.set(d.doseId, {
+      pumpId: d.pumpId,
+      caregiverId: d.caregiverId,
+      dosesAdministered: d.dosesAdministered,
+    });
+  }
+  return (doseId: string) => map.get(doseId) ?? null;
+}
+
 export { MS_PER_DAY };

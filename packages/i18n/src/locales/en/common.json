@@ -253,7 +253,26 @@
         "range_too_large": "Range cannot exceed 24 months."
       },
       "auditNotice": "Generation is logged locally. Only the SHA-256 hash and the date range are sent to the server for audit (no health data).",
-      "auditFailed": "Report generated locally. Audit log sync will retry once online."
+      "auditFailed": "Report generated locally. Audit log sync will retry once online.",
+      "csv": {
+        "sectionTitle": "Raw CSV export",
+        "description": "Export every dose in the selected range as CSV (compatible with Excel and spreadsheets).",
+        "downloadCta": "Download CSV",
+        "shareCta": "Share CSV",
+        "generationError": "Could not generate the CSV. Please try again.",
+        "sharedNotice": "Local share completed. No health data is sent to the server.",
+        "shareUnavailable": "System sharing is not available. Please use the Download button."
+      },
+      "pdf": {
+        "sectionTitle": "Medical PDF",
+        "downloadCta": "Download PDF",
+        "shareCta": "Send PDF",
+        "shareUnavailable": "System sharing is not available. Please use the Download button."
+      },
+      "signedLink": {
+        "cta": "Copy signed link",
+        "comingSoonTooltip": "Coming in v1.1. For now please use Download or Share."
+      }
     }
   },
   "quietHours": {
