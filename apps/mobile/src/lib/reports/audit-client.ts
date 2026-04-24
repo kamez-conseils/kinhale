@@ -33,3 +33,36 @@ export async function postReportGeneratedAudit(
     throw err;
   }
 }
+
+/**
+ * Méthodes de partage — aligné 1:1 sur le `z.enum(...)` côté API.
+ */
+export type ShareMethod = 'download' | 'system_share' | 'csv_download' | 'csv_system_share';
+
+export interface ReportSharedAuditPayload {
+  readonly reportHash: string;
+  readonly shareMethod: ShareMethod;
+  readonly sharedAtMs: number;
+}
+
+/**
+ * Poste l'audit trail de **partage** (E8-S04, KIN-084) vers
+ * `/audit/report-shared`.
+ *
+ * **Best-effort** identique à `postReportGeneratedAudit`. Aucun contenu
+ * santé ne transite — uniquement le hash opaque, la méthode de partage et
+ * le timestamp (ADR-D13).
+ */
+export async function postReportSharedAudit(payload: ReportSharedAuditPayload): Promise<void> {
+  const token = useAuthStore.getState().accessToken;
+  try {
+    await apiFetch<{ ok: boolean }>('/audit/report-shared', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      ...(token !== null ? { token } : {}),
+    });
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    throw err;
+  }
+}

@@ -7,41 +7,51 @@ import * as FileSystem from 'expo-file-system';
 import { useTranslation } from 'react-i18next';
 import { YStack, XStack, H1, H2, Text, Button, Card, Label, Input } from 'tamagui';
 import {
+  aggregateReportData,
+  buildCsvDoses,
   buildReportStrings,
+  generateMedicalCsv,
   generateMedicalReport,
   presetRange,
   validateDateRange,
   type DateRange,
   type RangePreset,
 } from '@kinhale/reports';
+import { projectDoses, type KinhaleDoc } from '@kinhale/sync';
 import { useAuthStore } from '../../src/stores/auth-store';
 import { useDocStore } from '../../src/stores/doc-store';
 import { ApiError } from '../../src/lib/api-client';
-import { postReportGeneratedAudit } from '../../src/lib/reports/audit-client';
+import {
+  postReportGeneratedAudit,
+  postReportSharedAudit,
+  type ShareMethod,
+} from '../../src/lib/reports/audit-client';
 
 const GENERATOR_LABEL = `Kinhale ${process.env['EXPO_PUBLIC_APP_VERSION'] ?? 'v1.0.0-preview'}`;
 
 type UiState =
   | { kind: 'idle' }
   | { kind: 'generating' }
-  | { kind: 'ready'; uri: string; audit: 'synced' | 'pending' }
+  | {
+      kind: 'ready';
+      pdfUri: string;
+      csvUri: string;
+      reportHash: string;
+      audit: 'synced' | 'pending';
+    }
   | { kind: 'error'; messageKey: string };
 
 /**
  * Écran « Rapport médecin » — mobile (iOS + Android, Expo SDK 52).
  *
- * Utilise `expo-print.printToFileAsync({ html })` pour matérialiser un PDF
- * depuis le HTML canonique produit par `@kinhale/reports`. Le fichier est
- * stocké dans le répertoire cache de l'app (pas dans `FileSystem.documentDirectory`
- * — pas de donnée santé persistée plus longtemps que nécessaire, le cache
- * est purgé par l'OS).
+ * KIN-084 ajoute :
+ * - Export CSV brut parallèle au PDF (E8-S03).
+ * - Boutons de partage par format (Télécharger ≡ share sheet Expo / Envoyer ≡
+ *   share sheet explicite).
+ * - Bouton « Lien signé 7 j » désactivé avec tooltip (ADR-D13).
+ * - Audit `POST /audit/report-shared`.
  *
- * Le partage passe par l'API native (iOS Share Sheet / Android Intent)
- * pour que l'utilisateur choisisse Mail / AirDrop / WhatsApp / Fichiers.
- * Aucun appel réseau n'est fait par le client Kinhale pour le partage —
- * le relais Kamez n'a jamais accès au PDF.
- *
- * Refs: W9, E8-S01, E8-S02, E8-S05, ADR-D12.
+ * Refs: ADR-D12, ADR-D13, W9, E8-S01, E8-S02, E8-S03, E8-S04, E8-S05.
  */
 export default function ReportsScreen(): JSX.Element {
   const { t } = useTranslation('common');
@@ -70,7 +80,8 @@ export default function ReportsScreen(): JSX.Element {
     () => (): void => {
       setState((prev) => {
         if (prev.kind === 'ready') {
-          void FileSystem.deleteAsync(prev.uri, { idempotent: true });
+          void FileSystem.deleteAsync(prev.pdfUri, { idempotent: true });
+          void FileSystem.deleteAsync(prev.csvUri, { idempotent: true });
         }
         return prev;
       });
@@ -88,7 +99,8 @@ export default function ReportsScreen(): JSX.Element {
     }
     setState((prev) => {
       if (prev.kind === 'ready') {
-        void FileSystem.deleteAsync(prev.uri, { idempotent: true });
+        void FileSystem.deleteAsync(prev.pdfUri, { idempotent: true });
+        void FileSystem.deleteAsync(prev.csvUri, { idempotent: true });
       }
       return { kind: 'generating' };
     });
@@ -104,7 +116,18 @@ export default function ReportsScreen(): JSX.Element {
       });
 
       const printed = await Print.printToFileAsync({ html: result.html });
-      const uri = printed.uri;
+      const pdfUri = printed.uri;
+
+      // Génère le CSV et l'écrit dans le cache de l'app (purgé à l'unmount).
+      const reportData = aggregateReportData(doc, range);
+      const csvDoses = buildCsvDoses(reportData, buildLookup(doc));
+      const csv = generateMedicalCsv(csvDoses);
+      const cacheDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? '';
+      const iso = new Date(now).toISOString().slice(0, 10);
+      const csvUri = `${cacheDir}kinhale-report-${iso}.csv`;
+      await FileSystem.writeAsStringAsync(csvUri, csv, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
 
       let auditStatus: 'synced' | 'pending' = 'synced';
       try {
@@ -122,27 +145,59 @@ export default function ReportsScreen(): JSX.Element {
         }
       }
 
-      setState({ kind: 'ready', uri, audit: auditStatus });
+      setState({
+        kind: 'ready',
+        pdfUri,
+        csvUri,
+        reportHash: result.contentHash,
+        audit: auditStatus,
+      });
     } catch {
       setState({ kind: 'error', messageKey: 'report.ui.generationError' });
     }
   };
 
-  const handleShare = async (): Promise<void> => {
-    if (state.kind !== 'ready') return;
+  /**
+   * Logge un partage côté audit trail (best-effort). Aucun effet UX en cas
+   * d'échec — le partage a déjà été matérialisé côté client.
+   */
+  const logShare = async (reportHash: string, method: ShareMethod): Promise<void> => {
+    try {
+      await postReportSharedAudit({
+        reportHash,
+        shareMethod: method,
+        sharedAtMs: Date.now(),
+      });
+    } catch {
+      // Best-effort.
+    }
+  };
+
+  /**
+   * Partage générique via `expo-sharing`. `mimeType` et `auditMethod` sont
+   * passés par l'appelant pour distinguer PDF vs CSV côté audit.
+   */
+  const shareFile = async (
+    uri: string,
+    mimeType: string,
+    auditMethod: ShareMethod,
+    reportHash: string,
+  ): Promise<void> => {
     const available = await Sharing.isAvailableAsync();
     if (!available) {
       if (Platform.OS !== 'web') {
-        Alert.alert(t('report.ui.pageTitle'), t('report.ui.generationError'));
+        const unavailableKey = auditMethod.startsWith('csv')
+          ? 'report.ui.csv.shareUnavailable'
+          : 'report.ui.pdf.shareUnavailable';
+        Alert.alert(t('report.ui.pageTitle'), t(unavailableKey));
       }
       return;
     }
-    const uri = state.uri;
     try {
-      await Sharing.shareAsync(uri, { mimeType: 'application/pdf' });
-    } finally {
-      await FileSystem.deleteAsync(uri, { idempotent: true });
-      setState({ kind: 'idle' });
+      await Sharing.shareAsync(uri, { mimeType });
+      await logShare(reportHash, auditMethod);
+    } catch {
+      // L'utilisateur a annulé le share sheet — pas d'audit.
     }
   };
 
@@ -208,16 +263,45 @@ export default function ReportsScreen(): JSX.Element {
           ) : null}
 
           {state.kind === 'ready' ? (
-            <YStack gap="$2">
-              <H2>{t('report.ui.shareCta')}</H2>
-              <Button
-                onPress={() => {
-                  void handleShare();
-                }}
-                accessibilityRole="button"
-              >
-                {t('report.ui.shareCta')}
-              </Button>
+            <YStack gap="$4">
+              {/* Section PDF */}
+              <YStack gap="$2">
+                <H2>{t('report.ui.pdf.sectionTitle')}</H2>
+                <Button
+                  onPress={() => {
+                    void shareFile(
+                      state.pdfUri,
+                      'application/pdf',
+                      'system_share',
+                      state.reportHash,
+                    );
+                  }}
+                  accessibilityRole="button"
+                >
+                  {t('report.ui.pdf.shareCta')}
+                </Button>
+                <Button disabled accessibilityLabel={t('report.ui.signedLink.comingSoonTooltip')}>
+                  {t('report.ui.signedLink.cta')}
+                </Button>
+                <Text color="$color9" fontSize="$2">
+                  {t('report.ui.signedLink.comingSoonTooltip')}
+                </Text>
+              </YStack>
+
+              {/* Section CSV */}
+              <YStack gap="$2">
+                <H2>{t('report.ui.csv.sectionTitle')}</H2>
+                <Text fontSize="$2">{t('report.ui.csv.description')}</Text>
+                <Button
+                  onPress={() => {
+                    void shareFile(state.csvUri, 'text/csv', 'csv_system_share', state.reportHash);
+                  }}
+                  accessibilityRole="button"
+                >
+                  {t('report.ui.csv.shareCta')}
+                </Button>
+              </YStack>
+
               <Text color={state.audit === 'synced' ? '$color10' : '$orange10'}>
                 {state.audit === 'synced' ? t('report.ui.auditNotice') : t('report.ui.auditFailed')}
               </Text>
@@ -240,4 +324,23 @@ function computeRange(
   const startMs = customStart !== '' ? Date.parse(`${customStart}T00:00:00Z`) : Number.NaN;
   const endMs = customEnd !== '' ? Date.parse(`${customEnd}T23:59:59.999Z`) : Number.NaN;
   return { startMs, endMs };
+}
+
+/**
+ * Construit un lookup `doseId → {pumpId, caregiverId, dosesAdministered}`
+ * à partir du document Automerge. Le CSV a besoin de ces identifiants
+ * opaques qui sont absents de `ReportData` (minimisation RM8 côté PDF).
+ */
+function buildLookup(
+  doc: KinhaleDoc,
+): (doseId: string) => { pumpId: string; caregiverId: string; dosesAdministered: number } | null {
+  const map = new Map<string, { pumpId: string; caregiverId: string; dosesAdministered: number }>();
+  for (const d of projectDoses(doc)) {
+    map.set(d.doseId, {
+      pumpId: d.pumpId,
+      caregiverId: d.caregiverId,
+      dosesAdministered: d.dosesAdministered,
+    });
+  }
+  return (doseId: string) => map.get(doseId) ?? null;
 }

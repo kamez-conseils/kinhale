@@ -164,19 +164,27 @@ export const userQuietHours = pgTable(
 
 /**
  * Audit trail des événements de conformité (E8-S05 : génération rapport
- * médecin, et futurs événements `report_downloaded`, `account_deletion_requested`,
- * etc.).
+ * médecin, E8-S04 : partage du rapport, et futurs événements
+ * `account_deletion_requested`, etc.).
  *
- * **Zero-knowledge strict** (ADR-D12) — `event_data` ne contient **JAMAIS** :
+ * **Zero-knowledge strict** (ADR-D12, ADR-D13) — `event_data` ne contient
+ * **JAMAIS** :
  * - de contenu santé (prise, symptôme, plan, dose, prénom enfant),
  * - d'identifiant santé côté client (pumpId, doseId, childId),
- * - le PDF lui-même ni son HTML source.
+ * - le PDF / CSV lui-même ni son HTML / texte source,
+ * - le destinataire d'un partage (email, numéro téléphone, identifiant social).
  *
- * Seules autorisées pour `event_type = 'report_generated'` :
+ * Seules autorisées pour `event_type = 'report_generated'` (E8-S05) :
  * - `reportHash` : hash SHA-256 opaque (RM24) du contenu PDF, non réversible.
  * - `rangeStartMs`, `rangeEndMs` : plage de dates (métadonnée temporelle, pas
  *   une donnée santé selon PRD §4).
  * - `generatedAtMs` : timestamp de génération.
+ *
+ * Seules autorisées pour `event_type = 'report_shared'` (E8-S04, KIN-084) :
+ * - `reportHash` : même hash que `report_generated` (corrélation audit).
+ * - `shareMethod` : enum fermée (`download` | `system_share` |
+ *   `csv_download` | `csv_system_share`).
+ * - `sharedAtMs` : timestamp de partage.
  *
  * Le format exact de `event_data` par type est validé en amont par un schéma
  * Zod côté route (défense en profondeur : la DB accepte un JSONB quelconque).

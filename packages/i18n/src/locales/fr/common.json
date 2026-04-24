@@ -253,7 +253,26 @@
         "range_too_large": "Plage maximum 24 mois."
       },
       "auditNotice": "La génération est tracée localement. Seul un hash SHA-256 et la plage sont transmis au serveur pour l'audit (aucune donnée de santé).",
-      "auditFailed": "Rapport généré localement. Synchronisation de l'audit en attente de connexion."
+      "auditFailed": "Rapport généré localement. Synchronisation de l'audit en attente de connexion.",
+      "csv": {
+        "sectionTitle": "Export CSV brut",
+        "description": "Exportez toutes les prises de la plage sélectionnée au format CSV (compatible Excel / tableurs).",
+        "downloadCta": "Télécharger le CSV",
+        "shareCta": "Partager le CSV",
+        "generationError": "Impossible de générer le CSV. Réessayez.",
+        "sharedNotice": "Partage local effectué. Aucune donnée santé n'est envoyée au serveur.",
+        "shareUnavailable": "Le partage système n'est pas disponible. Utilisez le bouton Télécharger."
+      },
+      "pdf": {
+        "sectionTitle": "PDF médecin",
+        "downloadCta": "Télécharger le PDF",
+        "shareCta": "Envoyer le PDF",
+        "shareUnavailable": "Le partage système n'est pas disponible. Utilisez le bouton Télécharger."
+      },
+      "signedLink": {
+        "cta": "Copier un lien signé",
+        "comingSoonTooltip": "Disponible en v1.1. Pour l'instant, utilisez Télécharger ou Partager."
+      }
     }
   },
   "quietHours": {

@@ -39,3 +39,16 @@ export { generateMedicalReport, InvalidReportRangeError } from './generate.js';
 // Strings loader (pont avec react-i18next)
 export type { Translator } from './i18n-strings.js';
 export { buildReportStrings } from './i18n-strings.js';
+
+// Génération CSV brut (E8-S03)
+export type { CsvColumn, CsvReportDose } from './csv/generate-csv.js';
+export {
+  CSV_COLUMNS,
+  CSV_FIELD_SEP,
+  CSV_LINE_SEP,
+  CSV_MULTI_VALUE_SEP,
+  CSV_UTF8_BOM,
+  buildCsvDoses,
+  escapeCsvValue,
+  generateMedicalCsv,
+} from './csv/generate-csv.js';

@@ -264,3 +264,197 @@ describe('POST /audit/report-generated', () => {
     await app.close();
   });
 });
+
+/**
+ * Tests de la route `POST /audit/report-shared` (E8-S04, KIN-084).
+ *
+ * Mêmes garanties zero-knowledge que `/audit/report-generated` : strict body
+ * schema, rate-limit Redis, insertion jsonb minimaliste, logs sans donnée
+ * santé.
+ */
+describe('POST /audit/report-shared', () => {
+  const VALID_PAYLOAD = {
+    reportHash: VALID_HASH,
+    shareMethod: 'download' as const,
+    sharedAtMs: 1_700_500_000_000,
+  };
+
+  it('retourne 401 sans JWT', async () => {
+    const db = makeMockDb();
+    const app = buildTestApp(db);
+    await app.ready();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/audit/report-shared',
+      payload: VALID_PAYLOAD,
+    });
+    expect(res.statusCode).toBe(401);
+    await app.close();
+  });
+
+  it('retourne 400 si body est vide', async () => {
+    const db = makeMockDb();
+    const app = buildTestApp(db);
+    await app.ready();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/audit/report-shared',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+      payload: {},
+    });
+    expect(res.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it("retourne 400 si reportHash n'est pas 64 chars hex", async () => {
+    const db = makeMockDb();
+    const app = buildTestApp(db);
+    await app.ready();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/audit/report-shared',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+      payload: { ...VALID_PAYLOAD, reportHash: 'too-short' },
+    });
+    expect(res.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it('retourne 400 si shareMethod est hors enum fermée', async () => {
+    const db = makeMockDb();
+    const app = buildTestApp(db);
+    await app.ready();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/audit/report-shared',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+      payload: { ...VALID_PAYLOAD, shareMethod: 'email_in_clear' },
+    });
+    expect(res.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it('retourne 400 si un champ supplémentaire fuite (strict mode anti-fuite)', async () => {
+    const db = makeMockDb();
+    const app = buildTestApp(db);
+    await app.ready();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/audit/report-shared',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+      payload: {
+        ...VALID_PAYLOAD,
+        // Tentative de fuite : adresse email destinataire
+        recipientEmail: 'doctor@example.com',
+      },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(db._insertValues).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it('retourne 400 si sharedAtMs est négatif', async () => {
+    const db = makeMockDb();
+    const app = buildTestApp(db);
+    await app.ready();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/audit/report-shared',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+      payload: { ...VALID_PAYLOAD, sharedAtMs: -1 },
+    });
+    expect(res.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it("persiste un événement 'report_shared' (zero-knowledge, champs attendus uniquement)", async () => {
+    const db = makeMockDb();
+    const app = buildTestApp(db);
+    await app.ready();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/audit/report-shared',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+      payload: VALID_PAYLOAD,
+    });
+    expect(res.statusCode).toBe(201);
+    expect(db._inserted).toHaveLength(1);
+    const row = db._inserted[0];
+    expect(row?.accountId).toBe(ACCOUNT_ID);
+    expect(row?.eventType).toBe('report_shared');
+    expect(row?.eventData).toEqual({
+      reportHash: VALID_HASH,
+      shareMethod: 'download',
+      sharedAtMs: 1_700_500_000_000,
+    });
+    await app.close();
+  });
+
+  it('accepte les 4 valeurs de shareMethod documentées', async () => {
+    const db = makeMockDb();
+    const app = buildTestApp(db);
+    await app.ready();
+    const methods = ['download', 'system_share', 'csv_download', 'csv_system_share'] as const;
+    const token = signAccess(app);
+    for (const method of methods) {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/audit/report-shared',
+        headers: { Authorization: `Bearer ${token}` },
+        payload: { ...VALID_PAYLOAD, shareMethod: method },
+      });
+      expect(res.statusCode).toBe(201);
+    }
+    expect(db._inserted).toHaveLength(4);
+    await app.close();
+  });
+
+  it('applique un rate-limit (429 après 20/h par device)', async () => {
+    const db = makeMockDb();
+    const app = buildTestApp(db);
+    await app.ready();
+    const token = signAccess(app);
+    let lastStatus = 0;
+    for (let i = 0; i < 21; i++) {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/audit/report-shared',
+        headers: { Authorization: `Bearer ${token}` },
+        payload: { ...VALID_PAYLOAD, sharedAtMs: 1_700_500_000_000 + i },
+      });
+      lastStatus = res.statusCode;
+    }
+    expect(lastStatus).toBe(429);
+    await app.close();
+  });
+
+  it('a un rate-limit indépendant de /audit/report-generated (keys Redis distinctes)', async () => {
+    const db = makeMockDb();
+    const app = buildTestApp(db);
+    await app.ready();
+    const token = signAccess(app);
+    // Saturer le quota report-generated (10/h)
+    for (let i = 0; i < 11; i++) {
+      await app.inject({
+        method: 'POST',
+        url: '/audit/report-generated',
+        headers: { Authorization: `Bearer ${token}` },
+        payload: {
+          reportHash: VALID_HASH,
+          rangeStartMs: 1_700_000_000_000,
+          rangeEndMs: 1_700_500_000_000,
+          generatedAtMs: 1_700_500_000_000 + i,
+        },
+      });
+    }
+    // report-shared doit rester disponible
+    const res = await app.inject({
+      method: 'POST',
+      url: '/audit/report-shared',
+      headers: { Authorization: `Bearer ${token}` },
+      payload: VALID_PAYLOAD,
+    });
+    expect(res.statusCode).toBe(201);
+    await app.close();
+  });
+});
