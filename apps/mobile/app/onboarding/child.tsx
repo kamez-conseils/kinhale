@@ -5,10 +5,12 @@ import { YStack, H1, Button, Text, Input } from 'tamagui';
 import { useAuthStore } from '../../src/stores/auth-store';
 import { useDocStore } from '../../src/stores/doc-store';
 import { getOrCreateDevice } from '../../src/lib/device';
+import { useOnlineGuard } from '../../src/hooks/useOnlineGuard';
 
 export default function OnboardingChildScreen(): JSX.Element {
   const { t } = useTranslation('common');
   const router = useRouter();
+  const { online } = useOnlineGuard();
   const deviceId = useAuthStore((s) => s.deviceId) ?? '';
   const appendChild = useDocStore((s) => s.appendChild);
 
@@ -18,6 +20,8 @@ export default function OnboardingChildScreen(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
 
   const handleSave = async (): Promise<void> => {
+    // Défense en profondeur : cf. kz-securite-075-078 §m1.
+    if (!online) return;
     setError(null);
     const birthYear = parseInt(birthYearStr, 10);
     if (firstName.trim() === '' || isNaN(birthYear)) {
@@ -65,9 +69,14 @@ export default function OnboardingChildScreen(): JSX.Element {
           {error}
         </Text>
       )}
+      {!online ? (
+        <Text color="$orange10" testID="offline-guard-message">
+          {t('offlineGuard.message')}
+        </Text>
+      ) : null}
       <Button
         onPress={() => void handleSave()}
-        disabled={loading}
+        disabled={loading || !online}
         marginTop="$2"
         accessible
         accessibilityRole="button"

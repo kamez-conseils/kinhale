@@ -138,5 +138,12 @@
     "errorConsent": "Merci d'accepter le partage pour continuer.",
     "cameraPermissionDenied": "Permission caméra refusée. Active-la dans les réglages.",
     "backToAuth": "Retour à la connexion"
+  },
+  "sync": {
+    "offline": "Hors-ligne",
+    "syncing": "Synchronisation…"
+  },
+  "offlineGuard": {
+    "message": "Cette action nécessite une connexion internet. Elle sera disponible dès que vous serez de nouveau en ligne."
   }
 }

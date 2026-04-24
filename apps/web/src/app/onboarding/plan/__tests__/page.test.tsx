@@ -75,10 +75,21 @@ jest.mock('../../../../lib/device', () => ({
   getOrCreateDevice: (...args: unknown[]) => mockGetOrCreateDevice(...args),
 }));
 
+// Statut sync — mutable pour que les tests du guard E7-S08 puissent le
+// basculer. Par défaut : en ligne.
+let mockConnected = true;
+jest.mock('../../../../stores/sync-status-store', () => ({
+  useSyncStatusStore: jest.fn(
+    (selector: (s: { connected: boolean; pulling: boolean }) => unknown) =>
+      selector({ connected: mockConnected, pulling: false }),
+  ),
+}));
+
 describe('OnboardingPlanPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAccessToken = 'tok-1';
+    mockConnected = true;
     mockAppendPlan.mockResolvedValue([new Uint8Array([1])]);
     mockProjectPumps.mockReturnValue([
       {
@@ -160,6 +171,37 @@ describe('OnboardingPlanPage', () => {
       renderWithProviders(<OnboardingPlanPage />);
       fireEvent.click(screen.getByText(/ajouter une pompe|add a pump/i));
       expect(mockPush).toHaveBeenCalledWith('/onboarding/pump');
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
+  });
+
+  it('hors-ligne : affiche le message du guard et ne déclenche pas appendPlan', async () => {
+    jest.useFakeTimers();
+    try {
+      mockConnected = false;
+      renderWithProviders(<OnboardingPlanPage />);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(screen.getByTestId('offline-guard-message')).toBeTruthy();
+
+      // Tenter de cliquer malgré le disabled : le handler `if (!online) return`
+      // doit empêcher appendPlan d'être appelé.
+      const saveBtn = screen.getByText(/enregistrer|save/i);
+      fireEvent.click(saveBtn);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(mockAppendPlan).not.toHaveBeenCalled();
     } finally {
       jest.clearAllTimers();
       jest.useRealTimers();

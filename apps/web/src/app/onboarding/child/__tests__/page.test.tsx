@@ -40,10 +40,21 @@ jest.mock('../../../../lib/device', () => ({
   getOrCreateDevice: (...args: unknown[]) => mockGetOrCreateDevice(...args),
 }));
 
+// Statut sync — mutable pour que les tests du guard E7-S08 puissent le
+// basculer. Par défaut : en ligne.
+let mockConnected = true;
+jest.mock('../../../../stores/sync-status-store', () => ({
+  useSyncStatusStore: jest.fn(
+    (selector: (s: { connected: boolean; pulling: boolean }) => unknown) =>
+      selector({ connected: mockConnected, pulling: false }),
+  ),
+}));
+
 describe('OnboardingChildPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAccessToken = 'tok-1';
+    mockConnected = true;
     mockAppendChild.mockResolvedValue([new Uint8Array([1])]);
   });
 
@@ -115,6 +126,40 @@ describe('OnboardingChildPage', () => {
       });
       expect(screen.getByRole('alert')).toBeTruthy();
       expect(mockPush).not.toHaveBeenCalled();
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
+  });
+
+  it('hors-ligne : affiche le message du guard et ne déclenche pas appendChild', async () => {
+    jest.useFakeTimers();
+    try {
+      mockConnected = false;
+      renderWithProviders(<OnboardingChildPage />);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(screen.getByTestId('offline-guard-message')).toBeTruthy();
+
+      // Même si l'utilisateur clique malgré le disabled : le handler
+      // `if (!online) return` doit empêcher appendChild d'être appelé.
+      const input = screen.getByPlaceholderText(/prénom|first/i);
+      fireEvent.change(input, { target: { value: 'Emma' } });
+      const yearInput = screen.getByPlaceholderText(/2020|year/i);
+      fireEvent.change(yearInput, { target: { value: '2020' } });
+      fireEvent.click(screen.getByText(/enregistrer|save/i));
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(mockAppendChild).not.toHaveBeenCalled();
     } finally {
       jest.clearAllTimers();
       jest.useRealTimers();

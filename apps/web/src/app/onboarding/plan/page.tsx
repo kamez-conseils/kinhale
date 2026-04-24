@@ -9,11 +9,13 @@ import { useAuthStore } from '../../../stores/auth-store';
 import { useDocStore } from '../../../stores/doc-store';
 import { getOrCreateDevice } from '../../../lib/device';
 import { useRequireAuth } from '../../../lib/useRequireAuth';
+import { useOnlineGuard } from '../../../hooks/useOnlineGuard';
 
 export default function OnboardingPlanPage(): React.JSX.Element | null {
   const { t } = useTranslation('common');
   const router = useRouter();
   const authenticated = useRequireAuth();
+  const { online } = useOnlineGuard();
   const deviceId = useAuthStore((s) => s.deviceId) ?? '';
   const appendPlan = useDocStore((s) => s.appendPlan);
   const doc = useDocStore((s) => s.doc);
@@ -31,6 +33,8 @@ export default function OnboardingPlanPage(): React.JSX.Element | null {
   const [error, setError] = useState<string | null>(null);
 
   const handleSave = async (): Promise<void> => {
+    // Défense en profondeur : cf. kz-securite-075-078 §m1.
+    if (!online) return;
     setError(null);
     if (selectedPumpId === null) {
       setError(t('onboarding.plan.saveError'));
@@ -130,7 +134,13 @@ export default function OnboardingPlanPage(): React.JSX.Element | null {
         </Text>
       )}
 
-      <Button onPress={() => void handleSave()} disabled={loading} marginTop="$2">
+      {!online ? (
+        <Text color="$orange10" testID="offline-guard-message" role="status">
+          {t('offlineGuard.message')}
+        </Text>
+      ) : null}
+
+      <Button onPress={() => void handleSave()} disabled={loading || !online} marginTop="$2">
         {loading ? t('onboarding.plan.saving') : t('onboarding.plan.save')}
       </Button>
     </YStack>

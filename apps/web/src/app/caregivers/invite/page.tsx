@@ -6,12 +6,14 @@ import QRCode from 'qrcode';
 import { YStack, XStack, Text, Button, Input } from 'tamagui';
 import { createInvitation, type CreatedInvitation } from '../../../lib/invitations/client';
 import { useRequireAuth } from '../../../lib/useRequireAuth';
+import { useOnlineGuard } from '../../../hooks/useOnlineGuard';
 
 type TargetRole = 'contributor' | 'restricted_contributor';
 
 export default function InviteCaregiverPage(): React.JSX.Element | null {
   const { t } = useTranslation('common');
   const authenticated = useRequireAuth();
+  const { online } = useOnlineGuard();
   const [role, setRole] = React.useState<TargetRole>('restricted_contributor');
   const [displayName, setDisplayName] = React.useState('');
   const [created, setCreated] = React.useState<CreatedInvitation | null>(null);
@@ -30,6 +32,10 @@ export default function InviteCaregiverPage(): React.JSX.Element | null {
   }, [created]);
 
   const handleSubmit = async (): Promise<void> => {
+    // Défense en profondeur : même si le bouton est `disabled` quand !online,
+    // un utilisateur qui réactiverait le DOM via DevTools ne doit pas réussir
+    // à déclencher un appel réseau voué à l'échec. Refs: kz-securite-075-078 §m1.
+    if (!online) return;
     setError(null);
     try {
       const result = await createInvitation({ targetRole: role, displayName });
@@ -124,7 +130,7 @@ export default function InviteCaregiverPage(): React.JSX.Element | null {
 
       <Button
         onPress={() => void handleSubmit()}
-        disabled={displayName.trim().length === 0}
+        disabled={displayName.trim().length === 0 || !online}
         backgroundColor="$blue9"
         color="white"
         borderColor="$blue10"
@@ -133,6 +139,12 @@ export default function InviteCaregiverPage(): React.JSX.Element | null {
       >
         {t('invitation.generateCta')}
       </Button>
+
+      {!online ? (
+        <Text color="$orange10" testID="offline-guard-message" role="status">
+          {t('offlineGuard.message')}
+        </Text>
+      ) : null}
 
       {error !== null ? <Text color="$red10">{error}</Text> : null}
     </YStack>

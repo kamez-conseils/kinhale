@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   useRelaySync as useRelaySyncCore,
@@ -15,6 +16,7 @@ import { blake2bHex } from '@kinhale/crypto';
 import { createRelayClient } from '../relay-client';
 import { useAuthStore } from '../../stores/auth-store';
 import { useDocStore } from '../../stores/doc-store';
+import { useSyncStatusStore } from '../../stores/sync-status-store';
 
 /**
  * Sel applicatif utilisé pour pseudonymiser les `householdId` dans les
@@ -137,7 +139,7 @@ function reportDecryptFailed(event: DecryptFailedEvent): void {
  * Refs: KIN-039, KIN-040
  */
 export function useRelaySync(): { connected: boolean } {
-  return useRelaySyncCore({
+  const result = useRelaySyncCore({
     useAccessToken: () => useAuthStore((s) => s.accessToken),
     useDeviceId: () => useAuthStore((s) => s.deviceId),
     useHouseholdId: () => useAuthStore((s) => s.householdId),
@@ -150,6 +152,14 @@ export function useRelaySync(): { connected: boolean } {
     hashHousehold,
     reportDecryptFailed,
   });
+  // Miroir du statut dans un store applicatif pour que les composants UI
+  // (badge offline, guards) puissent le lire sans monter eux-mêmes une
+  // 2e connexion WebSocket. Refs: KIN-75 / E7-S05.
+  const setConnected = useSyncStatusStore((s) => s.setConnected);
+  React.useEffect(() => {
+    setConnected(result.connected);
+  }, [result.connected, setConnected]);
+  return result;
 }
 
 // Composant shell applicatif (3 lignes). Intentionnellement dupliqué web/mobile
@@ -226,7 +236,7 @@ function saveCursorFactory(getHouseholdId: () => string | null): (cursor: number
  * live, catchup pour rattraper ce qui a été manqué pendant une absence.
  */
 export function usePullDelta(): { pulling: boolean } {
-  return usePullDeltaCore({
+  const result = usePullDeltaCore({
     useAccessToken: () => useAuthStore((s) => s.accessToken),
     useHouseholdId: () => useAuthStore((s) => s.householdId),
     useDoc: () => useDocStore((s) => s.doc),
@@ -237,6 +247,12 @@ export function usePullDelta(): { pulling: boolean } {
     saveCursor: saveCursorFactory(() => useAuthStore.getState().householdId),
     deriveGroupKey: getGroupKey,
   });
+  // Miroir du statut pulling dans le store pour l'UI. Refs: KIN-75 / E7-S05.
+  const setPulling = useSyncStatusStore((s) => s.setPulling);
+  React.useEffect(() => {
+    setPulling(result.pulling);
+  }, [result.pulling, setPulling]);
+  return result;
 }
 
 // ---------------------------------------------------------------------------
