@@ -1,6 +1,7 @@
 /** Types d'événements domaine persistés dans le document Automerge. */
 export type DomainEventType =
   | 'DoseAdministered'
+  | 'DoseReviewFlagged'
   | 'PumpReplaced'
   | 'PlanUpdated'
   | 'CaregiverInvited'
@@ -21,6 +22,27 @@ export interface DoseAdministeredPayload {
   symptoms: string[];
   circumstances: string[];
   freeFormTag: string | null;
+}
+
+/**
+ * Payload pour DoseReviewFlagged — RM6 (§4).
+ *
+ * Émis par le `useDuplicateDetectionWatcher` quand il détecte une paire de
+ * prises du même type sur la même pompe séparées de moins de 2 min.
+ * Référence les deux doses ; la projection `projectDoses` marque chacune
+ * comme `pending_review` dès qu'un flag existe.
+ *
+ * Idempotence : plusieurs flags pour la même paire (ordre inversé ou non)
+ * sont tolérés — la projection dédoublonne par `doseId`. Le watcher évite
+ * néanmoins les duplications via un cache local (`flaggedPairsRef`).
+ */
+export interface DoseReviewFlaggedPayload {
+  /** Identifiant unique du flag (UUID v4). */
+  flagId: string;
+  /** Les deux prises en conflit, **triées par doseId** pour canonicalité. */
+  doseIds: [string, string];
+  /** Instant de détection (UTC ms). */
+  detectedAtMs: number;
 }
 
 /** Payload pour PumpReplaced */
@@ -80,6 +102,7 @@ export interface ChildRegisteredPayload {
 /** Union discriminée des payloads */
 export type DomainEventPayload =
   | { type: 'DoseAdministered'; payload: DoseAdministeredPayload }
+  | { type: 'DoseReviewFlagged'; payload: DoseReviewFlaggedPayload }
   | { type: 'PumpReplaced'; payload: PumpReplacedPayload }
   | { type: 'PlanUpdated'; payload: PlanUpdatedPayload }
   | { type: 'CaregiverInvited'; payload: CaregiverInvitedPayload }

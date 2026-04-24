@@ -8,15 +8,19 @@ import {
   useSyncBatchFallback as useSyncBatchFallbackCore,
   useReminderScheduler as useReminderSchedulerCore,
   useMissedDoseWatcher as useMissedDoseWatcherCore,
+  useDuplicateDetectionWatcher as useDuplicateDetectionWatcherCore,
   getGroupKey,
   type DecryptFailedEvent,
   type FetchCatchupArgs,
   type CatchupResponse,
   type FetchBatchArgs,
   type FetchBatchResult,
+  type DuplicateDosePair,
+  type NotifyDuplicateArgs,
 } from '@kinhale/sync/client';
 import { blake2bHex } from '@kinhale/crypto';
 import { createRelayClient } from '../relay-client';
+import { getOrCreateDevice } from '../device';
 import { useAuthStore } from '../../stores/auth-store';
 import { useDocStore } from '../../stores/doc-store';
 import { useSyncStatusStore } from '../../stores/sync-status-store';
@@ -410,6 +414,30 @@ async function notifyMissedDoseNowWeb(args: {
   new Notification(args.title, { body: args.body, tag: args.id });
 }
 
+// ---------------------------------------------------------------------------
+// Détection doublons (KIN-73 / E7-S03, RM6) : flag côté doc + notification.
+// ---------------------------------------------------------------------------
+
+async function flagDuplicatePairWeb(pair: DuplicateDosePair): Promise<void> {
+  const { deviceId } = useAuthStore.getState();
+  if (deviceId === null) return;
+  const kp = await getOrCreateDevice();
+  await useDocStore.getState().appendDoseFlag(
+    {
+      flagId: crypto.randomUUID(),
+      doseIds: pair.doseIds,
+      detectedAtMs: pair.detectedAtMs,
+    },
+    deviceId,
+    kp.secretKey,
+  );
+}
+
+async function notifyDuplicateNowWeb(args: NotifyDuplicateArgs): Promise<void> {
+  if (!isWebNotificationPermissionGranted()) return;
+  new Notification(args.title, { body: args.body, tag: args.id });
+}
+
 /**
  * Monte le scheduler de rappels (E5-S01 + E5-S02, best-effort côté web) et
  * le watcher de doses manquées (E5-S03). Le web utilise l'API Web
@@ -439,6 +467,17 @@ export function RemindersBootstrap(): null {
     now: () => new Date(),
     missedDoseTitle: t('missed_dose.title'),
     missedDoseBody: t('missed_dose.body'),
+  });
+
+  // Watcher RM6 (KIN-73 / E7-S03) : détecte les doubles saisies et émet
+  // un événement `DoseReviewFlagged` + notification locale.
+  useDuplicateDetectionWatcherCore({
+    useDoc: () => useDocStore((s) => s.doc),
+    flagDuplicatePair: flagDuplicatePairWeb,
+    notifyDuplicate: notifyDuplicateNowWeb,
+    now: () => new Date(),
+    duplicateTitle: t('duplicate.title'),
+    duplicateBody: t('duplicate.body'),
   });
 
   return null;
