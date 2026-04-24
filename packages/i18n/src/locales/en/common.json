@@ -143,6 +143,10 @@
     "offline": "Offline",
     "syncing": "Syncing…"
   },
+  "duplicate": {
+    "title": "Kinhale",
+    "body": "Possible duplicate entry detected"
+  },
   "offlineGuard": {
     "message": "This action requires an internet connection. It will be available again once you are back online."
   }

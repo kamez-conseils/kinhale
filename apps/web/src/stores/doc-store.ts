@@ -11,6 +11,7 @@ import {
 import type {
   KinhaleDoc,
   DoseAdministeredPayload,
+  DoseReviewFlaggedPayload,
   ChildRegisteredPayload,
   PumpReplacedPayload,
   PlanUpdatedPayload,
@@ -52,6 +53,11 @@ interface DocState {
   ) => Promise<Uint8Array[]>;
   appendPlan: (
     payload: PlanUpdatedPayload,
+    deviceId: string,
+    secretKey: Uint8Array,
+  ) => Promise<Uint8Array[]>;
+  appendDoseFlag: (
+    payload: DoseReviewFlaggedPayload,
     deviceId: string,
     secretKey: Uint8Array,
   ) => Promise<Uint8Array[]>;
@@ -176,6 +182,26 @@ export const useDocStore = create<DocState>()((set, get) => ({
       deviceId,
       occurredAtMs: Date.now(),
       event: { type: 'PlanUpdated', payload },
+    };
+    const record = await signEvent(unsigned, secretKey);
+    const newDoc = appendEvent(doc, record);
+    const changes = getDocChanges(doc, newDoc);
+
+    void persistDoc(newDoc);
+    set({ doc: newDoc });
+    return changes;
+  },
+
+  async appendDoseFlag(payload, deviceId, secretKey) {
+    const currentDoc = get().doc;
+    const hid = (currentDoc as KinhaleDoc | null)?.householdId ?? deviceId;
+    const doc = currentDoc ?? createDoc(hid);
+
+    const unsigned: UnsignedEvent = {
+      id: crypto.randomUUID(),
+      deviceId,
+      occurredAtMs: Date.now(),
+      event: { type: 'DoseReviewFlagged', payload },
     };
     const record = await signEvent(unsigned, secretKey);
     const newDoc = appendEvent(doc, record);

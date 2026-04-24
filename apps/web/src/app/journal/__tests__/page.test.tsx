@@ -61,6 +61,7 @@ describe('JournalPage', () => {
       symptoms: [],
       circumstances: [],
       freeFormTag: null,
+      status: 'recorded',
     };
 
     mockProjectDoses.mockReturnValueOnce([fakeDose]);

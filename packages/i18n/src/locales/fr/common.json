@@ -143,6 +143,10 @@
     "offline": "Hors-ligne",
     "syncing": "Synchronisation…"
   },
+  "duplicate": {
+    "title": "Kinhale",
+    "body": "Double saisie détectée"
+  },
   "offlineGuard": {
     "message": "Cette action nécessite une connexion internet. Elle sera disponible dès que vous serez de nouveau en ligne."
   }

@@ -15,6 +15,7 @@ export type {
   DomainEventPayload,
   UnsignedEvent,
   DoseAdministeredPayload,
+  DoseReviewFlaggedPayload,
   PumpReplacedPayload,
   PlanUpdatedPayload,
   CaregiverInvitedPayload,
