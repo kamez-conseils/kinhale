@@ -3,7 +3,7 @@ import type { WebSocket } from 'ws';
 import { Expo } from 'expo-server-sdk';
 import { eq, and, ne } from 'drizzle-orm';
 import { mailboxMessages, pushTokens } from '../db/schema.js';
-import type { JwtPayload } from '../plugins/jwt.js';
+import type { SessionJwtPayload } from '../plugins/jwt.js';
 import { dispatchPush } from '../push/push-dispatch.js';
 
 const expo = new Expo();
@@ -53,7 +53,7 @@ const relayRoute: FastifyPluginAsync = async (app) => {
       },
     },
     (socket: WebSocket, request) => {
-      const payload = request.user as JwtPayload;
+      const payload = request.user as SessionJwtPayload;
       const { householdId, deviceId } = payload;
 
       if (!householdSockets.has(householdId)) {
