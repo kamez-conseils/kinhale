@@ -147,6 +147,11 @@
     "title": "Kinhale",
     "body": "Double saisie détectée"
   },
+  "peerDoseRecorded": {
+    "title": "Kinhale",
+    "body": "Nouvelle activité",
+    "inAppLine": "Un autre aidant vient d'enregistrer une prise."
+  },
   "offlineGuard": {
     "message": "Cette action nécessite une connexion internet. Elle sera disponible dès que vous serez de nouveau en ligne."
   },

@@ -58,3 +58,7 @@ export {
   REMINDER_WINDOW_AFTER_MS,
   REMINDER_WINDOW_BEFORE_MS,
 } from './projections/reminders.js';
+
+// Peer ping protocol (RM5, ADR-D11)
+export type { PeerPingMessage, PeerPingType } from './peer/peer-ping.js';
+export { PEER_PING_TYPES, isPeerPingMessage, buildPeerPingMessage } from './peer/peer-ping.js';

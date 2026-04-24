@@ -72,6 +72,37 @@ describe('createRelayClient', () => {
     expect(mockWs.sentMessages).toHaveLength(0);
   });
 
+  it('sendPing émet le JSON du message peer_ping sur la socket (KIN-82 / RM5)', () => {
+    const client = createRelayClient('tok', jest.fn());
+    client.sendPing({
+      type: 'peer_ping',
+      pingType: 'dose_recorded',
+      doseId: '0a7e1b74-8c7d-4b7e-9f8a-1234567890ab',
+      sentAtMs: 1_717_000_000_000,
+    });
+    expect(mockWs.sentMessages).toHaveLength(1);
+    const parsed = JSON.parse(mockWs.sentMessages[0]!) as Record<string, unknown>;
+    // Aucun champ santé ne fuite.
+    expect(parsed).toEqual({
+      type: 'peer_ping',
+      pingType: 'dose_recorded',
+      doseId: '0a7e1b74-8c7d-4b7e-9f8a-1234567890ab',
+      sentAtMs: 1_717_000_000_000,
+    });
+  });
+
+  it('sendPing est no-op silencieux si socket fermée (retry géré côté watcher + relais)', () => {
+    const client = createRelayClient('tok', jest.fn());
+    mockWs.readyState = 3; // CLOSED
+    client.sendPing({
+      type: 'peer_ping',
+      pingType: 'dose_recorded',
+      doseId: '0a7e1b74-8c7d-4b7e-9f8a-1234567890ab',
+      sentAtMs: 1,
+    });
+    expect(mockWs.sentMessages).toHaveLength(0);
+  });
+
   it('appelle onMessage pour un message valide avec blobJson', () => {
     const handler = jest.fn();
     createRelayClient('tok', handler);

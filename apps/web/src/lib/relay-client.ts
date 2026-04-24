@@ -1,3 +1,5 @@
+import type { PeerPingMessage } from '@kinhale/sync';
+
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 
 function toWsUrl(url: string): string {
@@ -14,6 +16,16 @@ export type RelayMessageHandler = (msg: RelayMessage) => void | Promise<void>;
 
 export interface RelayClient {
   send(blobJson: string): void;
+  /**
+   * Envoie un `peer_ping` typé au relais (RM5, ADR-D11). Le message doit
+   * être construit via `buildPeerPingMessage` de `@kinhale/sync` — aucune
+   * donnée santé n'est autorisée dans le payload.
+   *
+   * No-op silencieux si la WS n'est pas OPEN : la retransmission est assurée
+   * par `usePeerDosePing` qui observe le doc local, et la déduplication
+   * côté relais (TTL Redis) protège contre les doubles pings.
+   */
+  sendPing(ping: PeerPingMessage): void;
   close(): void;
 }
 
@@ -61,6 +73,12 @@ export function createRelayClient(
       if (ws.readyState === 1) {
         ws.send(JSON.stringify({ blobJson, sentAtMs: Date.now() }));
       }
+    },
+    sendPing(ping: PeerPingMessage): void {
+      // No-op silencieux si WS fermée : dédup côté relais + retry du watcher
+      // garantissent la délivrance au retour réseau (AC E5-S05).
+      if (ws.readyState !== 1) return;
+      ws.send(JSON.stringify(ping));
     },
     close(): void {
       // Inhibe `onClose` avant d'appeler `ws.close()` : une fermeture
