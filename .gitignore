@@ -99,3 +99,7 @@ temp/
 *.swp
 *.swo
 *~
+
+# Claude Code runtime
+.claude/scheduled_tasks.lock
+.claude/session-*.json

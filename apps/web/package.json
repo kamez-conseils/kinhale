@@ -18,6 +18,7 @@
   "dependencies": {
     "@kinhale/crypto": "workspace:*",
     "@kinhale/i18n": "workspace:*",
+    "@kinhale/reports": "workspace:*",
     "@kinhale/sync": "workspace:*",
     "@tamagui/config": "^1.121.0",
     "@tamagui/next-plugin": "^1.121.0",
