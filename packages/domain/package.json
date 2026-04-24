@@ -12,7 +12,8 @@
     "./entities": "./src/entities/index.ts",
     "./rules": "./src/rules/index.ts",
     "./errors": "./src/errors.ts",
-    "./notifications": "./src/entities/notification-type.ts"
+    "./notifications": "./src/entities/notification-type.ts",
+    "./quiet-hours": "./src/entities/quiet-hours.ts"
   },
   "scripts": {
     "lint": "eslint --max-warnings=0 .",

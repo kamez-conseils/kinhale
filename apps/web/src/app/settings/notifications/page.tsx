@@ -11,6 +11,7 @@ import {
   type NotificationType,
 } from '../../../lib/notification-preferences/client';
 import { useRequireAuth } from '../../../lib/useRequireAuth';
+import { QuietHoursSection } from '../../../components/QuietHoursSection';
 
 const PREFS_QUERY_KEY = ['notification-preferences'] as const;
 
@@ -53,6 +54,8 @@ export default function NotificationPreferencesPage(): React.JSX.Element | null 
         <Text color="$red10">{t('notificationPreferences.loadError')}</Text>
       ) : null}
       {mutationError !== null ? <Text color="$red10">{mutationError}</Text> : null}
+
+      <QuietHoursSection />
 
       {data?.map((pref: NotificationPreference) => (
         <Card key={pref.type} padding="$3">

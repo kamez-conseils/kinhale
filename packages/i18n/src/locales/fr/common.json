@@ -198,5 +198,21 @@
         "description": "Notification quand vous êtes retiré d'un foyer."
       }
     }
+  },
+  "quietHours": {
+    "title": "Heures silencieuses",
+    "description": "Pendant cette plage, les notifications non critiques arrivent sans son ni vibration. Les alertes de dose manquée et de sécurité restent actives.",
+    "enabledLabel": "Activer les heures silencieuses",
+    "startLabel": "Début",
+    "endLabel": "Fin",
+    "timezoneLabel": "Fuseau horaire",
+    "timezoneAutoDetected": "Détecté automatiquement : {{timezone}}",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "saveSuccess": "Préférences enregistrées.",
+    "saveError": "Impossible d'enregistrer. Réessayez.",
+    "loadError": "Impossible de charger les heures silencieuses.",
+    "invalidFormat": "Format invalide. Utilisez HH:MM (ex. 22:00).",
+    "safetyNote": "Les notifications de dose manquée restent émises, même pendant les heures silencieuses (règle de sécurité)."
   }
 }

@@ -28,6 +28,19 @@ jest.mock('../../../../lib/notification-preferences/client', () => ({
   updateNotificationPreference: (...args: unknown[]) => mockUpdatePref(...args),
 }));
 
+// Mock du client quiet hours — la page Notifications intègre désormais la
+// section « Heures silencieuses » (E5-S08).
+jest.mock('../../../../lib/quiet-hours/client', () => ({
+  getQuietHours: jest.fn().mockResolvedValue({
+    enabled: false,
+    startLocalTime: '22:00',
+    endLocalTime: '07:00',
+    timezone: 'America/Toronto',
+  }),
+  updateQuietHours: jest.fn().mockResolvedValue(undefined),
+  detectLocalTimezone: () => 'America/Toronto',
+}));
+
 const SAMPLE_PREFS = [
   { type: 'reminder', enabled: true, alwaysEnabled: false },
   { type: 'missed_dose', enabled: true, alwaysEnabled: true },

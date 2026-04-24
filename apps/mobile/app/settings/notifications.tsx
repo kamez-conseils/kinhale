@@ -7,6 +7,7 @@ import {
   type NotificationPreference,
   type NotificationType,
 } from '../../src/lib/notification-preferences/client';
+import { QuietHoursSection } from '../../src/components/QuietHoursSection';
 
 export default function NotificationPreferencesScreen(): React.JSX.Element {
   const { t } = useTranslation('common');
@@ -56,6 +57,8 @@ export default function NotificationPreferencesScreen(): React.JSX.Element {
       <Text>{t('notificationPreferences.description')}</Text>
 
       {error !== null ? <Text color="$red10">{error}</Text> : null}
+
+      <QuietHoursSection />
 
       {preferences.map((pref) => (
         <Card key={pref.type} padding="$3">
