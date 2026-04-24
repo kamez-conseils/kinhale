@@ -1,5 +1,6 @@
 const mockClose = jest.fn();
 const mockSend = jest.fn();
+const mockSendPing = jest.fn();
 
 type CapturedHandler =
   | ((msg: { blobJson: string; seq: number; sentAtMs: number }) => Promise<void>)
@@ -9,7 +10,7 @@ let capturedHandler: CapturedHandler;
 jest.mock('../../lib/relay-client', () => ({
   createRelayClient: jest.fn().mockImplementation((_token: string, handler: CapturedHandler) => {
     capturedHandler = handler;
-    return { send: mockSend, close: mockClose };
+    return { send: mockSend, sendPing: mockSendPing, close: mockClose };
   }),
 }));
 

@@ -18,6 +18,7 @@ export type {
   RelayMessageHandler,
   CreateRelayClient,
   UseRelaySyncDeps,
+  UseRelaySyncResult,
 } from './useRelaySync.js';
 export { usePullDelta } from './usePullDelta.js';
 export type {
@@ -52,6 +53,9 @@ export type {
   NotifyDuplicateArgs,
   UseDuplicateDetectionWatcherDeps,
 } from './useDuplicateDetectionWatcher.js';
+
+export { usePeerDosePing } from './usePeerDosePing.js';
+export type { SendPeerPing, UsePeerDosePingDeps } from './usePeerDosePing.js';
 export { classifyDecryptError, createDecryptFailedReporter } from './telemetry.js';
 export type {
   DecryptErrorClass,

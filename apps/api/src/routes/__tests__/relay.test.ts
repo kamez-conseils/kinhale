@@ -5,8 +5,6 @@ import type { DrizzleDb } from '../../plugins/db.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-const SENDER_TOKEN = 'ExponentPushToken[sender-device]';
-const OTHER_TOKEN = 'ExponentPushToken[other-device]';
 const HOUSEHOLD_ID = '00000000-0000-0000-0000-000000000002';
 
 vi.mock('expo-server-sdk', () => {
@@ -20,23 +18,26 @@ vi.mock('expo-server-sdk', () => {
   return { Expo: MockExpo };
 });
 
-function makeMockDb(tokensToReturn: { token: string }[]) {
+function makeMockDb() {
   // mailboxMessages.insert chain
   const mailboxInsertValues = vi.fn().mockResolvedValue(undefined);
   const mailboxInsert = vi.fn().mockReturnValue({ values: mailboxInsertValues });
 
-  // pushTokens.select chain
-  const selectWhere = vi.fn().mockResolvedValue(tokensToReturn);
-  const selectFrom = vi.fn().mockReturnValue({ where: selectWhere });
-  const select = vi.fn().mockReturnValue({ from: selectFrom });
-
   return {
     insert: mailboxInsert,
-    select,
-    _selectWhere: selectWhere,
+    // Select ne sera pas consulté par le nouveau relay pour les blobJson
+    // (dispatch aveugle supprimé en KIN-082). Laissé en place pour les tests
+    // d'initialisation app.
+    select: vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        innerJoin: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([]),
+        }),
+        where: vi.fn().mockResolvedValue([]),
+      }),
+    }),
     _mailboxInsertValues: mailboxInsertValues,
   } as unknown as DrizzleDb & {
-    _selectWhere: ReturnType<typeof vi.fn>;
     _mailboxInsertValues: ReturnType<typeof vi.fn>;
   };
 }
@@ -58,43 +59,20 @@ function buildTestApp(db: ReturnType<typeof makeMockDb>) {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe('relay push dispatch', () => {
+describe('relay — enregistrement des plugins + stores', () => {
   let db: ReturnType<typeof makeMockDb>;
   let app: ReturnType<typeof buildTestApp>;
 
   beforeEach(async () => {
-    // Simuler que la DB renvoie seulement le token de l'autre device (sender exclu)
-    db = makeMockDb([{ token: OTHER_TOKEN }]);
+    db = makeMockDb();
     app = buildTestApp(db);
     await app.ready();
   });
 
-  it('exclut le token du device expediteur lors du dispatch push', async () => {
-    const { Expo } = await import('expo-server-sdk');
-    const mockExpoInstance = (Expo as ReturnType<typeof vi.fn>).mock.results[0]?.value as
-      | {
-          sendPushNotificationsAsync: ReturnType<typeof vi.fn>;
-        }
-      | undefined;
-
-    // Vérifier que le token du sender n'est PAS dans les tokens envoyés.
-    // La DB mock renvoie uniquement OTHER_TOKEN — le sender est exclu au niveau DB
-    // via la clause ne(deviceId) dans la requête SELECT.
-    if (mockExpoInstance) {
-      expect(mockExpoInstance.sendPushNotificationsAsync).not.toHaveBeenCalledWith(
-        expect.arrayContaining([expect.objectContaining({ to: SENDER_TOKEN })]),
-      );
-    }
-
-    await app.close();
-  });
-
-  it('la requete SELECT filtre par ne(deviceId) — verification via mock', async () => {
-    // Ce test documente que le SELECT utilise ne(deviceId) :
-    // la DB mock renvoie uniquement OTHER_TOKEN (excluant SENDER_TOKEN),
-    // ce qui correspond a ce que la requete avec ne(deviceId) retournerait.
-    expect(db._selectWhere).toBeDefined();
-    // La DB mock configuree avec [{ token: OTHER_TOKEN }] ne contient pas SENDER_TOKEN
+  it("s'initialise sans erreur avec un DrizzleDb mocké (stores prefsStore / quietStore instanciés)", async () => {
+    // Si l'instanciation des stores levait une erreur (ex: absence de fonction
+    // sur le DrizzleDb mock), `app.ready()` échouerait.
+    expect(app).toBeDefined();
     expect(HOUSEHOLD_ID).toMatch(/^[0-9a-f-]+$/u);
     await app.close();
   });

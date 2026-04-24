@@ -9,6 +9,7 @@ import {
   useReminderScheduler as useReminderSchedulerCore,
   useMissedDoseWatcher as useMissedDoseWatcherCore,
   useDuplicateDetectionWatcher as useDuplicateDetectionWatcherCore,
+  usePeerDosePing as usePeerDosePingCore,
   getGroupKey,
   type DecryptFailedEvent,
   type FetchCatchupArgs,
@@ -18,6 +19,7 @@ import {
   type DuplicateDosePair,
   type NotifyDuplicateArgs,
 } from '@kinhale/sync/client';
+import type { PeerPingMessage } from '@kinhale/sync';
 import { blake2bHex } from '@kinhale/crypto';
 import { createRelayClient } from '../relay-client';
 import { getOrCreateDevice } from '../device';
@@ -132,7 +134,20 @@ function reportDecryptFailed(event: DecryptFailedEvent): void {
  *
  * Refs: KIN-039, KIN-040
  */
-export function useRelaySync(): { connected: boolean } {
+/**
+ * Ref module-scope pour partager la fonction `sendPing` retournée par
+ * `useRelaySync` avec `usePeerDosePing` monté dans le même bootstrap.
+ * Aucun couplage au store applicatif — la latence < 1 tick React est
+ * suffisante (les deux hooks sont montés dans le même `RelaySyncBootstrap`).
+ */
+const peerPingSenderRef: { current: (ping: PeerPingMessage) => void } = {
+  current: () => undefined,
+};
+
+export function useRelaySync(): {
+  connected: boolean;
+  sendPing: (p: PeerPingMessage) => void;
+} {
   const result = useRelaySyncCore({
     useAccessToken: () => useAuthStore((s) => s.accessToken),
     useDeviceId: () => useAuthStore((s) => s.deviceId),
@@ -152,7 +167,30 @@ export function useRelaySync(): { connected: boolean } {
   React.useEffect(() => {
     setConnected(result.connected);
   }, [result.connected, setConnected]);
+
+  React.useEffect(() => {
+    peerPingSenderRef.current = result.sendPing;
+    return () => {
+      peerPingSenderRef.current = () => undefined;
+    };
+  }, [result.sendPing]);
+
   return result;
+}
+
+/**
+ * Wrapper applicatif mobile qui monte le watcher `usePeerDosePing`
+ * (KIN-082 / RM5). Observe les nouvelles `DoseAdministered` créées par ce
+ * device et émet un `peer_ping` au relais via `peerPingSenderRef` alimenté
+ * par `useRelaySync` dans le même bootstrap.
+ */
+function usePeerDosePing(): void {
+  usePeerDosePingCore({
+    useDoc: () => useDocStore((s) => s.doc),
+    useDeviceId: () => useAuthStore((s) => s.deviceId),
+    sendPeerPing: (ping) => peerPingSenderRef.current(ping),
+    now: () => new Date(),
+  });
 }
 
 // Composant shell applicatif (3 lignes). Intentionnellement dupliqué web/mobile
@@ -169,6 +207,7 @@ export function RelaySyncBootstrap(): null {
   useRelaySync();
   usePullDelta();
   useSyncBatchFallback();
+  usePeerDosePing();
   return null;
 }
 

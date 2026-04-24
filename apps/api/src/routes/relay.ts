@@ -1,10 +1,39 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { WebSocket } from 'ws';
 import { Expo } from 'expo-server-sdk';
-import { eq, and, ne } from 'drizzle-orm';
-import { mailboxMessages, pushTokens } from '../db/schema.js';
+import { z } from 'zod';
+import { mailboxMessages } from '../db/schema.js';
 import type { SessionJwtPayload } from '../plugins/jwt.js';
-import { dispatchPush } from '../push/push-dispatch.js';
+import { handlePeerPing } from '../push/peer-ping-handler.js';
+import { createDrizzleNotificationPreferenceStore } from './notification-preferences.js';
+import { createDrizzleQuietHoursStore } from './quiet-hours.js';
+
+/**
+ * Schéma strict du message WS `peer_ping` entrant (KIN-082, RM5, ADR-D11).
+ *
+ * **Contrat figé** — toute évolution doit être doublée d'un passage
+ * `kz-securite` + mise à jour de l'ADR-D11. Aucun champ santé ne doit
+ * apparaître ici : le relais n'a besoin que de `pingType`, `doseId` (UUID
+ * opaque pour déduplication) et `sentAtMs` (instant d'émission, pas de
+ * prise).
+ *
+ * Les identifiants `householdId` et `senderDeviceId` ne sont **pas** dans le
+ * schéma : le relais les lit exclusivement du JWT vérifié du handshake WS
+ * (défense en profondeur contre l'usurpation).
+ *
+ * Miroir strict de `packages/sync/src/peer/peer-ping.ts` — si l'un évolue,
+ * mettre à jour l'autre (la duplication évite une dépendance cyclique
+ * `apps/api` → `@kinhale/sync` → `@kinhale/domain` qui révélerait une dette
+ * de typecheck existante hors scope KIN-082).
+ */
+const PeerPingMessageSchema = z
+  .object({
+    type: z.literal('peer_ping'),
+    pingType: z.enum(['dose_recorded']),
+    doseId: z.string().uuid(),
+    sentAtMs: z.number().finite().nonnegative(),
+  })
+  .strict();
 
 const expo = new Expo();
 
@@ -16,7 +45,32 @@ const householdChannel = (id: string) => `household:${id}`;
  */
 const householdSockets = new Map<string, Set<WebSocket>>();
 
+/**
+ * Route relais WS du flux de sync E2EE Kinhale.
+ *
+ * Canaux de message pris en charge :
+ * 1. **Sync blob** (`{blobJson, seq, sentAtMs}`) : blob chiffré Automerge
+ *    persisté en mailbox + broadcast Redis aux autres devices du foyer.
+ * 2. **Peer ping** (`{type: 'peer_ping', pingType, doseId, sentAtMs}`) :
+ *    signalement typé d'un événement métier. Déclenche un push opaque aux
+ *    autres aidants du foyer via `handlePeerPing`. Voir ADR-D11 — le
+ *    payload ne contient aucune donnée santé, et le relais lit toujours
+ *    `householdId` / `senderDeviceId` depuis le JWT vérifié, jamais du
+ *    corps du message.
+ *
+ * Les pushs aveugles sur tout message de sync ont été retirés (régression
+ * KIN-082) : ils généraient des notifications non-typées qui ignoraient les
+ * préférences granulaires (E5-S07) et les quiet hours (E5-S08). La
+ * notification peer est maintenant exclusivement portée par `peer_ping`.
+ *
+ * Refs: KIN-082, E5-S05, RM5, RM16, ADR-D11.
+ */
 const relayRoute: FastifyPluginAsync = async (app) => {
+  // Stores pour le dispatcher (préférences + quiet hours). Partagent la
+  // connexion Drizzle avec les autres routes.
+  const prefsStore = createDrizzleNotificationPreferenceStore(app.db);
+  const quietStore = createDrizzleQuietHoursStore(app.db);
+
   // Listener Redis partagé — routage vers les sockets locaux du foyer.
   app.redis.sub.on('message', (channel: string, raw: string) => {
     const householdId = channel.slice('household:'.length);
@@ -80,6 +134,46 @@ const relayRoute: FastifyPluginAsync = async (app) => {
           return;
         }
 
+        // ── Branche 1 : peer_ping (notification croisée RM5) ─────────────
+        //
+        // Validé AVANT la branche sync blob : ne doit pas être confondu avec
+        // un message malformé. Le schéma Zod garantit que les champs attendus
+        // (type, pingType, doseId UUID v4, sentAtMs) sont présents et
+        // typés strictement — tout champ supplémentaire est rejeté (strict()).
+        if (
+          typeof msg === 'object' &&
+          msg !== null &&
+          (msg as Record<string, unknown>)['type'] === 'peer_ping'
+        ) {
+          const parsed = PeerPingMessageSchema.safeParse(msg);
+          if (!parsed.success) {
+            socket.send(JSON.stringify({ error: 'peer_ping invalide' }));
+            return;
+          }
+          const ping = parsed.data;
+          // Fire-and-forget : le dispatch push ne doit pas bloquer la pipe WS.
+          // Le handler gère lui-même la dédup, le rate-limit et les erreurs.
+          void (async () => {
+            try {
+              await handlePeerPing({
+                db: app.db,
+                redis: app.redis.pub,
+                expo,
+                householdId,
+                senderDeviceId: deviceId,
+                doseId: ping.doseId,
+                prefsStore,
+                quietStore,
+                logger: app.log,
+              });
+            } catch (err) {
+              app.log.warn({ err }, 'Échec handlePeerPing (ignoré)');
+            }
+          })();
+          return;
+        }
+
+        // ── Branche 2 : sync blob Automerge chiffré ──────────────────────
         if (
           typeof msg !== 'object' ||
           msg === null ||
@@ -90,7 +184,7 @@ const relayRoute: FastifyPluginAsync = async (app) => {
         }
 
         const rawMsg = msg as Record<string, unknown>;
-        const blobJson = rawMsg['blobJson'] as string; // déjà validé par le check typeof
+        const blobJson = rawMsg['blobJson'] as string;
         const seq = typeof rawMsg['seq'] === 'number' ? rawMsg['seq'] : 0;
         const sentAtMs = typeof rawMsg['sentAtMs'] === 'number' ? rawMsg['sentAtMs'] : Date.now();
         const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
@@ -109,22 +203,6 @@ const relayRoute: FastifyPluginAsync = async (app) => {
           socket.send(JSON.stringify({ error: 'Erreur persistance message' }));
           return;
         }
-
-        // Push dispatch — fire-and-forget, ne bloque pas le flux relay
-        void (async () => {
-          try {
-            const rows = await app.db
-              .select({ token: pushTokens.token })
-              .from(pushTokens)
-              .where(
-                and(eq(pushTokens.householdId, householdId), ne(pushTokens.deviceId, deviceId)),
-              );
-            const tokens = rows.map((r) => r.token);
-            await dispatchPush(expo, tokens, app.log);
-          } catch (err) {
-            app.log.warn({ err }, 'Échec dispatch push (ignoré)');
-          }
-        })();
 
         // Publier vers Redis → broadcast à tous les relay nodes du même foyer.
         try {

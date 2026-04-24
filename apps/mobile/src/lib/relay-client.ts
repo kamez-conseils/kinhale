@@ -1,3 +1,5 @@
+import type { PeerPingMessage } from '@kinhale/sync';
+
 const API_URL = process.env['EXPO_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 
 function toWsUrl(url: string): string {
@@ -14,6 +16,12 @@ export type RelayMessageHandler = (msg: RelayMessage) => void | Promise<void>;
 
 export interface RelayClient {
   send(blobJson: string): void;
+  /**
+   * Envoie un `peer_ping` typé au relais (RM5, ADR-D11). No-op silencieux
+   * si la WS n'est pas OPEN — la retransmission est assurée par
+   * `usePeerDosePing` + dédup Redis côté relais.
+   */
+  sendPing(ping: PeerPingMessage): void;
   close(): void;
 }
 
@@ -61,6 +69,10 @@ export function createRelayClient(
       if (ws.readyState === 1) {
         ws.send(JSON.stringify({ blobJson, sentAtMs: Date.now() }));
       }
+    },
+    sendPing(ping: PeerPingMessage): void {
+      if (ws.readyState !== 1) return;
+      ws.send(JSON.stringify(ping));
     },
     close(): void {
       // Inhibe `onClose` avant d'appeler `ws.close()` : une fermeture

@@ -10,6 +10,7 @@ import {
 } from '../index.js';
 import type { SyncCursor } from '../index.js';
 import type { KinhaleDoc } from '../doc/schema.js';
+import type { PeerPingMessage } from '../peer/peer-ping.js';
 import {
   classifyDecryptError,
   createDecryptFailedReporter,
@@ -36,6 +37,13 @@ export type RelayMessageHandler = (msg: RelayIncomingMessage) => void | Promise<
 /** Contrat minimal d'un client relai — implémenté par web (WebSocket DOM) et mobile (WebSocket RN). */
 export interface RelayClient {
   send(blobJson: string): void;
+  /**
+   * Envoie un `peer_ping` au relais (RM5, ADR-D11). Optionnel pour
+   * rétrocompat : les implémentations antérieures à KIN-082 n'exposaient que
+   * `send` + `close`. Si non-implémenté, `usePeerDosePing` reste un no-op
+   * silencieux côté plateforme (le watcher ignore l'absence de canal ping).
+   */
+  sendPing?(ping: PeerPingMessage): void;
   close(): void;
 }
 
@@ -145,7 +153,17 @@ export interface UseRelaySyncDeps {
  *
  * Refs: KIN-039, ADR-D9 (compromis groupKey déterministe v1.0).
  */
-export function useRelaySync(deps: UseRelaySyncDeps): { connected: boolean } {
+/**
+ * Valeur de retour du hook — `connected` reflète l'état live, `sendPing`
+ * expose le canal ping du client courant (no-op si WS fermée). La fonction
+ * `sendPing` est stable sur toute la durée de vie du hook (ref wrapper).
+ */
+export interface UseRelaySyncResult {
+  readonly connected: boolean;
+  readonly sendPing: (ping: PeerPingMessage) => void;
+}
+
+export function useRelaySync(deps: UseRelaySyncDeps): UseRelaySyncResult {
   const accessToken = deps.useAccessToken();
   const deviceId = deps.useDeviceId();
   const householdId = deps.useHouseholdId();
@@ -368,5 +386,18 @@ export function useRelaySync(deps: UseRelaySyncDeps): { connected: boolean } {
     })();
   }, [doc, deviceId, householdId]);
 
-  return { connected };
+  // `sendPing` stable : lit `clientRef.current` à l'appel — no-op silencieux
+  // si la WS est fermée ou si le client plateforme n'implémente pas `sendPing`
+  // (rétrocompat avec les factories antérieures à KIN-082).
+  const sendPingRef = React.useRef<(ping: PeerPingMessage) => void>(() => undefined);
+  sendPingRef.current = (ping: PeerPingMessage): void => {
+    const client = clientRef.current;
+    if (client === null) return;
+    client.sendPing?.(ping);
+  };
+  const sendPing = React.useCallback((ping: PeerPingMessage): void => {
+    sendPingRef.current(ping);
+  }, []);
+
+  return { connected, sendPing };
 }

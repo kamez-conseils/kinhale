@@ -147,6 +147,11 @@
     "title": "Kinhale",
     "body": "Possible duplicate entry detected"
   },
+  "peerDoseRecorded": {
+    "title": "Kinhale",
+    "body": "New activity",
+    "inAppLine": "Another caregiver just recorded a dose."
+  },
   "offlineGuard": {
     "message": "This action requires an internet connection. It will be available again once you are back online."
   },

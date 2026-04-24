@@ -9,6 +9,7 @@ import {
   useReminderScheduler as useReminderSchedulerCore,
   useMissedDoseWatcher as useMissedDoseWatcherCore,
   useDuplicateDetectionWatcher as useDuplicateDetectionWatcherCore,
+  usePeerDosePing as usePeerDosePingCore,
   getGroupKey,
   type DecryptFailedEvent,
   type FetchCatchupArgs,
@@ -18,6 +19,7 @@ import {
   type DuplicateDosePair,
   type NotifyDuplicateArgs,
 } from '@kinhale/sync/client';
+import type { PeerPingMessage } from '@kinhale/sync';
 import { blake2bHex } from '@kinhale/crypto';
 import { createRelayClient } from '../relay-client';
 import { getOrCreateDevice } from '../device';
@@ -145,7 +147,19 @@ function reportDecryptFailed(event: DecryptFailedEvent): void {
  *
  * Refs: KIN-039, KIN-040
  */
-export function useRelaySync(): { connected: boolean } {
+/**
+ * Ref module-scope : stocke la dernière fonction `sendPing` retournée par
+ * `useRelaySync`, lue par `usePeerDosePing` pour transmettre un ping sans
+ * dupliquer la connexion WS. L'init est un no-op silencieux : si le relais
+ * n'est pas encore monté (bootstrap), les pings sont perdus et retentés au
+ * prochain changement du doc (watcher réentrant), ou dédupliqués côté relais
+ * au retour réseau.
+ */
+const peerPingSenderRef: { current: (ping: PeerPingMessage) => void } = {
+  current: () => undefined,
+};
+
+export function useRelaySync(): { connected: boolean; sendPing: (p: PeerPingMessage) => void } {
   const result = useRelaySyncCore({
     useAccessToken: () => useAuthStore((s) => s.accessToken),
     useDeviceId: () => useAuthStore((s) => s.deviceId),
@@ -166,7 +180,34 @@ export function useRelaySync(): { connected: boolean } {
   React.useEffect(() => {
     setConnected(result.connected);
   }, [result.connected, setConnected]);
+
+  // Expose `sendPing` au module : `usePeerDosePing` (monté plus bas dans le
+  // même bootstrap) le consomme sans couplage direct au hook.
+  React.useEffect(() => {
+    peerPingSenderRef.current = result.sendPing;
+    return () => {
+      peerPingSenderRef.current = () => undefined;
+    };
+  }, [result.sendPing]);
+
   return result;
+}
+
+/**
+ * Wrapper applicatif qui monte le watcher `usePeerDosePing` (KIN-082) :
+ * détecte les nouvelles `DoseAdministered` émises par ce device et envoie
+ * un `peer_ping` au relais pour déclencher la notification croisée (RM5).
+ *
+ * Doit être rendu **après** `useRelaySync` dans le même arbre pour que
+ * `peerPingSenderRef` soit alimenté avant la première détection.
+ */
+function usePeerDosePing(): void {
+  usePeerDosePingCore({
+    useDoc: () => useDocStore((s) => s.doc),
+    useDeviceId: () => useAuthStore((s) => s.deviceId),
+    sendPeerPing: (ping) => peerPingSenderRef.current(ping),
+    now: () => new Date(),
+  });
 }
 
 // Composant shell applicatif (3 lignes). Intentionnellement dupliqué web/mobile
@@ -184,6 +225,7 @@ export function RelaySyncBootstrap(): null {
   useRelaySync();
   usePullDelta();
   useSyncBatchFallback();
+  usePeerDosePing();
   return null;
 }
 
