@@ -10,7 +10,7 @@ Thank you for considering contributing to Kinhale! This project exists because p
 
 ### Code of Conduct
 
-This project adheres to the [Contributor Covenant](./CODE_OF_CONDUCT.md). By participating, you are expected to uphold it. Report unacceptable behaviour to `conduct@kinhale.app`.
+This project adheres to the [Contributor Covenant](./CODE_OF_CONDUCT.md). By participating, you are expected to uphold it. Report unacceptable behaviour to `community@kinhale.health`.
 
 ### How can I contribute?
 
@@ -106,7 +106,7 @@ Merci d'envisager une contribution à Kinhale ! Ce projet existe parce que des p
 
 ### Code de conduite
 
-Ce projet adhère au [Contributor Covenant](./CODE_OF_CONDUCT.md). En participant, vous vous engagez à le respecter. Signalez tout comportement inacceptable à `conduct@kinhale.app`.
+Ce projet adhère au [Contributor Covenant](./CODE_OF_CONDUCT.md). En participant, vous vous engagez à le respecter. Signalez tout comportement inacceptable à `community@kinhale.health`.
 
 ### Comment contribuer ?
 

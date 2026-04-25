@@ -1,0 +1,24 @@
+# Kinhale — Caddy reverse proxy for self-hosted production.
+# This file is mounted read-only into the kinhale_caddy_prod container.
+#
+# Customise the hostnames to match KINHALE_HOSTNAME and KINHALE_WEB_HOSTNAME
+# in your .env.prod, then restart the caddy service:
+#   docker compose -f infra/docker/docker-compose.prod.yml restart caddy
+#
+# Caddy negotiates Let's Encrypt certificates automatically. The host needs
+# inbound 80 + 443 reachable from the public internet.
+
+{$KINHALE_HOSTNAME} {
+    encode zstd gzip
+    @websocket {
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+    reverse_proxy @websocket api:3002
+    reverse_proxy api:3002
+}
+
+{$KINHALE_WEB_HOSTNAME} {
+    encode zstd gzip
+    reverse_proxy web:3000
+}

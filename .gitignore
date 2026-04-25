@@ -76,12 +76,19 @@ logs/
 *.pem
 *.key
 *.p12
+*.p8
 *.keystore
 *.jks
 !google-services.json.example
 !GoogleService-Info.plist.example
 google-services.json
 GoogleService-Info.plist
+secrets/
+private/
+
+# Self-hosting production env files (only the *.example template is committed)
+infra/docker/.env.prod
+infra/docker/.env.production
 
 # AWS
 .aws-sam/
@@ -100,6 +107,7 @@ temp/
 *.swo
 *~
 
-# Claude Code runtime
+# Claude Code runtime — local-only, never publish
+.claude/
 .claude/scheduled_tasks.lock
 .claude/session-*.json

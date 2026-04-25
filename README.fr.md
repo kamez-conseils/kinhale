@@ -3,7 +3,7 @@
 > _Un journal de suivi des pompes d'asthme pour enfant, chiffré de bout en bout et local d'abord — pensé par des aidants, pour les aidants._
 
 [![Licence : AGPL v3](https://img.shields.io/badge/Licence-AGPL_v3-blue.svg)](./LICENSE)
-[![Statut](https://img.shields.io/badge/statut-pré--alpha-orange.svg)]()
+[![Statut](https://img.shields.io/badge/statut-aperçu_v1.0-orange.svg)]()
 [![EN](https://img.shields.io/badge/lang-english-blue.svg)](./README.md)
 
 > **English: [read this README in English →](./README.md)**
@@ -57,17 +57,49 @@ Kinhale est un **outil de journalisation, de rappel et de partage**. Il ne recom
 
 ## État du projet
 
-Kinhale est en **pré-alpha**. Le développement actif commence au Sprint 0 du plan de livraison Kamez Conseils.
+Kinhale est en **aperçu v1.0**. Le code est en développement actif ; une
+instance officielle hébergée par Kamez Conseils en `ca-central-1` est prévue
+avec la sortie de la v1.0. Le self-hosting est supporté en *best effort* —
+voir le guide ci-dessous.
 
-## Démarrer
+## Démarrage rapide — développement
 
-La documentation développeur arrive dans `/docs/` dès l'ouverture du Sprint 0. Pour l'instant :
+```bash
+git clone https://github.com/kamez-conseils/kinhale.git
+cd kinhale
+pnpm install
+docker compose -f infra/docker/docker-compose.yml up -d
+pnpm dev
+```
 
-- Vue d'architecture : `docs/architecture/` *(à venir)*
+Le compose de développement embarque PostgreSQL, Redis, Mailpit (SMTP) et
+MinIO (S3) sur des ports locaux — voir
+[`infra/docker/README.md`](./infra/docker/README.md).
+
+## Démarrage rapide — self-hosting
+
+Si vous voulez exécuter votre propre relais (clinique, collectif
+d'auto-hébergement, déploiement familial), le guide complet est dans
+[`docs/user/SELF_HOSTING.md`](./docs/user/SELF_HOSTING.md). Version courte :
+
+```bash
+git clone https://github.com/kamez-conseils/kinhale.git
+cd kinhale
+git checkout v1.0.0
+cp infra/docker/.env.prod.example infra/docker/.env.prod
+# éditer infra/docker/.env.prod avec vos secrets et noms d'hôte
+docker compose -f infra/docker/docker-compose.prod.yml --env-file infra/docker/.env.prod up -d
+```
+
+## Documentation
+
+- Vue d'architecture : [`docs/architecture/ARCHITECTURE.md`](./docs/architecture/ARCHITECTURE.md)
+- Décisions d'architecture : [`docs/architecture/adr/`](./docs/architecture/adr/)
 - Guide de contribution : [CONTRIBUTING.md](./CONTRIBUTING.md)
-- Workflow Git (Gitflow) : `docs/contributing/GITFLOW.md`
+- Workflow Git (Gitflow) : [`docs/contributing/GITFLOW.md`](./docs/contributing/GITFLOW.md)
 - Politique de divulgation de vulnérabilités : [SECURITY.md](./SECURITY.md)
 - Code de conduite : [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
+- Guide de self-hosting : [`docs/user/SELF_HOSTING.md`](./docs/user/SELF_HOSTING.md)
 
 ## Licence
 
