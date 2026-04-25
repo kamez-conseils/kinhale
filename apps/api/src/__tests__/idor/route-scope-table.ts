@@ -54,6 +54,8 @@ export const ROUTE_SCOPE_TABLE: Record<string, RouteScope> = {
   'POST /audit/report-generated': 'self_scoped',
   'POST /audit/report-shared': 'self_scoped',
   'POST /audit/privacy-export': 'self_scoped',
+  // KIN-093 / E9-S09 — lecture du journal d'audit du compte courant.
+  'GET /me/audit-events': 'self_scoped',
 
   // --- Relais WS + catchup (household-scoped) ---------------------------
   // WebSocket upgrade — skippé par le test REST (auth WS dédiée).

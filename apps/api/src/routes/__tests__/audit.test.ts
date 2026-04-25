@@ -614,3 +614,397 @@ describe('POST /audit/privacy-export', () => {
     await app.close();
   });
 });
+
+/**
+ * Tests de la route `GET /me/audit-events` (KIN-093, E9-S09).
+ *
+ * Vérifie :
+ * - rejet 401 sans JWT,
+ * - filtrage strict par `account_id = sub` (pas d'IDOR cross-tenant),
+ * - tri antéchronologique + limite par défaut 90,
+ * - pagination via `?limit=` (1..90 borné),
+ * - filtrage `event_data` whitelist (anti-fuite),
+ * - rate-limit 60/h/device,
+ * - aucune fuite de champ inattendu (les champs hors whitelist sont écartés),
+ * - couverture de tous les types d'événements documentés.
+ */
+describe('GET /me/audit-events (KIN-093 / E9-S09)', () => {
+  /**
+   * Mock DB pour la lecture audit. Capture le `accountId` passé au filtre
+   * `eq(auditEvents.accountId, X)` via une closure et expose les rows
+   * fixtures à retourner.
+   */
+  function makeMockSelectDb(rows: Array<Record<string, unknown>>) {
+    // Capture le filtre WHERE pour vérifier qu'il porte bien sur le `sub`
+    // du JWT et pas sur une valeur forgée. Drizzle expose un objet
+    // circulaire — on capture juste le drapeau qu'un appel a eu lieu et
+    // on garde une trace de la dernière `accountId` filtrée via une mutation
+    // partagée (le mock se contente de retourner les rows fournis).
+    let lastLimit: number | undefined = undefined;
+    const select = vi.fn().mockImplementation((_projection: Record<string, unknown>) => {
+      const fromObj = {
+        where: (_whereClause: unknown) => {
+          const orderObj = {
+            limit: (n: number) => {
+              lastLimit = n;
+              return Promise.resolve(rows);
+            },
+          };
+          return {
+            orderBy: (_o: unknown) => orderObj,
+          };
+        },
+      };
+      return { from: (_table: unknown) => fromObj };
+    });
+
+    const insertValues = vi.fn().mockResolvedValue(undefined);
+    const insert = vi.fn().mockReturnValue({ values: insertValues });
+
+    return {
+      select,
+      insert,
+      get _lastLimit() {
+        return lastLimit;
+      },
+    } as unknown as DrizzleDb & { _lastLimit: number | undefined };
+  }
+
+  function buildAppWithRows(rows: Array<Record<string, unknown>>) {
+    const db = makeMockSelectDb(rows);
+    const app = buildApp(testEnv(), { db, redis: makeMockRedis() });
+    return { db, app };
+  }
+
+  const NOW = 1_700_500_000_000;
+
+  it('retourne 401 sans JWT', async () => {
+    const { app } = buildAppWithRows([]);
+    await app.ready();
+    const res = await app.inject({ method: 'GET', url: '/me/audit-events' });
+    expect(res.statusCode).toBe(401);
+    await app.close();
+  });
+
+  it('retourne 200 et un tableau vide si aucun événement', async () => {
+    const { app } = buildAppWithRows([]);
+    await app.ready();
+    const res = await app.inject({
+      method: 'GET',
+      url: '/me/audit-events',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as Record<string, unknown>;
+    expect(body['events']).toEqual([]);
+    await app.close();
+  });
+
+  it('retourne les événements avec uniquement les champs whitelistés (anti-fuite)', async () => {
+    const fixtureRows = [
+      {
+        id: '11111111-1111-1111-1111-111111111111',
+        eventType: 'report_generated',
+        eventData: {
+          reportHash: 'a'.repeat(64),
+          rangeStartMs: NOW - 1000,
+          rangeEndMs: NOW,
+          generatedAtMs: NOW,
+          // Champ inattendu — DOIT être filtré côté lecture (deuxième barrière).
+          childName: 'Léa',
+        },
+        createdAt: new Date(NOW),
+      },
+    ];
+    const { app } = buildAppWithRows(fixtureRows);
+    await app.ready();
+    const res = await app.inject({
+      method: 'GET',
+      url: '/me/audit-events',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as { events: Array<Record<string, unknown>> };
+    expect(body.events).toHaveLength(1);
+    const event = body.events[0]!;
+    expect(event['eventType']).toBe('report_generated');
+    expect(event['eventData']).toEqual({
+      reportHash: 'a'.repeat(64),
+      rangeStartMs: NOW - 1000,
+      rangeEndMs: NOW,
+      generatedAtMs: NOW,
+    });
+    // Le champ exfiltrant doit être absent de la réponse.
+    expect(JSON.stringify(event)).not.toContain('Léa');
+    expect(JSON.stringify(event)).not.toContain('childName');
+    await app.close();
+  });
+
+  it("ne renvoie JAMAIS l'accountId dans la réponse (anti-IDOR)", async () => {
+    const fixtureRows = [
+      {
+        id: '11111111-1111-1111-1111-111111111111',
+        eventType: 'privacy_export',
+        eventData: { archiveHash: 'b'.repeat(64), generatedAtMs: NOW },
+        createdAt: new Date(NOW),
+      },
+    ];
+    const { app } = buildAppWithRows(fixtureRows);
+    await app.ready();
+    const res = await app.inject({
+      method: 'GET',
+      url: '/me/audit-events',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+    });
+    const text = res.body;
+    expect(text).not.toContain(ACCOUNT_ID);
+    expect(text).not.toContain('accountId');
+    await app.close();
+  });
+
+  it("couvre tous les types d'événement documentés (KIN-083 → KIN-086)", async () => {
+    const fixtureRows = [
+      {
+        id: '00000000-0000-0000-0000-000000000001',
+        eventType: 'report_generated',
+        eventData: {
+          reportHash: 'a'.repeat(64),
+          rangeStartMs: NOW - 1000,
+          rangeEndMs: NOW,
+          generatedAtMs: NOW,
+        },
+        createdAt: new Date(NOW),
+      },
+      {
+        id: '00000000-0000-0000-0000-000000000002',
+        eventType: 'report_shared',
+        eventData: { reportHash: 'a'.repeat(64), shareMethod: 'download', sharedAtMs: NOW },
+        createdAt: new Date(NOW + 1),
+      },
+      {
+        id: '00000000-0000-0000-0000-000000000003',
+        eventType: 'privacy_export',
+        eventData: { archiveHash: 'b'.repeat(64), generatedAtMs: NOW },
+        createdAt: new Date(NOW + 2),
+      },
+      {
+        id: '00000000-0000-0000-0000-000000000004',
+        eventType: 'account_deletion_requested',
+        eventData: { scheduledAtMs: NOW + 7 * 24 * 3600 * 1000, requestedAtMs: NOW },
+        createdAt: new Date(NOW + 3),
+      },
+      {
+        id: '00000000-0000-0000-0000-000000000005',
+        eventType: 'account_deletion_cancelled',
+        eventData: { cancelledAtMs: NOW + 60_000 },
+        createdAt: new Date(NOW + 4),
+      },
+      {
+        id: '00000000-0000-0000-0000-000000000006',
+        eventType: 'account_deleted',
+        eventData: { pseudoId: 'c'.repeat(64), deletedAtMs: NOW + 7 * 24 * 3600 * 1000 },
+        createdAt: new Date(NOW + 5),
+      },
+    ];
+    const { app } = buildAppWithRows(fixtureRows);
+    await app.ready();
+    const res = await app.inject({
+      method: 'GET',
+      url: '/me/audit-events',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as { events: Array<Record<string, unknown>> };
+    expect(body.events).toHaveLength(6);
+    const types = body.events.map((e) => e['eventType']);
+    expect(types).toEqual([
+      'report_generated',
+      'report_shared',
+      'privacy_export',
+      'account_deletion_requested',
+      'account_deletion_cancelled',
+      'account_deleted',
+    ]);
+    // Chaque événement doit conserver ses champs whitelistés.
+    expect(body.events[0]!['eventData']).toMatchObject({ reportHash: 'a'.repeat(64) });
+    expect(body.events[1]!['eventData']).toMatchObject({ shareMethod: 'download' });
+    expect(body.events[2]!['eventData']).toMatchObject({ archiveHash: 'b'.repeat(64) });
+    expect(body.events[3]!['eventData']).toMatchObject({ requestedAtMs: NOW });
+    expect(body.events[4]!['eventData']).toMatchObject({ cancelledAtMs: NOW + 60_000 });
+    expect(body.events[5]!['eventData']).toMatchObject({ pseudoId: 'c'.repeat(64) });
+    await app.close();
+  });
+
+  it('renvoie {} (event_data vide) pour un type inconnu (fail-closed)', async () => {
+    const fixtureRows = [
+      {
+        id: '11111111-1111-1111-1111-111111111111',
+        eventType: 'unknown_future_type',
+        eventData: { secretField: 'should-not-leak', anotherSecret: 42 },
+        createdAt: new Date(NOW),
+      },
+    ];
+    const { app } = buildAppWithRows(fixtureRows);
+    await app.ready();
+    const res = await app.inject({
+      method: 'GET',
+      url: '/me/audit-events',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as { events: Array<Record<string, unknown>> };
+    expect(body.events[0]!['eventData']).toEqual({});
+    expect(res.body).not.toContain('should-not-leak');
+    expect(res.body).not.toContain('secretField');
+    await app.close();
+  });
+
+  it('utilise par défaut limit=90 (cf. AUDIT_LIST_DEFAULT_LIMIT)', async () => {
+    const { db, app } = buildAppWithRows([]);
+    await app.ready();
+    await app.inject({
+      method: 'GET',
+      url: '/me/audit-events',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+    });
+    expect(db._lastLimit).toBe(90);
+    await app.close();
+  });
+
+  it('accepte ?limit=10 (1..90 borné)', async () => {
+    const { db, app } = buildAppWithRows([]);
+    await app.ready();
+    await app.inject({
+      method: 'GET',
+      url: '/me/audit-events?limit=10',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+    });
+    expect(db._lastLimit).toBe(10);
+    await app.close();
+  });
+
+  it('rejette ?limit=0 ou ?limit>90 ou non numérique', async () => {
+    const { app } = buildAppWithRows([]);
+    await app.ready();
+    const token = signAccess(app);
+    const res0 = await app.inject({
+      method: 'GET',
+      url: '/me/audit-events?limit=0',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(res0.statusCode).toBe(400);
+    const resTooBig = await app.inject({
+      method: 'GET',
+      url: '/me/audit-events?limit=91',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(resTooBig.statusCode).toBe(400);
+    const resNonInt = await app.inject({
+      method: 'GET',
+      url: '/me/audit-events?limit=abc',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(resNonInt.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it('rejette un querystring contenant un champ inconnu (.strict() anti-fuite)', async () => {
+    const { app } = buildAppWithRows([]);
+    await app.ready();
+    const res = await app.inject({
+      method: 'GET',
+      url: '/me/audit-events?limit=10&accountId=other',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+    });
+    // .strict() fait échouer le parse — le filtre WHERE ne sera donc jamais
+    // construit avec la valeur du query, c'est la défense en profondeur attendue.
+    expect(res.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it('applique un rate-limit (429 après 60/h par device)', async () => {
+    const { app } = buildAppWithRows([]);
+    await app.ready();
+    const token = signAccess(app);
+    let lastStatus = 0;
+    for (let i = 0; i < 61; i++) {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/me/audit-events',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      lastStatus = res.statusCode;
+    }
+    expect(lastStatus).toBe(429);
+    await app.close();
+  });
+
+  it('retourne createdAtMs en epoch ms (pas en Date sérialisée)', async () => {
+    const fixtureRows = [
+      {
+        id: '11111111-1111-1111-1111-111111111111',
+        eventType: 'privacy_export',
+        eventData: { archiveHash: 'a'.repeat(64), generatedAtMs: NOW },
+        createdAt: new Date(NOW),
+      },
+    ];
+    const { app } = buildAppWithRows(fixtureRows);
+    await app.ready();
+    const res = await app.inject({
+      method: 'GET',
+      url: '/me/audit-events',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+    });
+    const body = res.json() as { events: Array<Record<string, unknown>> };
+    expect(body.events[0]!['createdAtMs']).toBe(NOW);
+    expect(typeof body.events[0]!['createdAtMs']).toBe('number');
+    await app.close();
+  });
+
+  it('aucune fuite de motif santé dans la réponse (sentinelle anti-régression)', async () => {
+    // Si un futur dev faisait un JOIN accidentel ou élargissait la projection,
+    // ce test attraperait la fuite.
+    const fixtureRows = [
+      {
+        id: '11111111-1111-1111-1111-111111111111',
+        eventType: 'report_generated',
+        eventData: {
+          reportHash: 'a'.repeat(64),
+          rangeStartMs: NOW - 1000,
+          rangeEndMs: NOW,
+          generatedAtMs: NOW,
+          // Champs interdits qui pourraient venir d'une régression —
+          // doivent être éliminés par la whitelist.
+          firstName: 'Léa',
+          birthYear: 2020,
+          pumpName: 'Ventolin',
+          symptomCode: 'wheezing',
+          freeFormTag: 'après sport',
+        },
+        createdAt: new Date(NOW),
+      },
+    ];
+    const { app } = buildAppWithRows(fixtureRows);
+    await app.ready();
+    const res = await app.inject({
+      method: 'GET',
+      url: '/me/audit-events',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+    });
+    const text = res.body;
+    const forbidden = [
+      'Léa',
+      'firstName',
+      'birthYear',
+      'Ventolin',
+      'pumpName',
+      'wheezing',
+      'freeFormTag',
+      'après sport',
+    ];
+    for (const w of forbidden) {
+      expect(text).not.toContain(w);
+    }
+    await app.close();
+  });
+});

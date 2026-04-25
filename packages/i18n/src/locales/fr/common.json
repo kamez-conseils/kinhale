@@ -367,6 +367,24 @@
     "contactLabel": "Contact RPRP",
     "contactValue": "privacy@kinhale.health"
   },
+  "audit": {
+    "page": {
+      "title": "Activité du foyer",
+      "subtitle": "Les 90 derniers événements concernant votre compte. Aucune donnée santé n'est jamais transmise au serveur — seuls des hashes opaques et des horodatages sont conservés.",
+      "listHeading": "Événements récents",
+      "empty": "Aucune activité enregistrée pour le moment.",
+      "loadError": "Impossible de charger l'historique d'activité."
+    },
+    "event": {
+      "report_generated": "Rapport médecin généré",
+      "report_shared": "Rapport médecin partagé",
+      "privacy_export": "Export de portabilité téléchargé",
+      "account_deletion_requested": "Demande de suppression de compte",
+      "account_deletion_cancelled": "Suppression de compte annulée",
+      "account_deleted": "Compte supprimé",
+      "other": "Autre événement"
+    }
+  },
   "privacyExport": {
     "title": "Exporter mes données",
     "description": "Exercez votre droit à la portabilité (RGPD art. 20 / Loi 25 art. 30). L'archive ZIP est générée intégralement sur votre appareil — le serveur Kinhale ne voit jamais vos données santé.",
