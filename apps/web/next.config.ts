@@ -1,7 +1,15 @@
+import path from 'node:path';
 import type { NextConfig } from 'next';
 import { withTamagui } from '@tamagui/next-plugin';
 
 const nextConfig: NextConfig = {
+  // Build autonome : copie node_modules + serveur Node minimal dans
+  // `.next/standalone`, exploité par `apps/web/Dockerfile.prod` pour produire
+  // une image runtime ~150 Mo au lieu de ~1.2 Go (full workspace install).
+  // En monorepo pnpm, la racine du workspace doit être indiquée pour que le
+  // tracer Next inclue les fichiers de `packages/*` dans `.next/standalone`.
+  output: 'standalone',
+  outputFileTracingRoot: path.resolve(__dirname, '../..'),
   transpilePackages: [
     'react-native-web',
     'tamagui',

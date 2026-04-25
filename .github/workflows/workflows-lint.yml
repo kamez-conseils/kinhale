@@ -1,0 +1,32 @@
+# Meta-workflow: lint the repo's GitHub Actions definitions.
+#
+# Runs `actionlint` (community tool, single static binary) on every PR that
+# touches `.github/`. Catches obvious YAML/Action mistakes (typos in `uses`,
+# wrong runner names, malformed expressions) before we waste a real CI run.
+#
+# Tracking: KIN-090 / E14-S04.
+
+name: Workflows lint
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - '.github/workflows-lint.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run actionlint
+        run: |
+          set -e
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7
+          ./actionlint -color

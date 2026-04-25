@@ -13,10 +13,11 @@
 #   internal services, mandatory secrets (no defaults), and Caddy in front
 #   of the relay + web app for automatic Let's Encrypt TLS.
 # - Multi-stage hardened production Dockerfiles (apps/api/Dockerfile.prod,
-#   apps/web/Dockerfile.prod with Next standalone output) are tracked under
-#   ticket E14-S04 (CI/CD pipeline). For v1.0 preview self-hosters, the
-#   existing apps/api/Dockerfile and apps/web/Dockerfile work but produce
-#   larger images than the eventual prod build.
+#   apps/web/Dockerfile.prod with Next standalone output) ship since
+#   KIN-090 (E14-S04). They run as a non-root `kinhale` user with a
+#   liveness healthcheck and use ~150 Mo runtime images. The dev
+#   Dockerfiles (apps/api/Dockerfile, apps/web/Dockerfile) remain as the
+#   `pnpm dev` entry points and are used by the dev compose only.
 #
 # Notes:
 # - All passwords / secrets MUST come from the env file. Variables marked
@@ -76,7 +77,7 @@ services:
   api:
     build:
       context: ../..
-      dockerfile: apps/api/Dockerfile
+      dockerfile: apps/api/Dockerfile.prod
     container_name: kinhale_api_prod
     restart: unless-stopped
     depends_on:
@@ -110,7 +111,7 @@ services:
   web:
     build:
       context: ../..
-      dockerfile: apps/web/Dockerfile
+      dockerfile: apps/web/Dockerfile.prod
     container_name: kinhale_web_prod
     restart: unless-stopped
     depends_on:

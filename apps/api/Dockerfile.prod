@@ -1,0 +1,82 @@
+# syntax=docker/dockerfile:1.7
+#
+# Production image for Kinhale API (Fastify 5).
+#
+# Multi-stage build:
+#   1. `deps`    : install full pnpm workspace (workspace packages export `.ts`
+#                   directly via NodeNext, so we keep TypeScript at runtime
+#                   through `tsx`).
+#   2. `runtime` : minimal Node 20 LTS Alpine, non-root, no shell utilities
+#                   beyond what `tsx` needs. Healthcheck + read-only friendly.
+#
+# Built and pushed by `.github/workflows/build-images.yml` to
+# `ghcr.io/kamez-conseils/kinhale-api`.
+#
+# Tracking: KIN-090 / E14-S04. Real deployment is KIN-091 / E14-S06.
+
+ARG NODE_IMAGE=node:20.19-alpine
+
+# ---- Stage 1: deps ---------------------------------------------------------
+FROM ${NODE_IMAGE} AS deps
+WORKDIR /app
+
+# Toolchain for native module builds (e.g. better-sqlite, libpq optional deps).
+RUN apk add --no-cache libc6-compat python3 make g++ \
+ && corepack enable \
+ && corepack prepare pnpm@10.33.0 --activate
+
+# Manifests first to maximise Docker layer caching.
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json tsconfig.base.json ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/crypto/package.json ./packages/crypto/
+COPY packages/domain/package.json ./packages/domain/
+COPY packages/eslint-config/package.json ./packages/eslint-config/
+COPY packages/tsconfig/package.json ./packages/tsconfig/
+COPY packages/test-utils/package.json ./packages/test-utils/
+
+# Install full deps (tsx is in devDependencies but required at runtime).
+RUN --mount=type=cache,id=pnpm-store-api,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --prefer-offline
+
+# Copy workspace sources needed at runtime.
+COPY apps/api ./apps/api
+COPY packages/crypto ./packages/crypto
+COPY packages/domain ./packages/domain
+COPY packages/tsconfig ./packages/tsconfig
+
+# Sanity: typecheck the API once during build (fail fast on broken images).
+RUN pnpm --filter @kinhale/api typecheck
+
+# ---- Stage 2: runtime ------------------------------------------------------
+FROM ${NODE_IMAGE} AS runtime
+WORKDIR /app
+
+ENV NODE_ENV=production \
+    PORT=3002 \
+    DISABLE_PURGE_WORKER=0 \
+    NPM_CONFIG_UPDATE_NOTIFIER=false
+
+RUN apk add --no-cache tini libc6-compat \
+ && addgroup -S kinhale -g 1001 \
+ && adduser -S kinhale -G kinhale -u 1001
+
+# Copy installed workspace from `deps`. We keep dev deps because workspace
+# packages export `.ts` directly and the API runs through `tsx`.
+COPY --from=deps --chown=kinhale:kinhale /app /app
+
+USER kinhale
+
+EXPOSE 3002
+
+# Minimal HTTP healthcheck against the public liveness endpoint.
+# Falls back gracefully if the route is missing — the relay always answers
+# 200 on `/health` (see `apps/api/src/app.ts`).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "require('http').get('http://127.0.0.1:'+ (process.env.PORT||3002) +'/health', r => process.exit(r.statusCode===200?0:1)).on('error', () => process.exit(1))"
+
+WORKDIR /app/apps/api
+
+ENTRYPOINT ["/sbin/tini", "--"]
+# Invoke the local `tsx` binary directly — avoids reaching for `pnpm exec`
+# (which would re-trigger corepack to re-download pnpm on every cold start).
+CMD ["./node_modules/.bin/tsx", "src/index.ts"]

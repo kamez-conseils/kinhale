@@ -1,3 +1,11 @@
+# End-to-end web tests — Playwright (Chromium + WebKit).
+#
+# Triggered on PRs that touch the web app or shared packages, and on push to
+# `develop` / `main`. Reuses the shared setup composite so Node / pnpm /
+# cache strategy stays consistent with the main CI workflow.
+#
+# Tracking: KIN-090 / E14-S04.
+
 name: E2E Web (Playwright)
 
 on:
@@ -9,38 +17,44 @@ on:
       - 'packages/sync/**'
       - 'packages/crypto/**'
       - '.github/workflows/e2e-web.yml'
+      - '.github/actions/setup/**'
   push:
     branches:
       - develop
       - main
 
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-web-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   playwright:
-    timeout-minutes: 15
+    name: Playwright (chromium + webkit)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.33.0
-      - name: Setup Node 20
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
       - name: Install Playwright browsers
         run: pnpm --filter @kinhale/web exec playwright install --with-deps chromium webkit
+
       - name: Run Playwright tests
         run: pnpm e2e:web
         env:
           NEXT_PUBLIC_API_URL: http://localhost:3002
+
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ github.run_id }}
           path: apps/web/playwright-report/
           retention-days: 7
+          if-no-files-found: warn

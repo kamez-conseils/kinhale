@@ -10,7 +10,6 @@ import {
   buildReportStrings,
   generateMedicalCsv,
   generateMedicalReport,
-  MS_PER_DAY,
   presetRange,
   validateDateRange,
   type DateRange,
@@ -445,5 +444,3 @@ function buildLookup(
   }
   return (doseId: string) => map.get(doseId) ?? null;
 }
-
-export { MS_PER_DAY };

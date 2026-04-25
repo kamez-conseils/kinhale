@@ -2,7 +2,12 @@
 
 > _Un journal de suivi des pompes d'asthme pour enfant, chiffré de bout en bout et local d'abord — pensé par des aidants, pour les aidants._
 
+[![CI](https://github.com/kamez-conseils/kinhale/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/kamez-conseils/kinhale/actions/workflows/ci.yml)
+[![E2E Web](https://github.com/kamez-conseils/kinhale/actions/workflows/e2e-web.yml/badge.svg?branch=develop)](https://github.com/kamez-conseils/kinhale/actions/workflows/e2e-web.yml)
+[![Scan sécurité](https://github.com/kamez-conseils/kinhale/actions/workflows/security-scan.yml/badge.svg)](https://github.com/kamez-conseils/kinhale/actions/workflows/security-scan.yml)
+[![Couverture](https://codecov.io/gh/kamez-conseils/kinhale/branch/develop/graph/badge.svg)](https://codecov.io/gh/kamez-conseils/kinhale)
 [![Licence : AGPL v3](https://img.shields.io/badge/Licence-AGPL_v3-blue.svg)](./LICENSE)
+[![Version](https://img.shields.io/github/v/tag/kamez-conseils/kinhale?label=version&sort=semver)](https://github.com/kamez-conseils/kinhale/releases)
 [![Statut](https://img.shields.io/badge/statut-aperçu_v1.0-orange.svg)]()
 [![EN](https://img.shields.io/badge/lang-english-blue.svg)](./README.md)
 

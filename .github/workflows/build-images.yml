@@ -1,0 +1,149 @@
+# Build & push Docker images — Kinhale API + Web.
+#
+# Triggers
+#   - push to `develop`             → tags: `develop`, `<short-sha>`
+#   - push to a tag matching `v*`   → tags: `<tag>`, `<short-sha>`, `latest`
+#   - manual `workflow_dispatch`    → tags: `<short-sha>` (smoke test)
+#
+# Images are pushed to `ghcr.io/<owner>/kinhale-api` and
+# `ghcr.io/<owner>/kinhale-web`. Multi-arch (amd64 + arm64) is built so the
+# same artefacts can run on Apple Silicon laptops, Graviton EC2, and the
+# default x86_64 self-hosting target.
+#
+# Each image is then scanned by Trivy; results are uploaded as SARIF to
+# GitHub's code scanning tab so high/critical findings are reviewable.
+#
+# IMPORTANT — scope KIN-090
+#   This workflow ONLY builds and publishes images. Real deployment to
+#   staging / prod is out of scope and tracked by KIN-091 (depends on
+#   E14-S06: Kamez Conseils ca-central-1 infra + secrets).
+#
+# Security
+#   - `permissions:` is scoped per-job (least privilege).
+#   - `pull_request_target` is intentionally NOT used (no privileged build of
+#     fork PR code → no supply-chain pwn vector).
+#   - All third-party actions are pinned to a major SemVer release; the
+#     security audit (kz-securite-KIN-090.md) lists the rationale.
+
+name: Build Docker images
+
+on:
+  push:
+    branches: [develop]
+    tags: ['v*']
+  workflow_dispatch:
+
+# Default: deny everything. Each job adds only what it needs.
+permissions: {}
+
+concurrency:
+  group: build-images-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_OWNER: ${{ github.repository_owner }}
+  PLATFORMS: linux/amd64,linux/arm64
+
+jobs:
+  build:
+    name: Build · ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+      # Allow uploading the Trivy SARIF.
+      security-events: write
+      # Required for OIDC-based image signing (cosign keyless) — used in a
+      # follow-up step but reserved here so we don't have to bump perms later.
+      id-token: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: api
+            image: kinhale-api
+            dockerfile: apps/api/Dockerfile.prod
+          - app: web
+            image: kinhale-web
+            dockerfile: apps/web/Dockerfile.prod
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags + labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ matrix.image }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,format=short
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+          labels: |
+            org.opencontainers.image.title=Kinhale ${{ matrix.app }}
+            org.opencontainers.image.description=Kinhale ${{ matrix.app }} — local-first E2EE asthma tracker for caregivers
+            org.opencontainers.image.licenses=AGPL-3.0-only
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.vendor=Kamez Conseils
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: ${{ env.PLATFORMS }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: true
+          sbom: true
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+      - name: Trivy vulnerability scan (image)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          # Scan the first tag — all share the same digest.
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ matrix.image }}@${{ steps.build.outputs.digest }}
+          format: sarif
+          output: trivy-${{ matrix.app }}.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '0'
+
+      - name: Upload Trivy SARIF to GitHub Security
+        if: ${{ !cancelled() }}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-${{ matrix.app }}.sarif
+          category: trivy-${{ matrix.app }}
+
+      - name: Trivy vulnerability scan (table — for logs)
+        if: ${{ !cancelled() }}
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ matrix.image }}@${{ steps.build.outputs.digest }}
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '0'

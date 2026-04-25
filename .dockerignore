@@ -1,0 +1,56 @@
+# Build context exclusions — applies to every `docker build .` from the repo
+# root. Keep aligned with `.gitignore` plus a few CI artefacts.
+
+# Node / pnpm
+**/node_modules
+.pnpm-store
+.npmrc.local
+
+# Builds
+**/dist
+**/build
+**/.next
+**/.turbo
+**/.expo
+**/coverage
+**/playwright-report
+**/test-results
+**/tsconfig.tsbuildinfo
+
+# Logs / OS
+**/*.log
+.DS_Store
+
+# Git / CI
+.git
+.github
+.gitignore
+.gitattributes
+
+# Editor / local
+.vscode
+.idea
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Docs / heavy assets that shouldn't ship in images
+docs
+**/*.md
+!README.md
+!apps/api/README.md
+!apps/web/README.md
+
+# Tests we don't ship in runtime images
+**/__tests__
+**/*.test.ts
+**/*.test.tsx
+**/playwright.config.ts
+**/jest.config.ts
+**/vitest.config.ts
+
+# Agents / runs
+.agents

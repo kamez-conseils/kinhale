@@ -1,3 +1,23 @@
+# Continuous integration — Kinhale monorepo.
+#
+# Runs on pull requests targeting `main` / `develop` / `release/**` and on
+# pushes to `develop` / `main`. Jobs are split so contributors get fast
+# feedback per category (format, lint, typecheck, test, build) and so a
+# failure in one stays scoped.
+#
+# All jobs share the same setup composite (see `.github/actions/setup`) which
+# caches the pnpm store and the Turborepo remote-effect cache (`~/.turbo`).
+# Heavy packages are tested twice: once on Ubuntu glibc, once on Alpine musl
+# (mirrors the production runtime — Docker images are based on
+# `node:20-alpine`).
+#
+# Coverage from `vitest --coverage` is uploaded as artefacts (and to Codecov
+# when a token is configured) so reviewers can inspect the diff coverage.
+#
+# Tracking: KIN-090 / E14-S04. Permissions are minimal per workflow as a
+# defence-in-depth measure against supply-chain attacks (KIN-090 security
+# review).
+
 name: CI
 
 on:
@@ -6,76 +26,143 @@ on:
   push:
     branches: [main, develop]
 
+# Default to no privileges; individual jobs grant only what they need.
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  PNPM_VERSION: '10.33.0'
+  # Disable Turbo's anonymous telemetry in CI.
+  TURBO_TELEMETRY_DISABLED: '1'
+  DO_NOT_TRACK: '1'
+
 jobs:
-  lint-typecheck-test:
-    name: Lint · Typecheck · Test
+  # --------------------------------------------------------------------------
+  # Format check — fastest job, fail the PR before doing anything heavier.
+  # --------------------------------------------------------------------------
+  format-check:
+    name: Format · prettier
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Format check
+        run: pnpm format:check
+
+  # --------------------------------------------------------------------------
+  # Lint root + workspaces in parallel.
+  # --------------------------------------------------------------------------
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Lint root config
+        run: pnpm lint:root
+      - name: Lint workspaces (turbo)
+        run: pnpm lint
+
+  # --------------------------------------------------------------------------
+  # Typecheck — depends only on workspace package compilation, not on lint.
+  # --------------------------------------------------------------------------
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Typecheck
+        run: pnpm typecheck
+
+  # --------------------------------------------------------------------------
+  # Tests with coverage — vitest emits coverage/ folders, jest emits its own
+  # under `apps/web/coverage`. We upload them as artefacts and (when secret
+  # available) push to Codecov.
+  # --------------------------------------------------------------------------
+  test:
+    name: Test · coverage
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.33.0
-
-      - name: Setup Node 20
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-
-      - name: Get pnpm store directory
-        id: pnpm-store
-        shell: bash
-        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-store.outputs.path }}
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-store-${{ runner.os }}-
-
-      - name: Install dependencies
-        timeout-minutes: 8
-        run: pnpm install --frozen-lockfile --prefer-offline
-        env:
-          NPM_CONFIG_FETCH_RETRIES: '5'
-          NPM_CONFIG_FETCH_RETRY_MINTIMEOUT: '15000'
-          NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT: '120000'
-          NPM_CONFIG_NETWORK_CONCURRENCY: '16'
-
-      - name: Format check
-        run: pnpm format:check
-
-      - name: Lint (root)
-        run: pnpm lint:root
-
-      - name: Lint (workspaces)
-        run: pnpm lint
-
-      - name: Typecheck
-        run: pnpm typecheck
-
+      - name: Setup
+        uses: ./.github/actions/setup
       - name: Test
         run: pnpm test
+      - name: Aggregate coverage
+        if: ${{ !cancelled() }}
+        run: |
+          mkdir -p coverage-artifacts
+          shopt -s globstar nullglob
+          for f in packages/**/coverage/lcov.info apps/**/coverage/lcov.info; do
+            pkg=$(echo "$f" | awk -F'/' '{print $2}')
+            cp "$f" "coverage-artifacts/${pkg}.lcov.info" || true
+          done
+          ls -la coverage-artifacts || true
+      - name: Upload coverage artefacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ github.run_id }}
+          path: coverage-artifacts/
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Upload coverage to Codecov
+        if: ${{ !cancelled() && env.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@v5
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ./coverage-artifacts
+          fail_ci_if_error: false
+          verbose: false
 
-  docker-alpine-verify:
-    name: Docker · node:20-alpine (musl)
+  # --------------------------------------------------------------------------
+  # Build apps that produce artefacts. Verifies the production toolchain
+  # before we attempt to build container images on push to develop / main.
+  # --------------------------------------------------------------------------
+  build:
+    name: Build (web + api)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: lint-typecheck-test
+    timeout-minutes: 20
+    needs: [typecheck]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Build (turbo)
+        run: pnpm build
 
+  # --------------------------------------------------------------------------
+  # Alpine musl smoke-test — runs lint/typecheck/test inside `node:20-alpine`
+  # so we surface musl-only regressions (libc differences, native modules)
+  # before they reach Docker images.
+  # --------------------------------------------------------------------------
+  docker-alpine-verify:
+    name: Docker · node:20-alpine (musl)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [lint, typecheck, test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Cache pnpm store (Alpine)
         uses: actions/cache@v4
         with:
@@ -83,20 +170,22 @@ jobs:
           key: pnpm-store-alpine-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             pnpm-store-alpine-
-
       - name: Verify scaffold on Alpine (musl libc)
-        timeout-minutes: 8
+        timeout-minutes: 12
+        env:
+          PNPM_VERSION: ${{ env.PNPM_VERSION }}
         run: |
           mkdir -p "${RUNNER_TEMP}/pnpm-store"
           docker run --rm \
             -v "${RUNNER_TEMP}/pnpm-store:/root/.local/share/pnpm/store" \
             -v "$GITHUB_WORKSPACE:/ws:ro" \
+            -e PNPM_VERSION="$PNPM_VERSION" \
             node:20-alpine sh -c '
               set -eu
               cp -r /ws /tmp/work
               cd /tmp/work
               corepack enable
-              corepack prepare pnpm@10.33.0 --activate
+              corepack prepare pnpm@"$PNPM_VERSION" --activate
               pnpm install --frozen-lockfile --prefer-offline
               pnpm format:check
               pnpm lint:root
