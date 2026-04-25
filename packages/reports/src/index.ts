@@ -52,3 +52,23 @@ export {
   escapeCsvValue,
   generateMedicalCsv,
 } from './csv/generate-csv.js';
+
+// Export de portabilité RGPD/Loi 25 (E9-S02, KIN-085, ADR-D14)
+export type {
+  BuildPrivacyArchiveArgs,
+  BuildPrivacyArchiveResult,
+  RelayAuditEventInfo,
+  RelayDeviceInfo,
+  RelayExportMetadata,
+  RelayNotificationPreferenceInfo,
+  RelayQuietHoursInfo,
+  SerializedCaregiver,
+  SerializedChild,
+  SerializedDoc,
+  SerializedDose,
+  SerializedPlan,
+  SerializedPump,
+} from './privacy-export/types.js';
+export { canonicalJsonStringify, serializeDocForExport } from './privacy-export/serialize-doc.js';
+export { buildPrivacyReadme } from './privacy-export/build-readme.js';
+export { PRIVACY_ARCHIVE_FILENAMES, buildPrivacyArchive } from './privacy-export/build-archive.js';

@@ -290,5 +290,27 @@
     "loadError": "Could not load quiet hours.",
     "invalidFormat": "Invalid format. Use HH:MM (e.g. 22:00).",
     "safetyNote": "Missed-dose notifications are still delivered even during quiet hours (safety rule)."
+  },
+  "privacyExport": {
+    "title": "Export my data",
+    "description": "Exercise your right to data portability (GDPR art. 20 / Quebec Law 25 art. 30). The ZIP archive is generated entirely on your device — the Kinhale server never sees your health data.",
+    "sectionTitle": "Portability archive",
+    "contents": "The archive contains: the full journal of doses (JSON + CSV), a printable HTML report, the technical metadata of your account (devices, audit trail, preferences), and a bilingual README with SHA-256 integrity hashes.",
+    "exportCta": "Export my data (GDPR / Law 25)",
+    "preparing": "Preparing archive…",
+    "readyMessage": "Archive ready. Download or share it from your device.",
+    "downloadCta": "Download archive",
+    "shareCta": "Share archive",
+    "shareUnavailable": "System sharing is not available. Use the Download button.",
+    "archiveHashLabel": "Integrity hash (SHA-256)",
+    "auditNotice": "The export is logged locally. Only a hash and a timestamp are sent to the server (no health data).",
+    "auditFailed": "Archive generated locally. Audit synchronization pending connection.",
+    "disclaimer": "Kinhale is a tracking and coordination tool. This archive contains no medical interpretation, no dose recommendation, no diagnosis.",
+    "signedLinkComingSoon": "Sending the archive by email via signed link will be available in v1.1.",
+    "errors": {
+      "notReady": "Your data is not yet loaded. Try again in a few seconds.",
+      "metadataFailed": "Could not retrieve metadata from the server. Check your connection.",
+      "generationFailed": "Could not generate the archive. Please try again."
+    }
   }
 }
