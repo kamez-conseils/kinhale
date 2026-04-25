@@ -5,6 +5,7 @@ import {
   isWithinQuietHours,
   type QuietHours,
 } from '@kinhale/domain/quiet-hours';
+import { PushPayloadSchema } from './push-payload-schema.js';
 
 /**
  * Cible d'un push : un token Expo associé à un compte utilisateur. Le compte
@@ -73,6 +74,14 @@ const ALWAYS_ENABLED: ReadonlySet<NotificationType> = new Set(['missed_dose', 's
  * `body: "Nouvelle activité"`, **aucune** donnée santé, aucun identifiant
  * métier dans le payload (le `notification_id` et le `household_id` opaques
  * seront ajoutés par le scheduler v1.1, cf. SPECS §9).
+ *
+ * **Verrouillage structurel (KIN-087, E9-S07)** : chaque message est validé
+ * via {@link PushPayloadSchema} **avant** l'appel Expo. Ce schéma
+ * `.strict()` rejette toute clé inattendue, toute valeur de `title` / `body`
+ * non-conforme, et toute combinaison de flags QoS non-autorisée. En cas de
+ * violation, le chunk est jeté (log warn) — **mieux vaut une notification
+ * perdue qu'une fuite santé**. Test anti-régression :
+ * `push/__tests__/payload-anti-leak.test.ts`.
  */
 export async function dispatchPush(
   expo: Expo,
@@ -147,7 +156,25 @@ export async function dispatchPush(
         } as const);
   });
 
-  const chunks = expo.chunkPushNotifications(messages);
+  // Défense en profondeur (RM16 / KIN-087) : valider chaque message via Zod
+  // strict **avant** l'appel Expo. Si un contributeur ajoute par inadvertance
+  // un champ santé (data, subtitle, sound custom, …), le parse échoue et on
+  // écarte le chunk — mieux vaut perdre une notif qu'exfiltrer une dose.
+  const lockedMessages: typeof messages = [];
+  for (const msg of messages) {
+    const parsed = PushPayloadSchema.safeParse(msg);
+    if (!parsed.success) {
+      logger?.warn(
+        { issues: parsed.error.issues.map((i) => ({ path: i.path, code: i.code })) },
+        'Payload push rejeté par PushPayloadSchema (KIN-087 RM16)',
+      );
+      continue;
+    }
+    lockedMessages.push(msg);
+  }
+  if (lockedMessages.length === 0) return;
+
+  const chunks = expo.chunkPushNotifications(lockedMessages);
   for (const chunk of chunks) {
     try {
       await expo.sendPushNotificationsAsync(chunk);
