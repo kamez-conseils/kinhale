@@ -3,7 +3,7 @@
 > _A local-first, end-to-end encrypted asthma inhaler tracker for kids — built for caregivers, by caregivers._
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](./LICENSE)
-[![Status](https://img.shields.io/badge/status-pre--alpha-orange.svg)]()
+[![Status](https://img.shields.io/badge/status-v1.0--preview-orange.svg)]()
 [![FR](https://img.shields.io/badge/lang-français-blue.svg)](./README.fr.md)
 
 > **Français : [lire ce README en français →](./README.fr.md)**
@@ -57,17 +57,48 @@ Kinhale is a **logging, reminder and sharing tool**. It never recommends doses, 
 
 ## Project status
 
-Kinhale is **pre-alpha**. Active development begins Sprint 0 of the Kamez Conseils delivery plan.
+Kinhale is **v1.0 preview**. The codebase is under active development; an
+official production instance hosted by Kamez Conseils in `ca-central-1` is
+planned with the v1.0 release. Self-hosting is supported on a best-effort
+basis — see the guide below.
 
-## Getting started
+## Quickstart — development
 
-Developer documentation will land in `/docs/` once Sprint 0 opens. For now:
+```bash
+git clone https://github.com/kamez-conseils/kinhale.git
+cd kinhale
+pnpm install
+docker compose -f infra/docker/docker-compose.yml up -d
+pnpm dev
+```
 
-- Architecture overview: `docs/architecture/` _(coming soon)_
+The dev compose ships PostgreSQL, Redis, Mailpit (SMTP) and MinIO (S3) on
+local ports — see [`infra/docker/README.md`](./infra/docker/README.md).
+
+## Quickstart — self-hosting
+
+If you want to run your own relay (clinic, self-hosting collective, family
+deployment) the full guide is in [`docs/user/SELF_HOSTING.md`](./docs/user/SELF_HOSTING.md).
+Short version:
+
+```bash
+git clone https://github.com/kamez-conseils/kinhale.git
+cd kinhale
+git checkout v1.0.0
+cp infra/docker/.env.prod.example infra/docker/.env.prod
+# edit infra/docker/.env.prod with your secrets and hostnames
+docker compose -f infra/docker/docker-compose.prod.yml --env-file infra/docker/.env.prod up -d
+```
+
+## Documentation
+
+- Architecture overview: [`docs/architecture/ARCHITECTURE.md`](./docs/architecture/ARCHITECTURE.md)
+- Architecture decisions: [`docs/architecture/adr/`](./docs/architecture/adr/)
 - Contribution guide: [CONTRIBUTING.md](./CONTRIBUTING.md)
-- Git workflow (Gitflow): `docs/contributing/GITFLOW.md`
+- Git workflow (Gitflow): [`docs/contributing/GITFLOW.md`](./docs/contributing/GITFLOW.md)
 - Security disclosure policy: [SECURITY.md](./SECURITY.md)
 - Code of conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
+- Self-hosting guide: [`docs/user/SELF_HOSTING.md`](./docs/user/SELF_HOSTING.md)
 
 ## Licence
 
