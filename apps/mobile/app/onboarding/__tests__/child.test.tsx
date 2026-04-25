@@ -56,6 +56,12 @@ describe('OnboardingChildScreen', () => {
     expect(screen.getAllByRole('header').length).toBeGreaterThanOrEqual(1);
   });
 
+  it("affiche le DisclaimerBanner complet (RM27, KIN-088) sur l'écran 1", () => {
+    renderWithProviders(<OnboardingChildScreen />);
+    expect(screen.getByTestId('disclaimer-banner-full')).toBeTruthy();
+    expect(screen.getByTestId('disclaimer-footer-short')).toBeTruthy();
+  });
+
   it('navigue vers /onboarding/pump après sauvegarde réussie', async () => {
     renderWithProviders(<OnboardingChildScreen />);
     fireEvent.changeText(screen.getByPlaceholderText(/prénom|first name/i), 'Emma');

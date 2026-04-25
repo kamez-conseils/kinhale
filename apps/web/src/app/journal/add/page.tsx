@@ -10,6 +10,7 @@ import { projectChild, projectPumps } from '@kinhale/sync';
 import { getOrCreateDevice, getGroupKey } from '../../../lib/device';
 import { useRelay } from '../../../hooks/use-relay';
 import { useRequireAuth } from '../../../lib/useRequireAuth';
+import { DisclaimerFooter } from '../../../components/DisclaimerFooter';
 
 const SYMPTOMS = ['cough', 'wheezing', 'shortness_of_breath', 'chest_tightness'] as const;
 const CIRCUMSTANCES = ['exercise', 'allergen', 'cold_air', 'night', 'infection', 'stress'] as const;
@@ -192,6 +193,8 @@ export default function AddDosePage(): React.JSX.Element | null {
       <Button onPress={() => void handleSave()} disabled={loading} marginTop="$2">
         {loading ? t('journal.saving') : t('journal.save')}
       </Button>
+      {/* Pied E4 saisie : disclaimer discret RM27. */}
+      <DisclaimerFooter />
     </YStack>
   );
 }

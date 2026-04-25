@@ -10,6 +10,7 @@ import { useDocStore } from '../../../stores/doc-store';
 import { getOrCreateDevice } from '../../../lib/device';
 import { useRequireAuth } from '../../../lib/useRequireAuth';
 import { useOnlineGuard } from '../../../hooks/useOnlineGuard';
+import { DisclaimerFooter } from '../../../components/DisclaimerFooter';
 
 export default function OnboardingPlanPage(): React.JSX.Element | null {
   const { t } = useTranslation('common');
@@ -93,6 +94,8 @@ export default function OnboardingPlanPage(): React.JSX.Element | null {
             {t('onboarding.plan.goToPumpCta')}
           </Button>
         </Card>
+        {/* Pied E10 : disclaimer discret omniprésent (RM27). */}
+        <DisclaimerFooter />
       </YStack>
     );
   }
@@ -143,6 +146,8 @@ export default function OnboardingPlanPage(): React.JSX.Element | null {
       <Button onPress={() => void handleSave()} disabled={loading || !online} marginTop="$2">
         {loading ? t('onboarding.plan.saving') : t('onboarding.plan.save')}
       </Button>
+      {/* Pied E10 : disclaimer discret omniprésent (RM27). */}
+      <DisclaimerFooter />
     </YStack>
   );
 }

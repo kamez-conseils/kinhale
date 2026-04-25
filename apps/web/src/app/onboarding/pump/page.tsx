@@ -8,6 +8,7 @@ import { useAuthStore } from '../../../stores/auth-store';
 import { useDocStore } from '../../../stores/doc-store';
 import { getOrCreateDevice } from '../../../lib/device';
 import { useRequireAuth } from '../../../lib/useRequireAuth';
+import { DisclaimerFooter } from '../../../components/DisclaimerFooter';
 
 export default function OnboardingPumpPage(): React.JSX.Element | null {
   const { t } = useTranslation('common');
@@ -108,6 +109,8 @@ export default function OnboardingPumpPage(): React.JSX.Element | null {
       <Button onPress={() => void handleSave()} disabled={loading} marginTop="$2">
         {loading ? t('onboarding.pump.saving') : t('onboarding.pump.save')}
       </Button>
+      {/* Pied E10 : disclaimer discret omniprésent (RM27). */}
+      <DisclaimerFooter />
     </YStack>
   );
 }

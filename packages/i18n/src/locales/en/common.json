@@ -226,7 +226,7 @@
       "week": "Week of",
       "none": "None"
     },
-    "disclaimer": "This document is a journal provided by the child's caregivers. It contains no medical interpretation, no dose recommendation, no diagnosis. It is intended to support the discussion with the healthcare professional.",
+    "disclaimer": "Kinhale is a cooperative journal kept by caregivers. It does not replace medical advice, does not diagnose, and does not recommend any treatment. It is not certified as a medical device under Health Canada, FDA, or CE rules. Your data stays under your exclusive control on your devices.",
     "integrity": {
       "label": "Document integrity",
       "hashLabel": "SHA-256 hash",
@@ -344,6 +344,28 @@
       "errorNotPending": "No deletion in progress for this account.",
       "errorGeneric": "Could not cancel. Please retry."
     }
+  },
+  "disclaimer": {
+    "full": "Kinhale is a cooperative journal kept by caregivers. It does not replace medical advice, does not diagnose, and does not recommend any treatment. It is not certified as a medical device under Health Canada, FDA, or CE rules. Your data stays under your exclusive control on your devices.",
+    "short": "Caregiver journal, not medical advice.",
+    "ariaLabel": "Non-medical-device disclaimer"
+  },
+  "settingsAbout": {
+    "title": "About",
+    "heading": "About Kinhale",
+    "description": "Kinhale is an open-source project by Kamez Conseils. The app is a cooperative journal and coordination tool between caregivers — not a medical device.",
+    "versionLabel": "Version",
+    "licenseLabel": "Licence",
+    "licenseValue": "AGPL v3 — open source",
+    "licenseLink": "Read the licence text",
+    "sourceLabel": "Source code",
+    "sourceLink": "Public repository",
+    "publisherLabel": "Publisher",
+    "publisherValue": "Kamez Conseils",
+    "privacyPolicy": "Privacy policy",
+    "privacyPolicyDescription": "Read the privacy policy dedicated to minors.",
+    "contactLabel": "Privacy officer",
+    "contactValue": "privacy@kinhale.health"
   },
   "privacyExport": {
     "title": "Export my data",

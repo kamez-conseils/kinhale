@@ -5,6 +5,7 @@ import { YStack, H1, Button, Text, Input, XStack } from 'tamagui';
 import { useAuthStore } from '../../src/stores/auth-store';
 import { useDocStore } from '../../src/stores/doc-store';
 import { getOrCreateDevice } from '../../src/lib/device';
+import { DisclaimerFooter } from '../../src/components/DisclaimerFooter';
 
 export default function OnboardingPumpScreen(): JSX.Element {
   const { t } = useTranslation('common');
@@ -107,6 +108,8 @@ export default function OnboardingPumpScreen(): JSX.Element {
       >
         {loading ? t('onboarding.pump.saving') : t('onboarding.pump.save')}
       </Button>
+      {/* Pied E10 : disclaimer discret omniprésent (RM27). */}
+      <DisclaimerFooter />
     </YStack>
   );
 }

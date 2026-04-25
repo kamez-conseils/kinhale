@@ -9,6 +9,7 @@ import { useDocStore } from '../../../stores/doc-store';
 import { getOrCreateDevice } from '../../../lib/device';
 import { useRequireAuth } from '../../../lib/useRequireAuth';
 import { useOnlineGuard } from '../../../hooks/useOnlineGuard';
+import { DisclaimerBanner, DisclaimerFooter } from '../../../components/DisclaimerFooter';
 
 export default function OnboardingChildPage(): React.JSX.Element | null {
   const { t } = useTranslation('common');
@@ -52,6 +53,8 @@ export default function OnboardingChildPage(): React.JSX.Element | null {
 
   return (
     <YStack padding="$4" gap="$4">
+      {/* Onboarding écran 1 : disclaimer complet RM27 affiché d'entrée. */}
+      <DisclaimerBanner />
       <H1>{t('onboarding.child.title')}</H1>
       <Text fontWeight="600">{t('onboarding.child.firstNameLabel')}</Text>
       <Input
@@ -78,6 +81,8 @@ export default function OnboardingChildPage(): React.JSX.Element | null {
       <Button onPress={() => void handleSave()} disabled={loading || !online} marginTop="$2">
         {loading ? t('onboarding.child.saving') : t('onboarding.child.save')}
       </Button>
+      {/* Pied E10 : version discrète sur chaque étape onboarding. */}
+      <DisclaimerFooter />
     </YStack>
   );
 }

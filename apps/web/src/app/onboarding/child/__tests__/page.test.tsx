@@ -63,6 +63,13 @@ describe('OnboardingChildPage', () => {
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
   });
 
+  it("affiche le DisclaimerBanner complet (RM27, KIN-088) sur l'écran 1", () => {
+    renderWithProviders(<OnboardingChildPage />);
+    // Onboarding écran 1 → version complète + footer discret en pied.
+    expect(screen.getByTestId('disclaimer-banner-full')).toBeTruthy();
+    expect(screen.getByTestId('disclaimer-footer-short')).toBeTruthy();
+  });
+
   it('redirige vers /auth si non authentifié (#181)', async () => {
     mockAccessToken = null;
     jest.useFakeTimers();

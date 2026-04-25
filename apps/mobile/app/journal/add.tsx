@@ -7,6 +7,7 @@ import { useDocStore } from '../../src/stores/doc-store';
 import { getOrCreateDevice, getGroupKey } from '../../src/lib/device';
 import { useRelay } from '../../src/hooks/use-relay';
 import { projectChild, projectPumps } from '@kinhale/sync';
+import { DisclaimerFooter } from '../../src/components/DisclaimerFooter';
 
 const SYMPTOMS = ['cough', 'wheezing', 'shortness_of_breath', 'chest_tightness'] as const;
 const CIRCUMSTANCES = ['exercise', 'allergen', 'cold_air', 'night', 'infection', 'stress'] as const;
@@ -189,6 +190,8 @@ export default function AddDoseScreen(): JSX.Element {
       >
         {loading ? t('journal.saving') : t('journal.save')}
       </Button>
+      {/* Pied E4 saisie : disclaimer discret RM27. */}
+      <DisclaimerFooter />
     </YStack>
   );
 }

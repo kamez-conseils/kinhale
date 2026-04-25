@@ -226,7 +226,7 @@
       "week": "Semaine du",
       "none": "Aucun"
     },
-    "disclaimer": "Ce document est un journal fourni par les aidants. Il ne contient aucune interprétation médicale, aucune recommandation de dose, aucun diagnostic. Il est destiné à faciliter le dialogue avec le professionnel de santé.",
+    "disclaimer": "Kinhale est un journal coopératif fourni par des aidants. Il ne remplace pas un avis médical, ne diagnostique pas et ne recommande aucun traitement. Il n'est pas certifié comme dispositif médical au sens de Santé Canada, de la FDA ou du marquage CE. Vos données restent sous votre contrôle exclusif sur vos appareils.",
     "integrity": {
       "label": "Intégrité du document",
       "hashLabel": "Hash SHA-256",
@@ -344,6 +344,28 @@
       "errorNotPending": "Aucune suppression en cours sur ce compte.",
       "errorGeneric": "Impossible d'annuler. Réessayez."
     }
+  },
+  "disclaimer": {
+    "full": "Kinhale est un journal coopératif fourni par des aidants. Il ne remplace pas un avis médical, ne diagnostique pas et ne recommande aucun traitement. Il n'est pas certifié comme dispositif médical au sens de Santé Canada, de la FDA ou du marquage CE. Vos données restent sous votre contrôle exclusif sur vos appareils.",
+    "short": "Journal d'aidants, pas un avis médical.",
+    "ariaLabel": "Avertissement non-dispositif-médical"
+  },
+  "settingsAbout": {
+    "title": "À propos",
+    "heading": "À propos de Kinhale",
+    "description": "Kinhale est un projet open source porté par Kamez Conseils. L'application est un journal coopératif et un outil de coordination entre aidants — pas un dispositif médical.",
+    "versionLabel": "Version",
+    "licenseLabel": "Licence",
+    "licenseValue": "AGPL v3 — code source ouvert",
+    "licenseLink": "Voir le texte de la licence",
+    "sourceLabel": "Code source",
+    "sourceLink": "Dépôt public",
+    "publisherLabel": "Éditeur",
+    "publisherValue": "Kamez Conseils",
+    "privacyPolicy": "Politique de confidentialité",
+    "privacyPolicyDescription": "Consulter la politique de confidentialité dédiée mineurs.",
+    "contactLabel": "Contact RPRP",
+    "contactValue": "privacy@kinhale.health"
   },
   "privacyExport": {
     "title": "Exporter mes données",

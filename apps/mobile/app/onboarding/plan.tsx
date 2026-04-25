@@ -7,6 +7,7 @@ import { useAuthStore } from '../../src/stores/auth-store';
 import { useDocStore } from '../../src/stores/doc-store';
 import { getOrCreateDevice } from '../../src/lib/device';
 import { useOnlineGuard } from '../../src/hooks/useOnlineGuard';
+import { DisclaimerFooter } from '../../src/components/DisclaimerFooter';
 
 export default function OnboardingPlanScreen(): JSX.Element {
   const { t } = useTranslation('common');
@@ -113,6 +114,8 @@ export default function OnboardingPlanScreen(): JSX.Element {
       >
         {loading ? t('onboarding.plan.saving') : t('onboarding.plan.save')}
       </Button>
+      {/* Pied E10 : disclaimer discret omniprésent (RM27). */}
+      <DisclaimerFooter />
     </YStack>
   );
 }
