@@ -13,12 +13,130 @@ import {
 /**
  * Comptes utilisateurs. L'email n'est jamais stocké en clair —
  * uniquement son SHA-256 (pseudonymisation Loi 25 / RGPD).
+ *
+ * **Suppression différée (E9-S03 / RM10)** :
+ * - `deletionStatus` = `'active'` par défaut. Bascule à `'pending_deletion'`
+ *   après confirmation step-up auth (POST /me/account/deletion-confirm).
+ * - `deletionScheduledAtMs` = timestamp UTC ms de purge prévue (now + 7 j).
+ *   `null` tant que `deletionStatus = 'active'`.
+ * - À la confirmation, le check `accountIsActive` (plugin authenticate)
+ *   refuse les requêtes des comptes en attente de suppression — sauf
+ *   l'endpoint d'annulation qui est volontairement permissif.
+ *
+ * Le worker `account-purge` scanne périodiquement
+ * `WHERE deletion_status = 'pending_deletion' AND deletion_scheduled_at_ms <= now`
+ * (index partiel) puis exécute la purge complète + insertion audit + e-mail J+7.
  */
-export const accounts = pgTable('accounts', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  emailHash: text('email_hash').notNull().unique(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+export const accounts = pgTable(
+  'accounts',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    emailHash: text('email_hash').notNull().unique(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    deletionStatus: text('deletion_status').notNull().default('active'),
+    deletionScheduledAtMs: bigint('deletion_scheduled_at_ms', { mode: 'number' }),
+  },
+  (t) => [
+    // Index partiel — le worker ne scanne que les comptes en attente, ce
+    // qui garde le coût de scan O(K) où K = nombre de comptes en grâce.
+    index('accounts_pending_deletion_idx').on(t.deletionScheduledAtMs),
+  ],
+);
+
+/**
+ * Statuts admis pour `accounts.deletion_status`.
+ *
+ * - `active` : compte normal, accessible à toutes les routes authentifiées.
+ * - `pending_deletion` : compte en période de grâce (J→J+7). Toutes les
+ *   routes authentifiées renvoient 403 sauf `/me/account/deletion-cancel`
+ *   et `/me/account/deletion-status` (l'utilisateur doit pouvoir revenir
+ *   sur sa décision et lire l'état).
+ *
+ * La valeur `deleted` n'existe pas en base — un compte purgé est
+ * physiquement absent de la table `accounts` ; sa trace ne subsiste que
+ * dans `deleted_accounts` (pseudonymisée).
+ */
+export const ACCOUNT_DELETION_STATUSES = ['active', 'pending_deletion'] as const;
+export type AccountDeletionStatus = (typeof ACCOUNT_DELETION_STATUSES)[number];
+
+/**
+ * Tokens step-up auth pour confirmer une action sensible (E9-S03 :
+ * suppression de compte). Pattern dérivé de `magic_links` mais lié à un
+ * `accountId` (pas à un `emailHash`) pour éviter une réidentification
+ * croisée.
+ *
+ * **Cycle de vie** :
+ * - `POST /me/account/deletion-request` → génère un token, envoie un
+ *   e-mail magic link spécifique (scope `account_deletion`).
+ * - L'utilisateur clique → `POST /me/account/deletion-confirm` consomme
+ *   le token (`usedAt = now`), bascule l'état du compte en
+ *   `pending_deletion`.
+ * - TTL strict de **5 minutes** — pattern step-up auth standard
+ *   (cf. NIST SP 800-63B § 5.1.1.2 réauthentification).
+ *
+ * **Sécurité** :
+ * - `tokenHash` : SHA-256 hex du token brut (jamais stocké en clair).
+ * - `usedAt` : interdit la réutilisation (anti-replay).
+ * - `accountId` : un seul token actif par compte à la fois (les anciens
+ *   sont invalidés implicitement par TTL ou explicitement par marquage
+ *   used à la consommation). Si l'utilisateur redemande pendant qu'un
+ *   token est encore valide, on émet un nouveau token et l'ancien expire
+ *   par TTL — pas besoin de DELETE explicite.
+ *
+ * **Zero-knowledge** : aucun email en clair, aucune donnée santé. Seul
+ * un `accountId` (UUID opaque) lie le token au compte.
+ */
+export const accountDeletionStepUpTokens = pgTable(
+  'account_deletion_step_up_tokens',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull().unique(),
+    expiresAt: timestamp('expires_at').notNull(),
+    usedAt: timestamp('used_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [index('account_deletion_step_up_account_idx').on(t.accountId)],
+);
+
+/**
+ * Trace pseudonymisée des comptes purgés (E9-S03 / RM10 / Loi 25 art. 28).
+ *
+ * **Pourquoi pseudonymiser plutôt qu'anonymiser** :
+ * - L'art. 17 RGPD impose l'effacement des données personnelles, mais
+ *   permet la conservation de preuves d'effacement pour défendre un
+ *   incident futur (ex. accusation d'avoir conservé les données).
+ * - `pseudo_id = SHA-256(account_id || pepper)` est techniquement réversible
+ *   uniquement par celui qui détient le pepper serveur — l'utilisateur ne
+ *   peut être ré-identifié. C'est conforme à l'art. 4(5) RGPD.
+ *
+ * **Schéma minimal** :
+ * - `pseudoId` : hash hex 64 chars (SHA-256 de l'accountId concaténé au
+ *   pepper de l'env JWT_SECRET — sans cleartext de l'accountId).
+ * - `deletedAtMs` : timestamp UTC ms de la purge effective.
+ * - `householdId` : UUID du foyer — utile pour démontrer qu'un foyer a bien
+ *   été purgé en cas d'audit régulateur. Pas de FK vers une table
+ *   `households` (n'existe pas en v1.0 — `householdId == accountId` côté
+ *   Automerge).
+ * - `createdAt` : timestamp DB de l'écriture (pour debug, distinct de
+ *   `deletedAtMs` qui est l'heure logique de la purge).
+ *
+ * **Rétention** : 12 mois post-suppression (cohérent avec la durée de
+ * conservation des logs OWASP). Une purge cron sera ajoutée en v1.1 — voir
+ * issue de suivi dans la PR.
+ */
+export const deletedAccounts = pgTable(
+  'deleted_accounts',
+  {
+    pseudoId: text('pseudo_id').primaryKey(),
+    deletedAtMs: bigint('deleted_at_ms', { mode: 'number' }).notNull(),
+    householdId: uuid('household_id').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [index('deleted_accounts_deleted_at_idx').on(t.deletedAtMs)],
+);
 
 /**
  * Devices enregistrés. Chaque device porte une clé publique Ed25519
@@ -201,9 +319,11 @@ export const auditEvents = pgTable(
   'audit_events',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    accountId: uuid('account_id')
-      .notNull()
-      .references(() => accounts.id, { onDelete: 'cascade' }),
+    // `account_id` peut être NULL après une purge (E9-S03 / RM10) : la FK
+    // bascule en `ON DELETE SET NULL` plutôt que cascade. Le contenu de
+    // `event_data` peut alors porter `pseudoId` pour préserver une trace
+    // corrélable au compte purgé sans ré-identification possible.
+    accountId: uuid('account_id').references(() => accounts.id, { onDelete: 'set null' }),
     eventType: text('event_type').notNull(),
     eventData: jsonb('event_data').notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),

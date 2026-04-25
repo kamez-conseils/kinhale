@@ -5,7 +5,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useTranslation } from 'react-i18next';
 import { Buffer } from 'buffer';
-import { YStack, XStack, H1, H2, Text, Button, Card } from 'tamagui';
+import { YStack, XStack, H1, H2, Text, Button, Card, Input } from 'tamagui';
 import {
   aggregateReportData,
   buildCsvDoses,
@@ -23,6 +23,12 @@ import {
   getPrivacyExportMetadata,
   postPrivacyExportAudit,
 } from '../../src/lib/privacy/export-client';
+import {
+  getDeletionStatus,
+  postDeletionRequest,
+  postDeletionCancel,
+  type DeletionStatus,
+} from '../../src/lib/account-deletion/client';
 
 const GENERATOR_LABEL = `Kinhale ${process.env['EXPO_PUBLIC_APP_VERSION'] ?? 'v1.0.0-preview'}`;
 
@@ -184,6 +190,8 @@ export default function PrivacyExportScreen(): JSX.Element | null {
       <H1 accessibilityRole="header">{t('privacyExport.title')}</H1>
       <Text>{t('privacyExport.description')}</Text>
 
+      <AccountDeletionSection />
+
       <Card padded bordered>
         <YStack gap="$3">
           <H2>{t('privacyExport.sectionTitle')}</H2>
@@ -243,6 +251,203 @@ export default function PrivacyExportScreen(): JSX.Element | null {
         {t('privacyExport.signedLinkComingSoon')}
       </Text>
     </YStack>
+  );
+}
+
+/**
+ * Section « Supprimer mon foyer » mobile — KIN-086, E9-S03 + E9-S04.
+ * Pendant fidèle de la section web (pattern symétrique).
+ */
+function AccountDeletionSection(): JSX.Element {
+  const { t } = useTranslation('common');
+  const requiredWord = t('accountDeletion.confirmationWord');
+  type DialogState =
+    | { kind: 'closed' }
+    | { kind: 'open'; word: string; email: string; submitting: boolean }
+    | { kind: 'sent' }
+    | { kind: 'error'; messageKey: string };
+  const [status, setStatus] = React.useState<DeletionStatus | null>(null);
+  const [dialog, setDialog] = React.useState<DialogState>({ kind: 'closed' });
+  const [cancelState, setCancelState] = React.useState<
+    | { kind: 'idle' }
+    | { kind: 'cancelling' }
+    | { kind: 'success' }
+    | { kind: 'error'; messageKey: string }
+  >({ kind: 'idle' });
+
+  const refreshStatus = React.useCallback(async (): Promise<void> => {
+    try {
+      const s = await getDeletionStatus();
+      setStatus(s);
+    } catch {
+      // Silencieux côté mobile — l'UI reste utilisable pour l'export.
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void refreshStatus();
+  }, [refreshStatus]);
+
+  const handleSubmit = async (): Promise<void> => {
+    if (dialog.kind !== 'open') return;
+    if (dialog.word !== requiredWord) {
+      setDialog({ kind: 'error', messageKey: 'accountDeletion.errors.wordMismatch' });
+      return;
+    }
+    setDialog({ ...dialog, submitting: true });
+    try {
+      const word = (requiredWord === 'DELETE' ? 'DELETE' : 'SUPPRIMER') as 'SUPPRIMER' | 'DELETE';
+      await postDeletionRequest({ confirmationWord: word, email: dialog.email });
+      setDialog({ kind: 'sent' });
+    } catch (err) {
+      const code = err instanceof ApiError ? err.message : 'network';
+      const messageKey =
+        code === 'invalid_credentials'
+          ? 'accountDeletion.errors.emailMismatch'
+          : code === 'already_pending'
+            ? 'accountDeletion.errors.alreadyPending'
+            : 'accountDeletion.errors.network';
+      setDialog({ kind: 'error', messageKey });
+    }
+  };
+
+  const handleCancel = async (): Promise<void> => {
+    setCancelState({ kind: 'cancelling' });
+    try {
+      await postDeletionCancel();
+      setCancelState({ kind: 'success' });
+      await refreshStatus();
+    } catch (err) {
+      const code = err instanceof ApiError ? err.message : 'unknown';
+      const messageKey =
+        code === 'grace_period_expired'
+          ? 'accountDeletion.pending.cancelExpired'
+          : 'accountDeletion.pending.cancelError';
+      setCancelState({ kind: 'error', messageKey });
+    }
+  };
+
+  const isPending = status?.status === 'pending_deletion';
+  const scheduledIso =
+    status?.scheduledAtMs !== null && status?.scheduledAtMs !== undefined
+      ? new Date(status.scheduledAtMs).toISOString().slice(0, 10)
+      : '';
+
+  return (
+    <Card padded bordered>
+      <YStack gap="$3">
+        <H2>{t('accountDeletion.sectionTitle')}</H2>
+        <Text fontSize="$2">{t('accountDeletion.description')}</Text>
+        <Text fontSize="$2" color="$color9">
+          {t('accountDeletion.consequences')}
+        </Text>
+        <Text fontSize="$2" color="$color9">
+          {t('accountDeletion.exportFirst')}
+        </Text>
+
+        {isPending ? (
+          <YStack
+            gap="$2"
+            padding="$3"
+            backgroundColor="$orange3"
+            borderRadius="$3"
+            accessibilityRole="alert"
+          >
+            <Text fontWeight="bold" color="$orange11">
+              {t('accountDeletion.pending.bannerTitle')}
+            </Text>
+            <Text color="$orange11">
+              {t('accountDeletion.pending.bannerMessage', { date: scheduledIso })}
+            </Text>
+            <Button
+              onPress={() => {
+                void handleCancel();
+              }}
+              disabled={cancelState.kind === 'cancelling'}
+              accessibilityLabel={t('accountDeletion.pending.cancelCta')}
+              accessibilityRole="button"
+            >
+              {cancelState.kind === 'cancelling'
+                ? t('accountDeletion.pending.cancelling')
+                : t('accountDeletion.pending.cancelCta')}
+            </Button>
+            {cancelState.kind === 'error' ? (
+              <Text color="$red10" accessibilityLiveRegion="polite">
+                {t(cancelState.messageKey)}
+              </Text>
+            ) : null}
+            {cancelState.kind === 'success' ? (
+              <Text color="$green10">{t('accountDeletion.pending.cancelSuccess')}</Text>
+            ) : null}
+          </YStack>
+        ) : dialog.kind === 'closed' ? (
+          <Button
+            onPress={() => setDialog({ kind: 'open', word: '', email: '', submitting: false })}
+            theme="red"
+            accessibilityLabel={t('accountDeletion.openDialogCta')}
+            accessibilityRole="button"
+          >
+            {t('accountDeletion.openDialogCta')}
+          </Button>
+        ) : dialog.kind === 'open' ? (
+          <YStack gap="$3" padding="$3" borderWidth={1} borderColor="$color7" borderRadius="$3">
+            <Text fontWeight="bold">{t('accountDeletion.dialogTitle')}</Text>
+            <Text>{t('accountDeletion.dialogInstruction', { word: requiredWord })}</Text>
+            <Input
+              value={dialog.word}
+              onChangeText={(v: string) => setDialog({ ...dialog, word: v })}
+              placeholder={requiredWord}
+              accessibilityLabel={t('accountDeletion.dialogTitle')}
+            />
+            <Text>{t('accountDeletion.emailLabel')}</Text>
+            <Input
+              value={dialog.email}
+              onChangeText={(v: string) => setDialog({ ...dialog, email: v })}
+              placeholder={t('accountDeletion.emailPlaceholder')}
+              accessibilityLabel={t('accountDeletion.emailLabel')}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <XStack gap="$2">
+              <Button
+                onPress={() => {
+                  void handleSubmit();
+                }}
+                disabled={dialog.submitting || dialog.word !== requiredWord || dialog.email === ''}
+                theme="red"
+                accessibilityRole="button"
+              >
+                {t('accountDeletion.submitCta')}
+              </Button>
+              <Button
+                onPress={() => setDialog({ kind: 'closed' })}
+                theme="alt2"
+                accessibilityRole="button"
+              >
+                {t('accountDeletion.cancelDialog')}
+              </Button>
+            </XStack>
+          </YStack>
+        ) : dialog.kind === 'sent' ? (
+          <Text color="$green10" accessibilityLiveRegion="polite">
+            {t('accountDeletion.stepUpSent')}
+          </Text>
+        ) : (
+          <YStack gap="$2">
+            <Text color="$red10" accessibilityLiveRegion="polite">
+              {t(dialog.messageKey)}
+            </Text>
+            <Button
+              onPress={() => setDialog({ kind: 'closed' })}
+              theme="alt2"
+              accessibilityRole="button"
+            >
+              {t('accountDeletion.cancelDialog')}
+            </Button>
+          </YStack>
+        )}
+      </YStack>
+    </Card>
   );
 }
 

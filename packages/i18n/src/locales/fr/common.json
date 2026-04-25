@@ -291,6 +291,60 @@
     "invalidFormat": "Format invalide. Utilisez HH:MM (ex. 22:00).",
     "safetyNote": "Les notifications de dose manquée restent émises, même pendant les heures silencieuses (règle de sécurité)."
   },
+  "accountDeletion": {
+    "sectionTitle": "Supprimer mon foyer",
+    "description": "Supprime définitivement votre foyer Kinhale après une période de grâce de 7 jours. Cette action est irréversible une fois la grâce écoulée.",
+    "consequences": "Vos données techniques (devices, audit, préférences) seront effacées du serveur. Vos données santé restent sur vos appareils et ne sont jamais envoyées au serveur.",
+    "exportFirst": "Avant de supprimer, exportez vos données depuis la section ci-dessus pour les conserver localement.",
+    "openDialogCta": "Lancer la suppression",
+    "dialogTitle": "Confirmer la suppression",
+    "dialogInstruction": "Tapez exactement {{word}} ci-dessous pour confirmer.",
+    "confirmationWordPlaceholder": "{{word}}",
+    "confirmationWord": "SUPPRIMER",
+    "emailLabel": "Adresse e-mail du compte",
+    "emailPlaceholder": "votre@email.com",
+    "submitCta": "Envoyer le lien de confirmation",
+    "cancelDialog": "Annuler",
+    "stepUpSent": "Un lien de confirmation a été envoyé à votre adresse e-mail. Cliquez dessus dans les 5 minutes pour confirmer la suppression.",
+    "errors": {
+      "wordMismatch": "Le mot de confirmation ne correspond pas.",
+      "emailMismatch": "L'adresse e-mail ne correspond pas au compte.",
+      "alreadyPending": "Une suppression est déjà en cours pour ce compte.",
+      "invalidBody": "Données invalides. Réessayez.",
+      "network": "Impossible de joindre le serveur. Vérifiez votre connexion."
+    },
+    "pending": {
+      "bannerTitle": "Suppression planifiée",
+      "bannerMessage": "Votre foyer sera définitivement supprimé le {{date}}. Vous pouvez encore annuler.",
+      "cancelCta": "Annuler la suppression",
+      "cancelling": "Annulation…",
+      "cancelSuccess": "Suppression annulée. Votre compte est de nouveau actif.",
+      "cancelExpired": "Le délai d'annulation est écoulé — la purge sera effectuée prochainement.",
+      "cancelError": "Impossible d'annuler. Réessayez."
+    },
+    "confirmPage": {
+      "title": "Confirmer la suppression",
+      "description": "Cliquez ci-dessous pour valider la suppression de votre foyer Kinhale. Vous disposerez encore de 7 jours pour revenir sur votre décision.",
+      "submitCta": "Confirmer la suppression",
+      "submitting": "Confirmation…",
+      "successTitle": "Suppression confirmée",
+      "successMessage": "Votre foyer sera supprimé le {{date}}. Vous pouvez annuler à tout moment depuis Paramètres → Confidentialité.",
+      "errorInvalidToken": "Ce lien de confirmation est invalide ou expiré. Relancez la procédure depuis Paramètres → Confidentialité.",
+      "errorTokenUsed": "Ce lien a déjà été utilisé.",
+      "errorGeneric": "Impossible de confirmer la suppression. Réessayez."
+    },
+    "cancelPage": {
+      "title": "Annuler la suppression",
+      "description": "Cliquez ci-dessous pour annuler la suppression de votre foyer.",
+      "submitCta": "Annuler la suppression",
+      "submitting": "Annulation…",
+      "successTitle": "Suppression annulée",
+      "successMessage": "Votre foyer Kinhale est de nouveau actif.",
+      "errorExpired": "Le délai d'annulation est écoulé. La purge sera effectuée prochainement.",
+      "errorNotPending": "Aucune suppression en cours sur ce compte.",
+      "errorGeneric": "Impossible d'annuler. Réessayez."
+    }
+  },
   "privacyExport": {
     "title": "Exporter mes données",
     "description": "Exercez votre droit à la portabilité (RGPD art. 20 / Loi 25 art. 30). L'archive ZIP est générée intégralement sur votre appareil — le serveur Kinhale ne voit jamais vos données santé.",

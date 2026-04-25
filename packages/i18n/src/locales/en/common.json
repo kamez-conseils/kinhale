@@ -291,6 +291,60 @@
     "invalidFormat": "Invalid format. Use HH:MM (e.g. 22:00).",
     "safetyNote": "Missed-dose notifications are still delivered even during quiet hours (safety rule)."
   },
+  "accountDeletion": {
+    "sectionTitle": "Delete my household",
+    "description": "Permanently deletes your Kinhale household after a 7-day grace period. This action is irreversible once the grace period ends.",
+    "consequences": "Your technical data (devices, audit, preferences) will be erased from the server. Your health data stays on your devices and is never sent to the server.",
+    "exportFirst": "Before deleting, export your data from the section above to keep a local copy.",
+    "openDialogCta": "Start deletion",
+    "dialogTitle": "Confirm deletion",
+    "dialogInstruction": "Type {{word}} exactly below to confirm.",
+    "confirmationWordPlaceholder": "{{word}}",
+    "confirmationWord": "DELETE",
+    "emailLabel": "Account email",
+    "emailPlaceholder": "your@email.com",
+    "submitCta": "Send confirmation link",
+    "cancelDialog": "Cancel",
+    "stepUpSent": "A confirmation link has been sent to your email. Click it within 5 minutes to confirm deletion.",
+    "errors": {
+      "wordMismatch": "The confirmation word does not match.",
+      "emailMismatch": "The email does not match this account.",
+      "alreadyPending": "A deletion is already pending for this account.",
+      "invalidBody": "Invalid data. Please retry.",
+      "network": "Could not reach the server. Check your connection."
+    },
+    "pending": {
+      "bannerTitle": "Deletion scheduled",
+      "bannerMessage": "Your household will be permanently deleted on {{date}}. You can still cancel.",
+      "cancelCta": "Cancel deletion",
+      "cancelling": "Cancelling…",
+      "cancelSuccess": "Deletion cancelled. Your account is active again.",
+      "cancelExpired": "The cancellation deadline has passed — the purge will run shortly.",
+      "cancelError": "Could not cancel. Please retry."
+    },
+    "confirmPage": {
+      "title": "Confirm deletion",
+      "description": "Click below to confirm the deletion of your Kinhale household. You will still have 7 days to change your mind.",
+      "submitCta": "Confirm deletion",
+      "submitting": "Confirming…",
+      "successTitle": "Deletion confirmed",
+      "successMessage": "Your household will be deleted on {{date}}. You can cancel anytime from Settings → Privacy.",
+      "errorInvalidToken": "This confirmation link is invalid or expired. Restart the procedure from Settings → Privacy.",
+      "errorTokenUsed": "This link has already been used.",
+      "errorGeneric": "Could not confirm deletion. Please retry."
+    },
+    "cancelPage": {
+      "title": "Cancel deletion",
+      "description": "Click below to cancel the deletion of your household.",
+      "submitCta": "Cancel deletion",
+      "submitting": "Cancelling…",
+      "successTitle": "Deletion cancelled",
+      "successMessage": "Your Kinhale household is active again.",
+      "errorExpired": "The cancellation deadline has passed. The purge will run shortly.",
+      "errorNotPending": "No deletion in progress for this account.",
+      "errorGeneric": "Could not cancel. Please retry."
+    }
+  },
   "privacyExport": {
     "title": "Export my data",
     "description": "Exercise your right to data portability (GDPR art. 20 / Quebec Law 25 art. 30). The ZIP archive is generated entirely on your device — the Kinhale server never sees your health data.",
