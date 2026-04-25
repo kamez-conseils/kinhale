@@ -149,6 +149,9 @@ function serializeDoses(doc: KinhaleDoc): ReadonlyArray<SerializedDose> {
         status: d.status,
         recordedByDeviceId: d.deviceId,
         recordedAtMs: d.occurredAtMs,
+        ...(d.voidedReason !== undefined ? { voidedReason: d.voidedReason } : {}),
+        ...(d.voidedByDeviceId !== undefined ? { voidedByDeviceId: d.voidedByDeviceId } : {}),
+        ...(d.voidedAtMs !== undefined ? { voidedAtMs: d.voidedAtMs } : {}),
       }),
     )
     .sort((a, b) => {

@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@kinhale/crypto": "workspace:*",
+    "@kinhale/domain": "workspace:*",
     "@kinhale/i18n": "workspace:*",
     "@kinhale/reports": "workspace:*",
     "@kinhale/sync": "workspace:*",

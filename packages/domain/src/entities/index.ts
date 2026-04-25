@@ -1,6 +1,7 @@
 export * from './caregiver';
 export * from './child';
 export * from './dose';
+export * from './dose-edit-permissions';
 export * from './household';
 export * from './invitation';
 export * from './notification-type';

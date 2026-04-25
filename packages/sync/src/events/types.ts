@@ -2,6 +2,8 @@
 export type DomainEventType =
   | 'DoseAdministered'
   | 'DoseReviewFlagged'
+  | 'DoseEdited'
+  | 'DoseVoided'
   | 'PumpReplaced'
   | 'PlanUpdated'
   | 'CaregiverInvited'
@@ -43,6 +45,78 @@ export interface DoseReviewFlaggedPayload {
   doseIds: [string, string];
   /** Instant de détection (UTC ms). */
   detectedAtMs: number;
+}
+
+/**
+ * Constante de raison d'annulation pour les doses résolues via le flux de
+ * conflit RM6 (E4-S05). La présence de cette valeur permet à l'UI de
+ * distinguer une annulation issue d'une résolution de conflit d'un void
+ * manuel libellé par l'utilisateur.
+ */
+export const VOIDED_REASON_DUPLICATE_RESOLVED = 'duplicate_resolved';
+
+/**
+ * Longueur maximale du `voidedReason` en caractères. Dimensionnée pour la
+ * saisie courte (cf. CLAUDE.md §contraintes E4-S07). Toute valeur excédant
+ * cette borne doit être rejetée par le validateur Zod côté UI **et** par le
+ * projector qui l'ignore (le statut reste `recorded`).
+ */
+export const VOIDED_REASON_MAX_LENGTH = 200;
+
+/**
+ * Payload pour `DoseEdited` — RM18, E4-S06.
+ *
+ * Patch immuable d'un sous-ensemble de champs métier d'une `DoseAdministered`
+ * existante. L'événement original n'est jamais modifié : la projection
+ * applique le dernier patch reçu pour le `doseId` lors de la dérivation
+ * (audit trail intact).
+ *
+ * Les champs absents du `patch` ne sont pas modifiés. Un `patch` totalement
+ * vide est ignoré par la projection.
+ */
+export interface DoseEditedPayload {
+  /** Référence vers la `DoseAdministered` à patcher. */
+  doseId: string;
+  /** Champs modifiables (tous optionnels, au moins un attendu). */
+  patch: {
+    administeredAtMs?: number;
+    dosesAdministered?: number;
+    symptoms?: ReadonlyArray<string>;
+    circumstances?: ReadonlyArray<string>;
+    freeFormTag?: string | null;
+  };
+  /** Device qui a effectué l'édition. */
+  editedByDeviceId: string;
+  /** UTC ms de l'édition. */
+  editedAtMs: number;
+  /**
+   * Raison obligatoire si l'éditeur est Admin et que > 30 min se sont
+   * écoulées depuis `administeredAtMs`. Optionnel sinon.
+   */
+  reason?: string;
+}
+
+/**
+ * Payload pour `DoseVoided` — RM18, E4-S07.
+ *
+ * Marque une prise comme annulée logiquement (gris barré, hors décompte
+ * pompe). La prise originale n'est jamais supprimée physiquement : l'audit
+ * trail conserve le `DoseAdministered` initial et l'événement `DoseVoided`
+ * en parallèle.
+ *
+ * Pour le flux de résolution de conflit (E4-S05), `voidedReason` doit valoir
+ * `VOIDED_REASON_DUPLICATE_RESOLVED` (constante exportée par ce module).
+ */
+export interface DoseVoidedPayload {
+  doseId: string;
+  voidedByDeviceId: string;
+  /** UTC ms de l'annulation. */
+  voidedAtMs: number;
+  /**
+   * Raison obligatoire (max 200 chars). Pour une résolution de conflit RM6,
+   * vaut la constante `VOIDED_REASON_DUPLICATE_RESOLVED`.
+   */
+  voidedReason: string;
 }
 
 /** Payload pour PumpReplaced */
@@ -103,6 +177,8 @@ export interface ChildRegisteredPayload {
 export type DomainEventPayload =
   | { type: 'DoseAdministered'; payload: DoseAdministeredPayload }
   | { type: 'DoseReviewFlagged'; payload: DoseReviewFlaggedPayload }
+  | { type: 'DoseEdited'; payload: DoseEditedPayload }
+  | { type: 'DoseVoided'; payload: DoseVoidedPayload }
   | { type: 'PumpReplaced'; payload: PumpReplacedPayload }
   | { type: 'PlanUpdated'; payload: PlanUpdatedPayload }
   | { type: 'CaregiverInvited'; payload: CaregiverInvitedPayload }

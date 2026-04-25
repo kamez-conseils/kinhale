@@ -171,4 +171,75 @@ describe('JournalScreen', () => {
     renderWithProviders(<JournalScreen />);
     expect(screen.getByText(/toux/i)).toBeTruthy();
   });
+
+  it("affiche le badge 'À vérifier' pour une dose pending_review (E4-S05)", () => {
+    const { useDocStore } = jest.requireMock('../../../src/stores/doc-store') as {
+      useDocStore: jest.Mock;
+    };
+    const { projectDoses } = jest.requireMock('@kinhale/sync') as {
+      projectDoses: jest.Mock;
+    };
+    const doc = makeDocWithDose();
+    useDocStore.mockImplementation(
+      (selector: (s: { doc: KinhaleDoc | null; initDoc: jest.Mock }) => unknown) =>
+        selector({ doc, initDoc: jest.fn() }),
+    );
+    projectDoses.mockReturnValue([
+      {
+        eventId: 'evt-1',
+        doseId: 'dose-abc',
+        pumpId: 'pump-1',
+        childId: 'child-1',
+        caregiverId: 'dev-1',
+        administeredAtMs: Date.now() - 5 * 60_000,
+        doseType: 'rescue',
+        dosesAdministered: 1,
+        symptoms: [],
+        circumstances: [],
+        freeFormTag: null,
+        occurredAtMs: Date.now() - 5 * 60_000,
+        deviceId: 'dev-1',
+        status: 'pending_review',
+      },
+    ]);
+    renderWithProviders(<JournalScreen />);
+    expect(screen.getByText(/à vérifier|needs review/i)).toBeTruthy();
+  });
+
+  it("affiche le badge 'Annulée' et grise une dose voidée (E4-S07)", () => {
+    const { useDocStore } = jest.requireMock('../../../src/stores/doc-store') as {
+      useDocStore: jest.Mock;
+    };
+    const { projectDoses } = jest.requireMock('@kinhale/sync') as {
+      projectDoses: jest.Mock;
+    };
+    const doc = makeDocWithDose();
+    useDocStore.mockImplementation(
+      (selector: (s: { doc: KinhaleDoc | null; initDoc: jest.Mock }) => unknown) =>
+        selector({ doc, initDoc: jest.fn() }),
+    );
+    projectDoses.mockReturnValue([
+      {
+        eventId: 'evt-1',
+        doseId: 'dose-abc',
+        pumpId: 'pump-1',
+        childId: 'child-1',
+        caregiverId: 'dev-1',
+        administeredAtMs: 1_700_000_000_000,
+        doseType: 'maintenance',
+        dosesAdministered: 1,
+        symptoms: [],
+        circumstances: [],
+        freeFormTag: null,
+        occurredAtMs: 1_700_000_000_000,
+        deviceId: 'dev-1',
+        status: 'voided',
+        voidedReason: 'mauvaise pompe',
+        voidedByDeviceId: 'dev-1',
+        voidedAtMs: 1_700_000_500_000,
+      },
+    ]);
+    renderWithProviders(<JournalScreen />);
+    expect(screen.getByText(/annulée|cancelled/i)).toBeTruthy();
+  });
 });
