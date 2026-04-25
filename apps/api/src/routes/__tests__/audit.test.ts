@@ -458,3 +458,159 @@ describe('POST /audit/report-shared', () => {
     await app.close();
   });
 });
+
+/**
+ * Tests de la route `POST /audit/privacy-export` (E9-S02, KIN-085).
+ *
+ * Trace la génération locale d'une archive RGPD/Loi 25. Mêmes garanties
+ * zero-knowledge que `/audit/report-generated` : strict body, rate-limit
+ * Redis, insertion jsonb minimaliste, logs sans donnée santé.
+ */
+describe('POST /audit/privacy-export', () => {
+  const VALID_PAYLOAD = {
+    archiveHash: VALID_HASH,
+    generatedAtMs: 1_700_500_000_000,
+  };
+
+  it('retourne 401 sans JWT', async () => {
+    const db = makeMockDb();
+    const app = buildTestApp(db);
+    await app.ready();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/audit/privacy-export',
+      payload: VALID_PAYLOAD,
+    });
+    expect(res.statusCode).toBe(401);
+    await app.close();
+  });
+
+  it('retourne 400 si body est vide', async () => {
+    const db = makeMockDb();
+    const app = buildTestApp(db);
+    await app.ready();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/audit/privacy-export',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+      payload: {},
+    });
+    expect(res.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it("retourne 400 si archiveHash n'est pas 64 chars hex", async () => {
+    const db = makeMockDb();
+    const app = buildTestApp(db);
+    await app.ready();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/audit/privacy-export',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+      payload: { ...VALID_PAYLOAD, archiveHash: 'too-short' },
+    });
+    expect(res.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it('retourne 400 si un champ supplémentaire fuite (strict mode anti-fuite)', async () => {
+    const db = makeMockDb();
+    const app = buildTestApp(db);
+    await app.ready();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/audit/privacy-export',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+      payload: {
+        ...VALID_PAYLOAD,
+        // Tentative de fuite : prénom enfant dans l'audit
+        childName: 'Léa',
+      },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(db._insertValues).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it('retourne 400 si generatedAtMs est négatif', async () => {
+    const db = makeMockDb();
+    const app = buildTestApp(db);
+    await app.ready();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/audit/privacy-export',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+      payload: { ...VALID_PAYLOAD, generatedAtMs: -1 },
+    });
+    expect(res.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it("persiste un événement 'privacy_export' avec uniquement les champs attendus (zero-knowledge)", async () => {
+    const db = makeMockDb();
+    const app = buildTestApp(db);
+    await app.ready();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/audit/privacy-export',
+      headers: { Authorization: `Bearer ${signAccess(app)}` },
+      payload: VALID_PAYLOAD,
+    });
+    expect(res.statusCode).toBe(201);
+    expect(db._inserted).toHaveLength(1);
+    const row = db._inserted[0];
+    expect(row?.accountId).toBe(ACCOUNT_ID);
+    expect(row?.eventType).toBe('privacy_export');
+    expect(row?.eventData).toEqual(VALID_PAYLOAD);
+    await app.close();
+  });
+
+  it('applique un rate-limit (429 après 5/h par device)', async () => {
+    const db = makeMockDb();
+    const app = buildTestApp(db);
+    await app.ready();
+    const token = signAccess(app);
+    let lastStatus = 0;
+    for (let i = 0; i < 6; i++) {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/audit/privacy-export',
+        headers: { Authorization: `Bearer ${token}` },
+        payload: { ...VALID_PAYLOAD, generatedAtMs: 1_700_500_000_000 + i },
+      });
+      lastStatus = res.statusCode;
+    }
+    expect(lastStatus).toBe(429);
+    await app.close();
+  });
+
+  it('a un rate-limit indépendant de /audit/report-generated et /audit/report-shared', async () => {
+    const db = makeMockDb();
+    const app = buildTestApp(db);
+    await app.ready();
+    const token = signAccess(app);
+    // Saturer le quota report-generated
+    for (let i = 0; i < 11; i++) {
+      await app.inject({
+        method: 'POST',
+        url: '/audit/report-generated',
+        headers: { Authorization: `Bearer ${token}` },
+        payload: {
+          reportHash: VALID_HASH,
+          rangeStartMs: 1_700_000_000_000,
+          rangeEndMs: 1_700_500_000_000,
+          generatedAtMs: 1_700_500_000_000 + i,
+        },
+      });
+    }
+    // privacy-export doit rester disponible
+    const res = await app.inject({
+      method: 'POST',
+      url: '/audit/privacy-export',
+      headers: { Authorization: `Bearer ${token}` },
+      payload: VALID_PAYLOAD,
+    });
+    expect(res.statusCode).toBe(201);
+    await app.close();
+  });
+});

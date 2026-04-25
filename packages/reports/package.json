@@ -18,7 +18,8 @@
   },
   "dependencies": {
     "@kinhale/crypto": "workspace:*",
-    "@kinhale/sync": "workspace:*"
+    "@kinhale/sync": "workspace:*",
+    "fflate": "~0.8.2"
   },
   "devDependencies": {
     "@kinhale/eslint-config": "workspace:*",

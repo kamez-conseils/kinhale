@@ -290,5 +290,27 @@
     "loadError": "Impossible de charger les heures silencieuses.",
     "invalidFormat": "Format invalide. Utilisez HH:MM (ex. 22:00).",
     "safetyNote": "Les notifications de dose manquée restent émises, même pendant les heures silencieuses (règle de sécurité)."
+  },
+  "privacyExport": {
+    "title": "Exporter mes données",
+    "description": "Exercez votre droit à la portabilité (RGPD art. 20 / Loi 25 art. 30). L'archive ZIP est générée intégralement sur votre appareil — le serveur Kinhale ne voit jamais vos données santé.",
+    "sectionTitle": "Archive de portabilité",
+    "contents": "L'archive contient : le journal complet des prises (JSON + CSV), un rapport HTML imprimable, les métadonnées techniques de votre compte (devices, audit trail, préférences), un fichier README bilingue avec hashes SHA-256 d'intégrité.",
+    "exportCta": "Exporter mes données (RGPD / Loi 25)",
+    "preparing": "Préparation de l'archive…",
+    "readyMessage": "Archive prête. Téléchargez-la ou partagez-la depuis votre appareil.",
+    "downloadCta": "Télécharger l'archive",
+    "shareCta": "Partager l'archive",
+    "shareUnavailable": "Le partage système n'est pas disponible. Utilisez le bouton Télécharger.",
+    "archiveHashLabel": "Hash d'intégrité (SHA-256)",
+    "auditNotice": "L'export est tracé localement. Seul un hash et un horodatage sont transmis au serveur (aucune donnée santé).",
+    "auditFailed": "Archive générée localement. Synchronisation de l'audit en attente de connexion.",
+    "disclaimer": "Kinhale est un outil de suivi et de coordination. Cette archive ne contient aucune interprétation médicale, aucune recommandation de dose, aucun diagnostic.",
+    "signedLinkComingSoon": "L'envoi de l'archive par e-mail via lien signé sera disponible en v1.1.",
+    "errors": {
+      "notReady": "Vos données ne sont pas encore chargées. Réessayez dans quelques secondes.",
+      "metadataFailed": "Impossible de récupérer les métadonnées du serveur. Vérifiez votre connexion.",
+      "generationFailed": "Impossible de générer l'archive. Réessayez."
+    }
   }
 }

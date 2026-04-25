@@ -18,6 +18,7 @@ import notificationsRoute from './routes/notifications.js';
 import notificationPreferencesRoute from './routes/notification-preferences.js';
 import quietHoursRoute from './routes/quiet-hours.js';
 import auditRoute from './routes/audit.js';
+import privacyRoute from './routes/privacy.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -86,6 +87,7 @@ export function buildApp(env: Env, overrides: BuildAppOverrides = {}): FastifyIn
   void app.register(notificationPreferencesRoute);
   void app.register(quietHoursRoute);
   void app.register(auditRoute, { prefix: '/audit' });
+  void app.register(privacyRoute);
 
   return app;
 }

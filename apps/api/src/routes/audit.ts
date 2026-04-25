@@ -29,8 +29,20 @@ const AUDIT_REPORT_WINDOW_SECONDS = 3600;
 const AUDIT_REPORT_SHARED_MAX_PER_HOUR = 20;
 const AUDIT_REPORT_SHARED_WINDOW_SECONDS = 3600;
 
+/**
+ * Nombre max de `privacy_export` par device et par heure (KIN-085, E9-S02).
+ *
+ * Quota strict : un export RGPD/Loi 25 est une action rare (1-2/an pour un
+ * usage normal). Limiter à 5/h freine un device compromis qui voudrait
+ * polluer l'audit ou tester massivement la pipeline.
+ */
+const AUDIT_PRIVACY_EXPORT_MAX_PER_HOUR = 5;
+const AUDIT_PRIVACY_EXPORT_WINDOW_SECONDS = 3600;
+
 const rateLimitKey = (deviceId: string): string => `rl:audit-report-generated:${deviceId}`;
 const rateLimitSharedKey = (deviceId: string): string => `rl:audit-report-shared:${deviceId}`;
+const rateLimitPrivacyExportKey = (deviceId: string): string =>
+  `rl:audit-privacy-export:${deviceId}`;
 
 /**
  * Borne supérieure de timestamp acceptée (année 3000). Protège contre des
@@ -107,6 +119,34 @@ const ReportSharedBody = z
   .strict();
 
 type ReportSharedData = z.infer<typeof ReportSharedBody>;
+
+/**
+ * Schéma Zod **strict** du body `POST /audit/privacy-export` (E9-S02, KIN-085).
+ *
+ * Trace la génération **locale** d'une archive de portabilité RGPD/Loi 25.
+ * Seuls 2 champs autorisés :
+ * - `archiveHash` : SHA-256 hex du ZIP entier — opaque côté relais, vérifiable
+ *   côté client.
+ * - `generatedAtMs` : horodatage de génération côté client.
+ *
+ * `.strict()` rejette tout champ supplémentaire — défense en profondeur
+ * contre un client compromis qui tenterait d'exfiltrer une donnée santé
+ * (ex. `childName`, `pumpName`) via le canal audit.
+ *
+ * **Zero-knowledge** :
+ * - `archiveHash` est un digest non réversible.
+ * - `generatedAtMs` est équivalent à l'horloge serveur à la milliseconde.
+ *
+ * Refs: ADR-D14, KIN-085, RGPD art. 20, Loi 25 art. 30.
+ */
+const PrivacyExportBody = z
+  .object({
+    archiveHash: z.string().regex(/^[0-9a-f]{64}$/, 'invalid_hash'),
+    generatedAtMs: z.number().int().min(0).max(MAX_ACCEPTABLE_MS),
+  })
+  .strict();
+
+type PrivacyExportData = z.infer<typeof PrivacyExportBody>;
 
 const auditRoute: FastifyPluginAsync = async (app) => {
   /**
@@ -207,6 +247,55 @@ const auditRoute: FastifyPluginAsync = async (app) => {
     await app.db.insert(auditEvents).values({
       accountId,
       eventType: 'report_shared',
+      eventData: data,
+    });
+
+    return reply.status(201).send({ ok: true });
+  });
+
+  /**
+   * POST /audit/privacy-export (E9-S02, KIN-085)
+   *
+   * Trace la génération locale d'une archive de portabilité RGPD/Loi 25.
+   * Appelé par le client après que `buildPrivacyArchive` a produit le ZIP.
+   *
+   * **Zero-knowledge strict** : le body ne contient **aucune donnée santé** :
+   * - `archiveHash` : SHA-256 hex de l'archive (RM24-like) — opaque relais.
+   * - `generatedAtMs` : timestamp client.
+   *
+   * Renvoie 201 même en cas de génération répétée (un utilisateur peut
+   * légitimement régénérer plusieurs fois — chaque tentative est tracée).
+   *
+   * Rate-limit Redis : 5/h/device (action rare).
+   *
+   * Refs: ADR-D14, KIN-085, E9-S02.
+   */
+  app.post('/privacy-export', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const parse = PrivacyExportBody.safeParse(request.body);
+    if (!parse.success) {
+      return reply.status(400).send({ error: 'invalid_body' });
+    }
+
+    const { sub: accountId, deviceId } = request.user as SessionJwtPayload;
+
+    const key = rateLimitPrivacyExportKey(deviceId);
+    const count = await app.redis.pub.incr(key);
+    if (count === 1) {
+      await app.redis.pub.expire(key, AUDIT_PRIVACY_EXPORT_WINDOW_SECONDS);
+    }
+    if (count > AUDIT_PRIVACY_EXPORT_MAX_PER_HOUR) {
+      app.log.warn(
+        { event: 'audit.privacy_export.rate_limited', deviceId },
+        'Rate-limit atteint sur /audit/privacy-export',
+      );
+      return reply.status(429).send({ error: 'rate_limited' });
+    }
+
+    const data: PrivacyExportData = parse.data;
+
+    await app.db.insert(auditEvents).values({
+      accountId,
+      eventType: 'privacy_export',
       eventData: data,
     });
 
