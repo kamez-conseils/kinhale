@@ -1,0 +1,166 @@
+# Security scans — Kinhale.
+#
+# Schedule
+#   - 03:17 UTC daily (off-peak, avoids the top-of-the-hour spike)
+#   - Push to `main` (post-release sanity)
+#   - Manual `workflow_dispatch`
+#
+# What runs
+#   1. `pnpm audit`            — npm audit DB, severity ≥ high.
+#   2. Trivy filesystem scan   — repo source + lockfile vulns, SARIF upload.
+#   3. Trivy image scan        — pulls the published `develop` images and
+#                                 re-scans (catches new CVEs without rebuild).
+#   4. Snyk scan               — only when `SNYK_TOKEN` secret is configured;
+#                                 skipped with a notice otherwise.
+#
+# Tracking: KIN-090 / E14-S04. Findings go to the GitHub Security tab
+# (Code scanning alerts) plus a workflow failure on critical results from
+# `pnpm audit`.
+
+name: Security scan
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: security-scan-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  pnpm-audit:
+    name: pnpm audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Audit dependencies (high+)
+        # `pnpm audit --audit-level high` exits non-zero if any HIGH or
+        # CRITICAL is found. We do not block on moderate (too noisy in early
+        # development).
+        run: pnpm audit --audit-level high
+
+  trivy-fs:
+    name: Trivy · filesystem
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-fs.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '0'
+      - name: Upload SARIF
+        if: ${{ !cancelled() }}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+
+  trivy-images:
+    name: Trivy · published images
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [kinhale-api, kinhale-web]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Log in to GHCR (read)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Resolve target image
+        id: target
+        run: |
+          set -e
+          # On scheduled runs scan the develop tag; on push to main scan the
+          # most recent vX.Y.Z tag (or fall back to develop if missing).
+          if [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${GITHUB_REF_NAME}" = "main" ]; then
+            tag="latest"
+          else
+            tag="develop"
+          fi
+          echo "ref=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${tag}" >> "$GITHUB_OUTPUT"
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ steps.target.outputs.ref }}
+          format: sarif
+          output: trivy-${{ matrix.image }}.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '0'
+      - name: Upload SARIF
+        if: ${{ !cancelled() }}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-${{ matrix.image }}.sarif
+          category: trivy-${{ matrix.image }}
+
+  snyk:
+    name: Snyk · dependencies (optional)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Skip if SNYK_TOKEN missing
+        id: gate
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          if [ -z "${SNYK_TOKEN:-}" ]; then
+            echo "::notice::SNYK_TOKEN not configured — skipping Snyk scan."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Setup
+        if: ${{ steps.gate.outputs.skip != 'true' }}
+        uses: ./.github/actions/setup
+      - name: Snyk test (high+)
+        if: ${{ steps.gate.outputs.skip != 'true' }}
+        uses: snyk/actions/node@cdb760004ba9ea4d525f2e043745dfe85bb9077e # v0.4.0
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --all-projects --sarif-file-output=snyk.sarif
+        continue-on-error: true
+      - name: Upload Snyk SARIF
+        if: ${{ steps.gate.outputs.skip != 'true' && !cancelled() }}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk.sarif
+          category: snyk

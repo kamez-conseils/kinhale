@@ -1,0 +1,100 @@
+# syntax=docker/dockerfile:1.7
+#
+# Production image for Kinhale Web (Next.js 15, standalone output).
+#
+# Multi-stage build:
+#   1. `deps`    : install pnpm workspace dependencies (cache-friendly).
+#   2. `builder` : run `next build` with `output: 'standalone'` enabled in
+#                   `next.config.ts` — emits `.next/standalone/` and
+#                   `.next/static/` ready for a minimal runtime image.
+#   3. `runtime` : copy only the standalone server + static assets + public/
+#                   into a slim Alpine image, run as non-root.
+#
+# Built and pushed by `.github/workflows/build-images.yml` to
+# `ghcr.io/kamez-conseils/kinhale-web`.
+#
+# Tracking: KIN-090 / E14-S04. Real deployment is KIN-091 / E14-S06.
+
+ARG NODE_IMAGE=node:20.19-alpine
+
+# ---- Stage 1: deps ---------------------------------------------------------
+FROM ${NODE_IMAGE} AS deps
+WORKDIR /app
+
+RUN apk add --no-cache libc6-compat python3 make g++ \
+ && corepack enable \
+ && corepack prepare pnpm@10.33.0 --activate
+
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json tsconfig.base.json ./
+COPY apps/web/package.json ./apps/web/
+COPY packages/crypto/package.json ./packages/crypto/
+COPY packages/sync/package.json ./packages/sync/
+COPY packages/domain/package.json ./packages/domain/
+COPY packages/i18n/package.json ./packages/i18n/
+COPY packages/reports/package.json ./packages/reports/
+COPY packages/eslint-config/package.json ./packages/eslint-config/
+COPY packages/tsconfig/package.json ./packages/tsconfig/
+COPY packages/test-utils/package.json ./packages/test-utils/
+
+RUN --mount=type=cache,id=pnpm-store-web,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --prefer-offline
+
+# ---- Stage 2: builder ------------------------------------------------------
+FROM ${NODE_IMAGE} AS builder
+WORKDIR /app
+
+RUN corepack enable \
+ && corepack prepare pnpm@10.33.0 --activate
+
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1
+
+# Reuse installed deps from previous stage.
+COPY --from=deps /app /app
+
+# Sources of the web app + workspace packages it transpiles.
+COPY apps/web ./apps/web
+COPY packages/crypto ./packages/crypto
+COPY packages/sync ./packages/sync
+COPY packages/domain ./packages/domain
+COPY packages/i18n ./packages/i18n
+COPY packages/reports ./packages/reports
+COPY packages/tsconfig ./packages/tsconfig
+
+# Ensure `public/` exists even when no static asset is shipped (tamagui only
+# writes `public/tamagui.css` when extraction runs). The runtime stage copies
+# this directory unconditionally.
+RUN mkdir -p ./apps/web/public \
+ && pnpm --filter @kinhale/web build
+
+# ---- Stage 3: runtime ------------------------------------------------------
+FROM ${NODE_IMAGE} AS runtime
+WORKDIR /app
+
+ENV NODE_ENV=production \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0 \
+    NEXT_TELEMETRY_DISABLED=1
+
+RUN apk add --no-cache tini \
+ && addgroup -S kinhale -g 1001 \
+ && adduser -S kinhale -G kinhale -u 1001
+
+# Standalone tracer copies a minimal node_modules subset and a `server.js`.
+# `outputFileTracingRoot` is set to the monorepo root so the standalone
+# directory contains `apps/web/server.js` and shared `node_modules`.
+COPY --from=builder --chown=kinhale:kinhale /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=kinhale:kinhale /app/apps/web/.next/static ./apps/web/.next/static
+# `public/` is created by the builder stage even when empty (tamagui emits
+# `tamagui.css` there at build time — see `next.config.ts`).
+COPY --from=builder --chown=kinhale:kinhale /app/apps/web/public ./apps/web/public
+
+USER kinhale
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "require('http').get('http://127.0.0.1:'+ (process.env.PORT||3000) +'/', r => process.exit(r.statusCode<500?0:1)).on('error', () => process.exit(1))"
+
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["node", "apps/web/server.js"]
