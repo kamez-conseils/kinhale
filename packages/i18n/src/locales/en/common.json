@@ -367,6 +367,24 @@
     "contactLabel": "Privacy officer",
     "contactValue": "privacy@kinhale.health"
   },
+  "audit": {
+    "page": {
+      "title": "Household activity",
+      "subtitle": "The 90 most recent events about your account. No health data is ever sent to the server — only opaque hashes and timestamps are stored.",
+      "listHeading": "Recent events",
+      "empty": "No activity recorded yet.",
+      "loadError": "Could not load activity history."
+    },
+    "event": {
+      "report_generated": "Medical report generated",
+      "report_shared": "Medical report shared",
+      "privacy_export": "Portability export downloaded",
+      "account_deletion_requested": "Account deletion requested",
+      "account_deletion_cancelled": "Account deletion cancelled",
+      "account_deleted": "Account deleted",
+      "other": "Other event"
+    }
+  },
   "privacyExport": {
     "title": "Export my data",
     "description": "Exercise your right to data portability (GDPR art. 20 / Quebec Law 25 art. 30). The ZIP archive is generated entirely on your device — the Kinhale server never sees your health data.",

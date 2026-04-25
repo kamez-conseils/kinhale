@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { eq, desc } from 'drizzle-orm';
 import { auditEvents } from '../db/schema.js';
 import type { SessionJwtPayload } from '../plugins/jwt.js';
 
@@ -39,10 +40,32 @@ const AUDIT_REPORT_SHARED_WINDOW_SECONDS = 3600;
 const AUDIT_PRIVACY_EXPORT_MAX_PER_HOUR = 5;
 const AUDIT_PRIVACY_EXPORT_WINDOW_SECONDS = 3600;
 
+/**
+ * Quota de lecture du journal d'audit (KIN-093, E9-S09).
+ *
+ * 60/h/device — cohérent avec les autres routes self-scoped authentifiées
+ * (notification-preferences, quiet-hours). La lecture est rare (l'écran est
+ * consulté ponctuellement), un quota plus haut ouvrirait une fenêtre
+ * d'exfiltration répétée pour un device compromis.
+ */
+const AUDIT_LIST_MAX_PER_HOUR = 60;
+const AUDIT_LIST_WINDOW_SECONDS = 3600;
+
+/**
+ * Borne supérieure du nombre d'événements retournés par `GET /me/audit-events`.
+ *
+ * 90 derniers événements (cf. E9-S09 — « 90 derniers évts »). Suffisant pour
+ * couvrir plusieurs mois d'activité d'un foyer normal sans exposer un trail
+ * volumineux d'un coup.
+ */
+const AUDIT_LIST_DEFAULT_LIMIT = 90;
+const AUDIT_LIST_MAX_LIMIT = 90;
+
 const rateLimitKey = (deviceId: string): string => `rl:audit-report-generated:${deviceId}`;
 const rateLimitSharedKey = (deviceId: string): string => `rl:audit-report-shared:${deviceId}`;
 const rateLimitPrivacyExportKey = (deviceId: string): string =>
   `rl:audit-privacy-export:${deviceId}`;
+const rateLimitListKey = (deviceId: string): string => `rl:audit-list:${deviceId}`;
 
 /**
  * Borne supérieure de timestamp acceptée (année 3000). Protège contre des
@@ -147,6 +170,106 @@ const PrivacyExportBody = z
   .strict();
 
 type PrivacyExportData = z.infer<typeof PrivacyExportBody>;
+
+/**
+ * Schéma Zod du querystring `GET /me/audit-events` (KIN-093, E9-S09).
+ *
+ * Pagination v1 minimaliste : un simple `limit` borné par
+ * {@link AUDIT_LIST_MAX_LIMIT}. La spec parle de pagination cursor-based
+ * « optionnelle pour le futur » — en v1.0 on retourne juste les N plus
+ * récents, ordre antéchronologique. Si > 90 events s'avèrent nécessaires
+ * un jour, ajouter un curseur `before` (timestamp d'un event observé) sans
+ * changer le format actuel.
+ */
+const ListEventsQuery = z
+  .object({
+    limit: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(AUDIT_LIST_MAX_LIMIT)
+      .default(AUDIT_LIST_DEFAULT_LIMIT),
+  })
+  .strict();
+
+/**
+ * Whitelists **explicites** des champs `event_data` retournés au client par
+ * type d'événement (KIN-093, défense en profondeur anti-fuite).
+ *
+ * Motivation : la table `audit_events` accepte n'importe quel JSONB. Les
+ * routes d'écriture (`POST /audit/*`) protègent à l'entrée via Zod `.strict()`,
+ * mais un dev pourrait :
+ * - écrire un nouvel événement sans schéma strict côté insert,
+ * - faire un JOIN par accident qui ramènerait une colonne d'une autre table,
+ * - patcher une ligne existante avec des champs supplémentaires.
+ *
+ * La sortie est donc filtrée par une **deuxième barrière** : seul les champs
+ * documentés ici remontent au client. Tout champ inconnu est silencieusement
+ * écarté (pas d'erreur — l'API reste tolérante aux données legacy).
+ *
+ * Aligné sur les schémas Zod d'écriture déclarés plus haut. Si un nouveau
+ * type est introduit, il faut y ajouter son entrée ; sinon ses event_data
+ * sortiront vides (`{}`), ce qui est le comportement le plus sûr par défaut.
+ *
+ * **Aucune donnée santé** ici par construction — uniquement hashes opaques
+ * et timestamps.
+ */
+type AuditEventDataPlain = Readonly<Record<string, unknown>>;
+
+const AUDIT_EVENT_DATA_WHITELIST: Readonly<Record<string, ReadonlyArray<string>>> = {
+  report_generated: ['reportHash', 'rangeStartMs', 'rangeEndMs', 'generatedAtMs'],
+  report_shared: ['reportHash', 'shareMethod', 'sharedAtMs'],
+  privacy_export: ['archiveHash', 'generatedAtMs'],
+  // E9-S03 / KIN-086 — payloads écrits par account-deletion.ts.
+  account_deletion_requested: ['scheduledAtMs', 'requestedAtMs'],
+  account_deletion_cancelled: ['cancelledAtMs'],
+  // Worker `account-purge` — l'événement est inséré avec `account_id = NULL`
+  // (FK ON DELETE SET NULL) et un `pseudoId` pour corrélation post-purge.
+  // Ce type ne devrait jamais apparaître dans `GET /me/audit-events` (le
+  // compte est purgé), mais on déclare la whitelist par sécurité.
+  account_deleted: ['pseudoId', 'deletedAtMs'],
+};
+
+/**
+ * Filtre une valeur `event_data` brute en ne gardant que les clés autorisées
+ * pour le type donné. Tout type inconnu retourne `{}` (fail-closed).
+ */
+function pickWhitelistedEventData(eventType: string, raw: unknown): AuditEventDataPlain {
+  const allowed = AUDIT_EVENT_DATA_WHITELIST[eventType];
+  if (allowed === undefined) {
+    return {};
+  }
+  if (raw === null || typeof raw !== 'object') {
+    return {};
+  }
+  const out: Record<string, unknown> = {};
+  const obj = raw as Record<string, unknown>;
+  for (const key of allowed) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      out[key] = obj[key];
+    }
+  }
+  return out;
+}
+
+/**
+ * Format de réponse `GET /me/audit-events`.
+ *
+ * **Aucune fuite de scope** : `accountId` est *volontairement* absent —
+ * le client connaît son propre `sub` via le JWT, pas besoin de lui répéter,
+ * et son absence évite qu'un futur dev introduise une régression IDOR
+ * (l'attaquant n'a aucun champ à comparer pour deviner un id étranger).
+ */
+interface AuditEventListItem {
+  readonly id: string;
+  readonly eventType: string;
+  readonly eventData: AuditEventDataPlain;
+  readonly createdAtMs: number;
+}
+
+interface AuditEventListResponse {
+  readonly events: ReadonlyArray<AuditEventListItem>;
+}
 
 const auditRoute: FastifyPluginAsync = async (app) => {
   /**
@@ -303,4 +426,85 @@ const auditRoute: FastifyPluginAsync = async (app) => {
   });
 };
 
+/**
+ * Plugin séparé pour `GET /me/audit-events` (KIN-093, E9-S09).
+ *
+ * Hébergé dans le même fichier que `auditRoute` pour cohérence du module
+ * audit, mais enregistré **sans préfixe** côté `app.ts` afin d'exposer la
+ * route à `/me/audit-events` (pattern aligné sur `notification-preferences`,
+ * `quiet-hours`, `privacy`).
+ *
+ * **Sécurité (KIN-093)** :
+ * - Authentification JWT obligatoire (`preHandler: [app.authenticate]`).
+ * - Filtre `WHERE account_id = sub` strict — aucune fuite cross-tenant
+ *   possible (un JWT du compte B ne récupère JAMAIS les events de A).
+ * - Rate-limit Redis 60/h/device (cohérent self-scoped).
+ * - Réponse strictement scopée à la table `audit_events` — aucun JOIN.
+ * - `event_data` est filtré par `pickWhitelistedEventData` : seuls les
+ *   champs documentés par type sont remontés au client. Tout champ
+ *   inattendu est écarté silencieusement (fail-closed).
+ * - L'`accountId` n'apparaît PAS dans la réponse (le client le connaît
+ *   déjà via le JWT — réémettre ne fait que créer une cible IDOR).
+ *
+ * Refs: KIN-093, E9-S09, RM11.
+ */
+const auditEventsListRoute: FastifyPluginAsync = async (app) => {
+  app.get<{ Querystring: z.infer<typeof ListEventsQuery> }>(
+    '/me/audit-events',
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      const parsedQuery = ListEventsQuery.safeParse(request.query);
+      if (!parsedQuery.success) {
+        return reply.status(400).send({ error: 'invalid_query' });
+      }
+      const { limit } = parsedQuery.data;
+
+      const { sub: accountId, deviceId } = request.user as SessionJwtPayload;
+
+      // Rate-limit Redis (pattern identique à audit.ts / privacy.ts).
+      const key = rateLimitListKey(deviceId);
+      const count = await app.redis.pub.incr(key);
+      if (count === 1) {
+        await app.redis.pub.expire(key, AUDIT_LIST_WINDOW_SECONDS);
+      }
+      if (count > AUDIT_LIST_MAX_PER_HOUR) {
+        app.log.warn(
+          { event: 'audit.list.rate_limited', deviceId },
+          'Rate-limit atteint sur GET /me/audit-events',
+        );
+        return reply.status(429).send({ error: 'rate_limited' });
+      }
+
+      // Filtrage strict par `account_id = sub`. La projection ne sélectionne
+      // QUE les colonnes d'`audit_events` — aucun JOIN possible avec une
+      // autre table (cf. anti-fuite KIN-093). Si on ajoute un jour des FK
+      // à exposer (ex. invite émetteur), il faudra étendre la whitelist
+      // explicitement et mettre à jour les tests anti-fuite.
+      const rows = await app.db
+        .select({
+          id: auditEvents.id,
+          eventType: auditEvents.eventType,
+          eventData: auditEvents.eventData,
+          createdAt: auditEvents.createdAt,
+        })
+        .from(auditEvents)
+        .where(eq(auditEvents.accountId, accountId))
+        .orderBy(desc(auditEvents.createdAt))
+        .limit(limit);
+
+      const response: AuditEventListResponse = {
+        events: rows.map((r) => ({
+          id: r.id,
+          eventType: r.eventType,
+          eventData: pickWhitelistedEventData(r.eventType, r.eventData),
+          createdAtMs: r.createdAt.getTime(),
+        })),
+      };
+
+      return reply.status(200).send(response);
+    },
+  );
+};
+
+export { auditEventsListRoute };
 export default auditRoute;

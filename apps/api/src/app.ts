@@ -17,7 +17,7 @@ import invitationsRoute from './routes/invitations.js';
 import notificationsRoute from './routes/notifications.js';
 import notificationPreferencesRoute from './routes/notification-preferences.js';
 import quietHoursRoute from './routes/quiet-hours.js';
-import auditRoute from './routes/audit.js';
+import auditRoute, { auditEventsListRoute } from './routes/audit.js';
 import privacyRoute from './routes/privacy.js';
 import accountDeletionRoute from './routes/account-deletion.js';
 
@@ -88,6 +88,9 @@ export function buildApp(env: Env, overrides: BuildAppOverrides = {}): FastifyIn
   void app.register(notificationPreferencesRoute);
   void app.register(quietHoursRoute);
   void app.register(auditRoute, { prefix: '/audit' });
+  // KIN-093 / E9-S09 — endpoint `GET /me/audit-events` enregistré sans
+  // préfixe (pattern privacy/notification-preferences/quiet-hours).
+  void app.register(auditEventsListRoute);
   void app.register(privacyRoute);
   void app.register(accountDeletionRoute);
 
