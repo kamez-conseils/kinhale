@@ -94,6 +94,12 @@ describe('AddDosePage', () => {
     expect(screen.getAllByRole('button').length).toBeGreaterThanOrEqual(3); // maintenance + rescue + save
   });
 
+  it('affiche le DisclaimerFooter discret (RM27, KIN-088)', async () => {
+    renderWithProviders(<AddDosePage />);
+    await waitFor(() => expect(mockGetGroupKey).toHaveBeenCalledWith('hh-1'));
+    expect(screen.getByTestId('disclaimer-footer-short')).toBeTruthy();
+  });
+
   it('navigue vers /journal après sauvegarde réussie', async () => {
     // Fake timers : empêche Tamagui de scheduler des setState via setTimeout hors act(),
     // ce qui crée une boucle MutationObserver dans RTL v16 + React 19 + jsdom (CI Docker).

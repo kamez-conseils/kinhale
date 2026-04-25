@@ -6,6 +6,7 @@ import { useAuthStore } from '../../src/stores/auth-store';
 import { useDocStore } from '../../src/stores/doc-store';
 import { getOrCreateDevice } from '../../src/lib/device';
 import { useOnlineGuard } from '../../src/hooks/useOnlineGuard';
+import { DisclaimerBanner, DisclaimerFooter } from '../../src/components/DisclaimerFooter';
 
 export default function OnboardingChildScreen(): JSX.Element {
   const { t } = useTranslation('common');
@@ -46,6 +47,8 @@ export default function OnboardingChildScreen(): JSX.Element {
 
   return (
     <YStack padding="$4" gap="$4">
+      {/* Onboarding écran 1 : disclaimer complet RM27 affiché d'entrée. */}
+      <DisclaimerBanner />
       <H1>{t('onboarding.child.title')}</H1>
       <Text fontWeight="600">{t('onboarding.child.firstNameLabel')}</Text>
       <Input
@@ -83,6 +86,8 @@ export default function OnboardingChildScreen(): JSX.Element {
       >
         {loading ? t('onboarding.child.saving') : t('onboarding.child.save')}
       </Button>
+      {/* Pied E10 : version discrète sur chaque étape onboarding. */}
+      <DisclaimerFooter />
     </YStack>
   );
 }

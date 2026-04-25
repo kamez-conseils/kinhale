@@ -2,6 +2,7 @@ import React, { useState, type JSX } from 'react';
 import { useTranslation } from 'react-i18next';
 import { YStack, H1, Input, Button, Text } from 'tamagui';
 import { apiFetch } from '../../src/lib/api-client';
+import { DisclaimerFooter } from '../../src/components/DisclaimerFooter';
 
 export default function AuthScreen(): JSX.Element {
   const { t } = useTranslation('common');
@@ -31,6 +32,7 @@ export default function AuthScreen(): JSX.Element {
     return (
       <YStack padding="$4" gap="$4" alignItems="center" justifyContent="center" flex={1}>
         <Text fontSize="$5">{t('auth.linkSent')}</Text>
+        <DisclaimerFooter />
       </YStack>
     );
   }
@@ -61,6 +63,8 @@ export default function AuthScreen(): JSX.Element {
       >
         {loading ? t('common.loading') : t('auth.submit')}
       </Button>
+      {/* Pied E1 auth : disclaimer discret RM27. */}
+      <DisclaimerFooter />
     </YStack>
   );
 }

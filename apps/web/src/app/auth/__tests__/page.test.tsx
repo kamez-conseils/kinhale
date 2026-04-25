@@ -26,6 +26,11 @@ describe('AuthPage', () => {
     expect(screen.getByPlaceholderText(/email/i)).toBeInTheDocument();
   });
 
+  it('affiche le DisclaimerFooter discret (RM27, KIN-088)', () => {
+    renderWithProviders(<AuthPage />);
+    expect(screen.getByTestId('disclaimer-footer-short')).toBeTruthy();
+  });
+
   it('appelle apiFetch /auth/magic-link au clic sur soumettre', async () => {
     const { apiFetch } = jest.requireMock('../../../lib/api-client') as { apiFetch: jest.Mock };
     apiFetch.mockResolvedValue({ message: 'ok' });
