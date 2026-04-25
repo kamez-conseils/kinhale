@@ -74,6 +74,22 @@ Before opening a PR:
 - [ ] Accessibility (WCAG 2.1 AA) considered for any UI change.
 - [ ] Any new dependency is declared and licence-checked (compatible with AGPL v3).
 
+### Database migrations
+
+Kinhale uses **Drizzle Kit** for schema migrations (`apps/api/src/db/migrations/`).
+Every `NNNN_<tag>.sql` (the "up") **must** be paired with a hand-written
+`NNNN_<tag>.down.sql` (the rollback). CI blocks any PR that adds a migration
+without its rollback (test `rollback.unit.test.ts`).
+
+- Write idempotent SQL in the rollback (`DROP TABLE IF EXISTS`, `ALTER TABLE
+  IF EXISTS … DROP COLUMN IF EXISTS`, etc.).
+- Run the round-trip locally: `KINHALE_DB_TEST_URL=postgres://… pnpm
+  --filter @kinhale/api test src/db`.
+- Document any data-loss scenario in the PR description and reference
+  [`docs/runbooks/database-migrations.md`](./docs/runbooks/database-migrations.md).
+- Trigger a rollback with `pnpm --filter @kinhale/api db:rollback` (rolls
+  back the most recent applied migration only).
+
 ### Development setup
 
 Detailed setup instructions will live in `docs/contributing/DEVELOPMENT.md` once Sprint 0 opens. Prerequisites:
@@ -151,6 +167,24 @@ Avant d'ouvrir une PR :
 - [ ] PR ≤ 400 lignes modifiées, ou inclut une justification pour une review plus volumineuse.
 - [ ] Accessibilité (WCAG 2.1 AA) prise en compte pour toute modification UI.
 - [ ] Toute nouvelle dépendance est déclarée et sa licence est compatible AGPL v3.
+
+### Migrations de base de données
+
+Kinhale utilise **Drizzle Kit** pour les migrations de schéma
+(`apps/api/src/db/migrations/`). Chaque `NNNN_<tag>.sql` (« up ») **doit**
+être accompagné d'un fichier `NNNN_<tag>.down.sql` écrit à la main
+(rollback). La CI bloque toute PR qui ajoute une migration sans son
+rollback (test `rollback.unit.test.ts`).
+
+- Écrire un SQL idempotent dans le rollback (`DROP TABLE IF EXISTS`,
+  `ALTER TABLE IF EXISTS … DROP COLUMN IF EXISTS`, etc.).
+- Lancer le round-trip local : `KINHALE_DB_TEST_URL=postgres://… pnpm
+  --filter @kinhale/api test src/db`.
+- Documenter tout cas de perte de données dans la description de la PR
+  et renvoyer vers
+  [`docs/runbooks/database-migrations.md`](./docs/runbooks/database-migrations.md).
+- Déclencher un rollback avec `pnpm --filter @kinhale/api db:rollback`
+  (rollback uniquement la dernière migration appliquée).
 
 ### Principes non négociables
 

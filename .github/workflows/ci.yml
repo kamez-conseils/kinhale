@@ -134,6 +134,40 @@ jobs:
           verbose: false
 
   # --------------------------------------------------------------------------
+  # DB rollback round-trip — provisions an ephemeral Postgres 16 service and
+  # runs the integration suite that applies every migration, rolls each one
+  # back, then re-applies them. Blocking gate that any new `up.sql` ships
+  # with its `down.sql` (KIN-092 / E14-S05).
+  # --------------------------------------------------------------------------
+  db-rollback-test:
+    name: DB · migration rollback round-trip
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: kinhale
+          POSTGRES_PASSWORD: kinhale_ci
+          POSTGRES_DB: kinhale_ci
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U kinhale -d kinhale_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      KINHALE_DB_TEST_URL: postgresql://kinhale:kinhale_ci@localhost:5433/kinhale_ci
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Run rollback round-trip
+        run: pnpm --filter @kinhale/api test src/db
+
+  # --------------------------------------------------------------------------
   # Build apps that produce artefacts. Verifies the production toolchain
   # before we attempt to build container images on push to develop / main.
   # --------------------------------------------------------------------------
