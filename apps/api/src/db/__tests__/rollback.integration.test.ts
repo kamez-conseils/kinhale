@@ -15,7 +15,7 @@
  * `down.sql` ou que le `down.sql` n'est pas idempotent.
  */
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Pool } from 'pg';
 
 import { fileURLToPath } from 'node:url';
@@ -45,8 +45,7 @@ const describeIfDb = TEST_DB_URL ? describe : describe.skip;
 describeIfDb('migration rollback round-trip (Postgres réel)', () => {
   let pool: Pool;
 
-  beforeAll(async () => {
-    pool = new Pool({ connectionString: TEST_DB_URL });
+  async function resetSchema(): Promise<void> {
     // Bac à sable : on repart d'un schéma `public` vide. Le test est seul
     // sur sa DB jetable, c'est sans effet de bord pour les autres jobs.
     const client = await pool.connect();
@@ -58,6 +57,16 @@ describeIfDb('migration rollback round-trip (Postgres réel)', () => {
     } finally {
       client.release();
     }
+  }
+
+  beforeAll(async () => {
+    pool = new Pool({ connectionString: TEST_DB_URL });
+  }, 30_000);
+
+  beforeEach(async () => {
+    // Reset entre chaque `it()` — pas de couplage temporel, vitest peut
+    // réordonner les tests sans casse.
+    await resetSchema();
   }, 30_000);
 
   afterAll(async () => {
