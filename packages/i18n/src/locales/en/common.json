@@ -217,11 +217,46 @@
       "asideTitle": "Welcome to Kinhale",
       "asideBody": "We will set up your child's tracking in under 3 minutes. No jargon, no busywork."
     },
+    "pumps": {
+      "title": "What inhalers do they use?",
+      "sub": "Let's set up the routine. We can adjust anything later.",
+      "maintLabel": "Maintenance (morning + evening)",
+      "maintSub": "Fluticasone, Budesonide…",
+      "rescueLabel": "Rescue (as needed)",
+      "rescueSub": "Salbutamol (Ventolin)…",
+      "cta": "Continue",
+      "atLeastOne": "Select at least one type of inhaler to continue.",
+      "asideEyebrow": "Step 2 · 6",
+      "asideTitle": "Your inhalers",
+      "asideBody": "A maintenance inhaler, a rescue inhaler, or both. Tracking adapts to what your child uses."
+    },
+    "plan": {
+      "stepTitle": "When during the day?",
+      "stepSub": "We'll send a gentle reminder. Never guilt.",
+      "morningLabel": "Morning",
+      "eveningLabel": "Evening",
+      "plansTitle": "The action plan",
+      "plansSub": "Like a traffic light. Green, yellow, red.",
+      "greenLabel": "Green zone",
+      "greenSub": "No symptoms · maintenance only",
+      "yellowLabel": "Yellow zone",
+      "yellowSub": "Cough, wheeze · add rescue puffs",
+      "redLabel": "Red zone",
+      "redSub": "Distress · 4 rescue puffs and call 911",
+      "stepCta": "Got it",
+      "noMaintenance": "No maintenance inhaler registered. Enable it in the previous step to set reminders.",
+      "asideEyebrow": "Step 3 · 6",
+      "asideTitle": "When?",
+      "asideBody": "Pick reminders that match real life. You can change them later."
+    },
     "done": {
       "title": "Well done {{name}} !",
       "sub": "First details saved. Routine activated.",
       "nextReminder": "Next reminder · tonight 8:00 PM",
-      "cta": "Go to home"
+      "cta": "Go to home",
+      "asideEyebrow": "",
+      "asideTitle": "You are set",
+      "asideBody": "The journal is live and reminders are active."
     },
     "errors": {
       "nameRequired": "Your child's first name is required."

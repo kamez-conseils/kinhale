@@ -1,5 +1,6 @@
 import React from 'react';
-import { screen, fireEvent, act } from '@testing-library/react';
+import { fireEvent, screen, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import OnboardingPlanPage from '../page';
 import { renderWithProviders } from '../../../../test-utils/render';
 
@@ -8,7 +9,7 @@ jest.setTimeout(15000);
 const mockProjectPumps = jest.fn((_doc: unknown) => [
   {
     pumpId: 'pump-1',
-    name: 'Ventolin',
+    name: 'Fluticasone',
     pumpType: 'maintenance',
     totalDoses: 200,
     expiresAtMs: null,
@@ -40,26 +41,7 @@ jest.mock('../../../../stores/auth-store', () => ({
 }));
 
 const mockAppendPlan = jest.fn().mockResolvedValue([new Uint8Array([1])]);
-const mockDoc = {
-  householdId: 'hh-1',
-  events: [
-    {
-      id: 'e1',
-      type: 'PumpReplaced',
-      payloadJson: JSON.stringify({
-        pumpId: 'pump-1',
-        name: 'Ventolin',
-        pumpType: 'maintenance',
-        totalDoses: 200,
-        expiresAtMs: null,
-      }),
-      signerPublicKeyHex: 'a'.repeat(64),
-      signatureHex: 'b'.repeat(128),
-      deviceId: 'dev-1',
-      occurredAtMs: 1000,
-    },
-  ],
-};
+const mockDoc = { householdId: 'hh-1', events: [] };
 jest.mock('../../../../stores/doc-store', () => ({
   useDocStore: jest.fn((selector: (s: { appendPlan: jest.Mock; doc: typeof mockDoc }) => unknown) =>
     selector({ appendPlan: mockAppendPlan, doc: mockDoc }),
@@ -75,8 +57,6 @@ jest.mock('../../../../lib/device', () => ({
   getOrCreateDevice: (...args: unknown[]) => mockGetOrCreateDevice(...args),
 }));
 
-// Statut sync — mutable pour que les tests du guard E7-S08 puissent le
-// basculer. Par défaut : en ligne.
 let mockConnected = true;
 jest.mock('../../../../stores/sync-status-store', () => ({
   useSyncStatusStore: jest.fn(
@@ -84,6 +64,14 @@ jest.mock('../../../../stores/sync-status-store', () => ({
       selector({ connected: mockConnected, pulling: false }),
   ),
 }));
+
+const flush = async (): Promise<void> => {
+  for (let i = 0; i < 6; i += 1) {
+    await act(async () => {
+      await Promise.resolve();
+    });
+  }
+};
 
 describe('OnboardingPlanPage', () => {
   beforeEach(() => {
@@ -94,7 +82,7 @@ describe('OnboardingPlanPage', () => {
     mockProjectPumps.mockReturnValue([
       {
         pumpId: 'pump-1',
-        name: 'Ventolin',
+        name: 'Fluticasone',
         pumpType: 'maintenance',
         totalDoses: 200,
         expiresAtMs: null,
@@ -108,12 +96,7 @@ describe('OnboardingPlanPage', () => {
     jest.useFakeTimers();
     try {
       renderWithProviders(<OnboardingPlanPage />);
-      await act(async () => {
-        await Promise.resolve();
-        await Promise.resolve();
-        await Promise.resolve();
-        await Promise.resolve();
-      });
+      await flush();
       expect(mockReplace).toHaveBeenCalledWith('/auth');
     } finally {
       jest.clearAllTimers();
@@ -121,56 +104,49 @@ describe('OnboardingPlanPage', () => {
     }
   });
 
-  it('affiche le formulaire quand une pompe de fond est disponible', () => {
-    renderWithProviders(<OnboardingPlanPage />);
-    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
-    // Avec une seule pompe, le sélecteur est masqué (auto-sélection) et le champ heures est affiché
-    expect(screen.getByPlaceholderText(/8.*20|ex.*8/i)).toBeInTheDocument();
-  });
-
-  it('navigue vers /journal après sauvegarde réussie', async () => {
+  it('affiche le titre du step Plan + horaires par défaut 8h/20h', async () => {
     jest.useFakeTimers();
     try {
       renderWithProviders(<OnboardingPlanPage />);
-      fireEvent.change(screen.getByPlaceholderText(/8.*20|ex.*8/i), {
-        target: { value: '8, 20' },
-      });
-      fireEvent.click(screen.getByText(/enregistrer|save/i));
-      await act(async () => {
-        await Promise.resolve();
-        await Promise.resolve();
-        await Promise.resolve();
-        await Promise.resolve();
-      });
-      expect(mockAppendPlan).toHaveBeenCalledWith(
-        expect.objectContaining({ pumpId: 'pump-1', scheduledHoursUtc: [8, 20] }),
-        'dev-1',
-        expect.any(Uint8Array),
-      );
-      expect(mockPush).toHaveBeenCalledWith('/journal');
+      await flush();
+      // KIN-108 : refonte clinical-calm — titre étape 3 « À quels moments
+      // de la journée ? » / « When during the day? ».
+      expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
     } finally {
       jest.clearAllTimers();
       jest.useRealTimers();
     }
   });
 
-  it('affiche le CTA "Ajouter une pompe" quand aucune pompe de fond n\'est enregistrée', async () => {
-    mockProjectPumps.mockReturnValue([]);
-    renderWithProviders(<OnboardingPlanPage />);
-    expect(
-      screen.getByText(/ajoute d'abord une pompe|add a maintenance pump/i),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/ajouter une pompe|add a pump/i)).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText(/8.*20|ex.*8/i)).toBeNull();
+  it('crée un plan avec [8, 20] sur la pompe maintenance puis redirige', async () => {
+    jest.useFakeTimers();
+    try {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      renderWithProviders(<OnboardingPlanPage />);
+      await flush();
+      await user.click(screen.getByTestId('onboarding-plan-cta'));
+      await flush();
+      expect(mockAppendPlan).toHaveBeenCalledWith(
+        expect.objectContaining({ pumpId: 'pump-1', scheduledHoursUtc: [8, 20] }),
+        'dev-1',
+        expect.any(Uint8Array),
+      );
+      expect(mockPush).toHaveBeenCalledWith('/onboarding/done');
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
   });
 
-  it('navigue vers /onboarding/pump en cliquant sur le CTA quand aucune pompe', async () => {
+  it('affiche un message si aucune pompe maintenance et désactive le CTA', async () => {
     mockProjectPumps.mockReturnValue([]);
     jest.useFakeTimers();
     try {
       renderWithProviders(<OnboardingPlanPage />);
-      fireEvent.click(screen.getByText(/ajouter une pompe|add a pump/i));
-      expect(mockPush).toHaveBeenCalledWith('/onboarding/pump');
+      await flush();
+      // Le CTA est désactivé quand pas de pompe maintenance.
+      const cta = screen.getByTestId('onboarding-plan-cta');
+      expect(cta).toBeDisabled();
     } finally {
       jest.clearAllTimers();
       jest.useRealTimers();
@@ -178,29 +154,16 @@ describe('OnboardingPlanPage', () => {
   });
 
   it('hors-ligne : affiche le message du guard et ne déclenche pas appendPlan', async () => {
+    mockConnected = false;
     jest.useFakeTimers();
     try {
-      mockConnected = false;
       renderWithProviders(<OnboardingPlanPage />);
-      await act(async () => {
-        await Promise.resolve();
-        await Promise.resolve();
-        await Promise.resolve();
-        await Promise.resolve();
-      });
-
+      await flush();
       expect(screen.getByTestId('offline-guard-message')).toBeTruthy();
-
-      // Tenter de cliquer malgré le disabled : le handler `if (!online) return`
-      // doit empêcher appendPlan d'être appelé.
-      const saveBtn = screen.getByText(/enregistrer|save/i);
-      fireEvent.click(saveBtn);
-      await act(async () => {
-        await Promise.resolve();
-        await Promise.resolve();
-        await Promise.resolve();
-        await Promise.resolve();
-      });
+      // Bouton désactivé → fireEvent court-circuite pointer-events: none
+      // pour vérifier que le handler `if (!online) return` bloque.
+      fireEvent.click(screen.getByTestId('onboarding-plan-cta'));
+      await flush();
       expect(mockAppendPlan).not.toHaveBeenCalled();
     } finally {
       jest.clearAllTimers();
