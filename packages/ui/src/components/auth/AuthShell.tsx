@@ -11,6 +11,15 @@ interface AuthShellProps {
   copy: AuthCopy;
   layout: 'mobile' | 'web';
   invitation?: AuthInvitation | null;
+  /**
+   * Contrôle le rendu du bloc titre/sub en haut de la colonne droite.
+   * - `auto` (défaut) : rend `welcomeTitle` (ou titre d'invitation) +
+   *   `welcomeSub`. À utiliser sur l'état `enter`.
+   * - `none` : ne rend PAS de titre — utile pour les états `sent` et
+   *   `signing` qui portent leur propre titre (`sentTitle`, `signingTitle`).
+   *   Évite le double-titre vs la maquette de référence.
+   */
+  header?: 'auto' | 'none';
   children: React.ReactNode;
 }
 
@@ -24,17 +33,20 @@ export function AuthShell({
   copy,
   layout,
   invitation = null,
+  header = 'auto',
   children,
 }: AuthShellProps): React.JSX.Element {
+  const renderHeader = header === 'auto';
   const headerCopy = invitation
     ? {
         title: copy.invitedAs({
           who: invitation.inviterName,
           role: copy.roleLabels[invitation.role],
         }),
-        sub: copy.inviteHelper,
+        sub: copy.welcomeSub,
+        helper: copy.inviteHelper,
       }
-    : { title: copy.welcomeTitle, sub: copy.welcomeSub };
+    : { title: copy.welcomeTitle, sub: copy.welcomeSub, helper: null };
 
   if (layout === 'mobile') {
     return (
@@ -55,23 +67,37 @@ export function AuthShell({
           </Stack>
 
           <YStack flex={1} minHeight={0}>
-            <YStack alignItems="center" marginBottom={24} gap={8}>
-              <Text
-                tag="h1"
-                margin={0}
-                fontSize={28}
-                fontWeight="500"
-                letterSpacing={-0.6}
-                color="$color"
-                lineHeight={32}
-                textAlign="center"
-              >
-                {headerCopy.title}
-              </Text>
-              <Text fontSize={14} color="$colorMuted" textAlign="center" lineHeight={21}>
-                {headerCopy.sub}
-              </Text>
-            </YStack>
+            {renderHeader && (
+              <YStack alignItems="center" marginBottom={24} gap={8}>
+                <Text
+                  tag="h1"
+                  margin={0}
+                  fontFamily="$heading"
+                  fontSize={28}
+                  fontWeight="500"
+                  letterSpacing={-0.56}
+                  color="$color"
+                  lineHeight={32}
+                  textAlign="center"
+                >
+                  {headerCopy.title}
+                </Text>
+                <Text fontSize={14} color="$colorMuted" textAlign="center" lineHeight={21}>
+                  {headerCopy.sub}
+                </Text>
+                {headerCopy.helper !== null && (
+                  <Text
+                    fontSize={12}
+                    color="$colorMore"
+                    fontStyle="italic"
+                    textAlign="center"
+                    marginTop={6}
+                  >
+                    {headerCopy.helper}
+                  </Text>
+                )}
+              </YStack>
+            )}
 
             {children}
           </YStack>
@@ -91,15 +117,27 @@ export function AuthShell({
         backgroundColor="$background"
         $sm={{ flexDirection: 'column' }}
       >
-        {/* Panneau marque (gauche) */}
+        {/* Panneau marque (gauche)
+            Gradient diagonal teinté de l'accent — calé sur la maquette
+            `Kinhale Auth.html` :
+              linear-gradient(155deg,
+                color-mix(accent 12%, surface),
+                color-mix(accent 4%, surface) 60%,
+                surface)
+            On passe par `style` natif pour profiter de `color-mix(in oklch)`
+            que Tamagui ne sait pas générer côté style props.
+        */}
         <YStack
           flex={1.1}
           padding={48}
           paddingTop={40}
           justifyContent="space-between"
-          backgroundColor="$surface"
           borderRightWidth={0.5}
           borderRightColor="$borderColor"
+          style={{
+            background:
+              'linear-gradient(155deg, color-mix(in oklch, var(--maint) 12%, var(--surface)), color-mix(in oklch, var(--maint) 4%, var(--surface)) 60%, var(--surface))',
+          }}
           $sm={{
             flex: 0,
             paddingTop: 24,
@@ -115,6 +153,7 @@ export function AuthShell({
           <YStack gap={28} alignItems="flex-start" $sm={{ display: 'none' }}>
             <BreathOrb size={220} />
             <Text
+              fontFamily="$heading"
               fontSize={38}
               fontWeight="500"
               letterSpacing={-0.95}
@@ -165,23 +204,31 @@ export function AuthShell({
           $sm={{ paddingHorizontal: 24, paddingTop: 32, paddingBottom: 100 }}
         >
           <YStack maxWidth={380} width="100%" alignSelf="center" gap={28}>
-            <YStack gap={10}>
-              <Text
-                tag="h1"
-                margin={0}
-                fontSize={36}
-                fontWeight="500"
-                letterSpacing={-0.9}
-                color="$color"
-                lineHeight={40}
-                $sm={{ fontSize: 28, lineHeight: 32 }}
-              >
-                {headerCopy.title}
-              </Text>
-              <Text fontSize={15} color="$colorMuted" lineHeight={23}>
-                {headerCopy.sub}
-              </Text>
-            </YStack>
+            {renderHeader && (
+              <YStack gap={10}>
+                <Text
+                  tag="h1"
+                  margin={0}
+                  fontFamily="$heading"
+                  fontSize={36}
+                  fontWeight="500"
+                  letterSpacing={-0.9}
+                  color="$color"
+                  lineHeight={40}
+                  $sm={{ fontSize: 28, lineHeight: 32 }}
+                >
+                  {headerCopy.title}
+                </Text>
+                <Text fontSize={15} color="$colorMuted" lineHeight={23}>
+                  {headerCopy.sub}
+                </Text>
+                {headerCopy.helper !== null && (
+                  <Text fontSize={12} color="$colorMore" fontStyle="italic" marginTop={6}>
+                    {headerCopy.helper}
+                  </Text>
+                )}
+              </YStack>
+            )}
             {children}
           </YStack>
 

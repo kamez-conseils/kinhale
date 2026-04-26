@@ -133,8 +133,16 @@ function AuthPageInner(): React.JSX.Element {
     window.location.href = 'mailto:';
   }, []);
 
+  // Le `header` du shell n'apparaît qu'à l'état `enter` — sur `sent` la
+  // SentBlock porte son propre titre, on évite ainsi le double-titre vs
+  // la maquette de référence (kz-design-review J2).
   return (
-    <AuthShell copy={copy} layout="web" invitation={invitation}>
+    <AuthShell
+      copy={copy}
+      layout="web"
+      invitation={invitation}
+      header={state === 'enter' ? 'auto' : 'none'}
+    >
       {state === 'enter' && (
         <EmailForm
           copy={copy}
