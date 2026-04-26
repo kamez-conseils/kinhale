@@ -1,13 +1,20 @@
+import { Buffer } from 'buffer';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { YStack, Text, Button, Input } from 'tamagui';
+import { fromHex, sealedBoxDecrypt, toHex } from '@kinhale/crypto';
 import {
   acceptInvitation,
+  fetchSealedGroupKey,
   getInvitationPublic,
   type InvitationPublicInfo,
 } from '../../../src/lib/invitations/client';
 import { useAuthStore } from '../../../src/stores/auth-store';
+import { getDeviceX25519Keypair, setGroupKey } from '../../../src/lib/device';
+
+const POLL_INTERVAL_MS = 5000;
+const POLL_TIMEOUT_MS = 60_000;
 
 export default function AcceptInvitationScreen(): React.JSX.Element {
   const { t } = useTranslation('common');
@@ -20,6 +27,8 @@ export default function AcceptInvitationScreen(): React.JSX.Element {
   const [pin, setPin] = React.useState(initialPin);
   const [consent, setConsent] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
+  const [phase, setPhase] = React.useState<'idle' | 'awaiting-seal'>('idle');
+  const [householdIdState, setHouseholdIdState] = React.useState<string>('');
 
   React.useEffect(() => {
     if (token === '') return;
@@ -33,6 +42,47 @@ export default function AcceptInvitationScreen(): React.JSX.Element {
       });
   }, [token, t]);
 
+  React.useEffect(() => {
+    if (phase !== 'awaiting-seal') return;
+    let cancelled = false;
+    const startedAt = Date.now();
+
+    const poll = async (): Promise<void> => {
+      if (cancelled) return;
+      try {
+        const sealed = await fetchSealedGroupKey(token);
+        if (sealed === null) {
+          if (Date.now() - startedAt < POLL_TIMEOUT_MS && !cancelled) {
+            setTimeout(() => void poll(), POLL_INTERVAL_MS);
+          } else if (!cancelled) {
+            setSubmitError(t('invitation.errorSealTimeout'));
+          }
+          return;
+        }
+        const keypair = await getDeviceX25519Keypair();
+        const ciphertext = fromHex(sealed.sealedGroupKeyHex);
+        const decrypted = await sealedBoxDecrypt(ciphertext, keypair);
+        if (decrypted === null || decrypted.length !== 32) {
+          setSubmitError(t('invitation.errorSealDecrypt'));
+          return;
+        }
+        await setGroupKey(householdIdState, decrypted);
+        if (!cancelled) router.replace('/journal');
+      } catch {
+        if (Date.now() - startedAt < POLL_TIMEOUT_MS && !cancelled) {
+          setTimeout(() => void poll(), POLL_INTERVAL_MS);
+        } else if (!cancelled) {
+          setSubmitError(t('invitation.errorSealTimeout'));
+        }
+      }
+    };
+
+    void poll();
+    return () => {
+      cancelled = true;
+    };
+  }, [phase, token, t, router, householdIdState]);
+
   const handleSubmit = async (): Promise<void> => {
     setSubmitError(null);
     if (!consent) {
@@ -40,9 +90,14 @@ export default function AcceptInvitationScreen(): React.JSX.Element {
       return;
     }
     try {
-      const result = await acceptInvitation(token, pin, true);
-      useAuthStore.getState().setAuth(result.sessionToken, '', '');
-      router.replace('/journal');
+      const keypair = await getDeviceX25519Keypair();
+      const recipientPublicKeyHex = toHex(keypair.publicKey);
+      const result = await acceptInvitation(token, pin, true, recipientPublicKeyHex);
+      const claims = parseJwtClaims(result.sessionToken);
+      const householdId = claims.householdId ?? '';
+      useAuthStore.getState().setAuth(result.sessionToken, '', householdId);
+      setHouseholdIdState(householdId);
+      setPhase('awaiting-seal');
     } catch (e) {
       const code = (e as Error).message;
       const map: Record<string, string> = {
@@ -67,6 +122,18 @@ export default function AcceptInvitationScreen(): React.JSX.Element {
     return (
       <YStack padding="$4">
         <Text>…</Text>
+      </YStack>
+    );
+  }
+
+  if (phase === 'awaiting-seal') {
+    return (
+      <YStack padding="$4" gap="$3">
+        <Text fontSize="$6" fontWeight="bold" accessibilityRole="header">
+          {t('invitation.awaitingSealTitle')}
+        </Text>
+        <Text>{t('invitation.awaitingSealBody')}</Text>
+        {submitError !== null ? <Text color="$red10">{submitError}</Text> : null}
       </YStack>
     );
   }
@@ -112,4 +179,24 @@ export default function AcceptInvitationScreen(): React.JSX.Element {
       {submitError !== null ? <Text color="$red10">{submitError}</Text> : null}
     </YStack>
   );
+}
+
+/**
+ * Parse minimal JWT claims (header.payload.signature) — payload only. Pas
+ * de vérification cryptographique ; le device vient de recevoir le JWT du
+ * backend authentifié par TLS. Utilisé pour récupérer householdId.
+ */
+function parseJwtClaims(token: string): { householdId?: string } {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3 || parts[1] === undefined) return {};
+    const json =
+      typeof atob === 'function'
+        ? atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'))
+        : Buffer.from(parts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
+    const payload = JSON.parse(json) as { householdId?: string };
+    return payload;
+  } catch {
+    return {};
+  }
 }

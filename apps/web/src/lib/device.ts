@@ -9,8 +9,8 @@
  * Refs: KIN-095, ADR-D15, kz-securite-AUDIT-TRANSVERSE B1+B2.
  */
 
-import { generateSigningKeypair, randomBytes, toHex } from '@kinhale/crypto';
-import type { SigningKeypair } from '@kinhale/crypto';
+import { ed25519ToX25519, generateSigningKeypair, randomBytes, toHex } from '@kinhale/crypto';
+import type { KeyExchangeKeypair, SigningKeypair } from '@kinhale/crypto';
 import { secureStoreGet, secureStorePut } from './secure-store';
 
 const DEVICE_KEY_NAME = 'device-keypair-v1';
@@ -126,6 +126,20 @@ export async function setGroupKey(householdId: string, key: Uint8Array): Promise
   }
   await secureStorePut(GROUP_KEY_PREFIX + householdId, key);
   groupKeyCache.set(householdId, key);
+}
+
+/**
+ * Convertit le keypair Ed25519 du device courant en keypair X25519
+ * (transformation de Montgomery). Utilisé par le flux KIN-096 pour
+ * sceller / descellement la `groupKey` reçue du foyer.
+ *
+ * **Pas de persistance séparée** : on dérive à la volée depuis le keypair
+ * Ed25519 déjà chiffré dans `secure-store`. La conversion est purement
+ * mathématique (sodium `crypto_sign_ed25519_*_to_curve25519`).
+ */
+export async function getDeviceX25519Keypair(): Promise<KeyExchangeKeypair> {
+  const ed = await getOrCreateDevice();
+  return ed25519ToX25519(ed);
 }
 
 /**

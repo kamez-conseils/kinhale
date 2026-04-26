@@ -1,7 +1,14 @@
 import { Buffer } from 'buffer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-import { generateSigningKeypair, randomBytes, toHex, fromHex } from '@kinhale/crypto';
+import {
+  ed25519ToX25519,
+  generateSigningKeypair,
+  randomBytes,
+  toHex,
+  fromHex,
+} from '@kinhale/crypto';
+import type { KeyExchangeKeypair } from '@kinhale/crypto';
 
 const DEVICE_PUBKEY_KEY = 'kinhale-device-pubkey';
 const DEVICE_SECRET_KEY = 'kinhale-device-secret';
@@ -66,4 +73,28 @@ export async function getGroupKey(householdId: string): Promise<Uint8Array> {
   await SecureStore.setItemAsync(storageKey, Buffer.from(key).toString('base64'));
   groupKeyCache.set(householdId, key);
   return key;
+}
+
+/**
+ * Persiste une clé de groupe reçue via le flux QR invite (KIN-096).
+ * À appeler après avoir descellé l'envelope X25519 envoyée par l'admin
+ * du foyer.
+ */
+export async function setGroupKey(householdId: string, key: Uint8Array): Promise<void> {
+  if (key.length !== 32) {
+    throw new Error(`groupKey must be 32 bytes, got ${String(key.length)}`);
+  }
+  const storageKey = `${GROUP_KEY_PREFIX}${householdId}`;
+  await SecureStore.setItemAsync(storageKey, Buffer.from(key).toString('base64'));
+  groupKeyCache.set(householdId, key);
+}
+
+/**
+ * Convertit le keypair Ed25519 du device courant en keypair X25519
+ * (transformation de Montgomery, cf. `crypto_sign_ed25519_*_to_curve25519`).
+ * Utilisé pour le scellement / descellement de la `groupKey` (KIN-096).
+ */
+export async function getDeviceX25519Keypair(): Promise<KeyExchangeKeypair> {
+  const ed = await getOrCreateDevice();
+  return ed25519ToX25519({ publicKey: ed.publicKey, secretKey: ed.secretKey });
 }

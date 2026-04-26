@@ -4,6 +4,13 @@ export { getSodium } from './sodium.js';
 export { generateSigningKeypair, sign, verify } from './sign/ed25519.js';
 export type { SigningKeypair } from './sign/ed25519.js';
 export { secretboxKeygen, secretboxNonce, secretbox, secretboxOpen } from './box/xchacha20.js';
+export {
+  sealedBoxEncrypt,
+  sealedBoxDecrypt,
+  SEALED_BOX_OVERHEAD_BYTES,
+  SEALED_BOX_PUBLIC_KEY_BYTES,
+  SEALED_BOX_PRIVATE_KEY_BYTES,
+} from './box/sealed.js';
 export { deriveKey, generateSalt, ARGON2ID_PARAMS } from './kdf/argon2id.js';
 export { randomBytes } from './random/random.js';
 export { toHex, fromHex, toBase64url, fromBase64url } from './encode/index.js';
