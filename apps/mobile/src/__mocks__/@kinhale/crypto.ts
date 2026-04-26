@@ -29,8 +29,16 @@ export const ARGON2ID_PARAMS = { opsLimit: 3, memLimit: 65536 };
 
 export const randomBytes = jest.fn().mockReturnValue(new Uint8Array(32));
 
-export const toHex = jest.fn().mockReturnValue('a'.repeat(64));
-export const fromHex = jest.fn().mockReturnValue(new Uint8Array(32));
+export const toHex = jest.fn((bytes: Uint8Array): string => {
+  let h = '';
+  for (const b of bytes) h += b.toString(16).padStart(2, '0');
+  return h;
+});
+export const fromHex = jest.fn((hex: string): Uint8Array => {
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  return out;
+});
 export const toBase64url = jest.fn().mockReturnValue('base64url==');
 export const fromBase64url = jest.fn().mockReturnValue(new Uint8Array(32));
 
@@ -46,7 +54,21 @@ export const serverSessionKeys = jest.fn().mockReturnValue({
   sharedRx: new Uint8Array(32),
   sharedTx: new Uint8Array(32),
 });
-export const ed25519ToX25519 = jest.fn().mockReturnValue(new Uint8Array(32));
+export const ed25519ToX25519 = jest.fn().mockResolvedValue({
+  publicKey: new Uint8Array(32),
+  privateKey: new Uint8Array(32),
+});
+
+// KIN-096 envelope X25519
+export const SEALED_BOX_OVERHEAD_BYTES = 48;
+export const SEALED_BOX_PUBLIC_KEY_BYTES = 32;
+export const SEALED_BOX_PRIVATE_KEY_BYTES = 32;
+export const sealedBoxEncrypt = jest.fn(async (plaintext: Uint8Array) => {
+  const out = new Uint8Array(plaintext.length + SEALED_BOX_OVERHEAD_BYTES);
+  out.set(plaintext, SEALED_BOX_OVERHEAD_BYTES);
+  return out;
+});
+export const sealedBoxDecrypt = jest.fn(async (_ciphertext: Uint8Array) => new Uint8Array(32));
 
 export const generateSeedPhrase = jest
   .fn()

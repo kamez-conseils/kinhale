@@ -46,6 +46,9 @@ function makeMockRedis(): RedisClients {
     async expire(_k: string, _ttl: number) {
       return 1;
     },
+    async ttl(k: string) {
+      return kv.has(k) ? 600 : -2;
+    },
   };
 
   // The mock only implements the subset of Redis methods used by InvitationStore.
@@ -104,5 +107,71 @@ describe('InvitationStore', () => {
     expect(await store.isLocked('tok-abc')).toBe(false);
     await store.lock('tok-abc');
     expect(await store.isLocked('tok-abc')).toBe(true);
+  });
+
+  describe('markAccepted (KIN-096 envelope X25519)', () => {
+    const PUBKEY_HEX = 'aa'.repeat(32);
+
+    it("ajoute la clé publique X25519 de l'invité et persiste", async () => {
+      await store.create(baseRecord);
+      const updated = await store.markAccepted('tok-abc', PUBKEY_HEX);
+      expect(updated).not.toBeNull();
+      expect(updated?.recipientPublicKeyHex).toBe(PUBKEY_HEX);
+
+      const reloaded = await store.get('tok-abc');
+      expect(reloaded?.recipientPublicKeyHex).toBe(PUBKEY_HEX);
+    });
+
+    it("retourne null si l'invitation n'existe pas", async () => {
+      const updated = await store.markAccepted('inconnu', PUBKEY_HEX);
+      expect(updated).toBeNull();
+    });
+
+    it('idempotent — ne remplace pas une clé publique existante (anti-rebind)', async () => {
+      const FIRST = 'aa'.repeat(32);
+      const SECOND = 'bb'.repeat(32);
+      await store.create(baseRecord);
+      await store.markAccepted('tok-abc', FIRST);
+      const second = await store.markAccepted('tok-abc', SECOND);
+      // Le second appel ne change pas la clé publique
+      expect(second?.recipientPublicKeyHex).toBe(FIRST);
+      const reloaded = await store.get('tok-abc');
+      expect(reloaded?.recipientPublicKeyHex).toBe(FIRST);
+    });
+  });
+
+  describe('markSealed (KIN-096 envelope X25519)', () => {
+    const SEALED_HEX = 'cd'.repeat(80);
+
+    it("persiste le sealedGroupKeyHex sur l'invitation", async () => {
+      await store.create(baseRecord);
+      await store.markAccepted('tok-abc', 'aa'.repeat(32));
+      const updated = await store.markSealed('tok-abc', SEALED_HEX);
+      expect(updated?.sealedGroupKeyHex).toBe(SEALED_HEX);
+      const reloaded = await store.get('tok-abc');
+      expect(reloaded?.sealedGroupKeyHex).toBe(SEALED_HEX);
+      // Préserve la clé publique
+      expect(reloaded?.recipientPublicKeyHex).toBe('aa'.repeat(32));
+    });
+
+    it("retourne null si l'invitation n'existe pas", async () => {
+      const updated = await store.markSealed('inconnu', SEALED_HEX);
+      expect(updated).toBeNull();
+    });
+  });
+
+  describe('listByHousehold', () => {
+    it('retourne les invitations actives du foyer', async () => {
+      await store.create(baseRecord);
+      await store.create({ ...baseRecord, token: 'tok-2' });
+      const list = await store.listByHousehold('h1');
+      expect(list).toHaveLength(2);
+      expect(list.map((r) => r.token).sort()).toEqual(['tok-2', 'tok-abc']);
+    });
+
+    it('retourne [] si aucune invitation pour ce foyer', async () => {
+      const list = await store.listByHousehold('h-vide');
+      expect(list).toEqual([]);
+    });
   });
 });

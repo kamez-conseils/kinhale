@@ -1,7 +1,7 @@
 import React from 'react';
 import { screen, fireEvent, act } from '@testing-library/react';
-import AcceptInvitationPage from '../page';
-import { renderWithProviders } from '../../../../test-utils/render';
+
+// ── Mocks (DOIVENT être déclarés avant l'import du SUT) ────────────────────
 
 const mockPush = jest.fn();
 jest.mock('next/navigation', () => ({
@@ -11,9 +11,11 @@ jest.mock('next/navigation', () => ({
 
 const mockGetInvitationPublic = jest.fn();
 const mockAcceptInvitation = jest.fn();
+const mockFetchSealedGroupKey = jest.fn();
 jest.mock('../../../../lib/invitations/client', () => ({
   getInvitationPublic: (...args: unknown[]) => mockGetInvitationPublic(...args),
   acceptInvitation: (...args: unknown[]) => mockAcceptInvitation(...args),
+  fetchSealedGroupKey: (...args: unknown[]) => mockFetchSealedGroupKey(...args),
 }));
 
 const mockSetAuth = jest.fn();
@@ -22,6 +24,35 @@ jest.mock('../../../../stores/auth-store', () => ({
     getState: () => ({ setAuth: mockSetAuth }),
   },
 }));
+
+// `@kinhale/crypto` n'est pas importable depuis Jest (ESM `.js` extensions
+// + libsodium WASM). On mocke uniquement les helpers utilisés par la page.
+jest.mock('@kinhale/crypto', () => ({
+  toHex: (bytes: Uint8Array): string => {
+    let h = '';
+    for (const b of bytes) h += b.toString(16).padStart(2, '0');
+    return h;
+  },
+  fromHex: (hex: string): Uint8Array => {
+    const out = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+    return out;
+  },
+  sealedBoxDecrypt: jest.fn(async () => new Uint8Array(32)),
+}));
+
+const mockGetDeviceX25519Keypair = jest.fn(async () => ({
+  publicKey: new Uint8Array(32),
+  privateKey: new Uint8Array(32),
+}));
+const mockSetGroupKey = jest.fn(async (..._args: unknown[]) => undefined);
+jest.mock('../../../../lib/device', () => ({
+  getDeviceX25519Keypair: () => mockGetDeviceX25519Keypair(),
+  setGroupKey: (householdId: string, key: Uint8Array) => mockSetGroupKey(householdId, key),
+}));
+
+import AcceptInvitationPage from '../page';
+import { renderWithProviders } from '../../../../test-utils/render';
 
 describe('AcceptInvitationPage', () => {
   jest.setTimeout(15000);
@@ -32,10 +63,20 @@ describe('AcceptInvitationPage', () => {
       targetRole: 'restricted_contributor',
       displayName: 'Garderie',
     });
+    // sessionToken = base64url JSON {"householdId":"hh-xyz"}
+    // header.payload.sig — on n'a besoin que du payload
+    const payload = btoa(JSON.stringify({ householdId: 'hh-xyz' }))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/u, '');
     mockAcceptInvitation.mockResolvedValue({
-      sessionToken: 'jwt-xyz',
+      sessionToken: `header.${payload}.sig`,
       targetRole: 'restricted_contributor',
       displayName: 'Garderie',
+    });
+    mockFetchSealedGroupKey.mockResolvedValue({
+      recipientPublicKeyHex: 'aa'.repeat(32),
+      sealedGroupKeyHex: 'bb'.repeat(80),
     });
   });
 
@@ -68,9 +109,7 @@ describe('AcceptInvitationPage', () => {
         await Promise.resolve();
       });
       expect(screen.getByText(/expir/i)).toBeTruthy();
-      // Le formulaire ne doit pas être affiché
       expect(screen.queryByText(/Rejoindre|Join/i)).toBeNull();
-      // Bouton retour à la connexion doit être affiché (#179)
       expect(screen.getByText(/retour à la connexion|back to login/i)).toBeTruthy();
     } finally {
       jest.clearAllTimers();
@@ -97,7 +136,7 @@ describe('AcceptInvitationPage', () => {
     }
   });
 
-  it('soumet avec PIN valide + consentement et redirige vers /journal', async () => {
+  it('soumet avec PIN valide + consentement et envoie recipientPublicKeyHex (KIN-096)', async () => {
     jest.useFakeTimers();
     try {
       renderWithProviders(<AcceptInvitationPage />);
@@ -108,11 +147,9 @@ describe('AcceptInvitationPage', () => {
         await Promise.resolve();
       });
 
-      // Saisir le PIN
       const pinInput = screen.getByPlaceholderText(/pin/i);
       fireEvent.change(pinInput, { target: { value: '123456' } });
 
-      // Cocher le consentement
       fireEvent.click(screen.getByTestId('consent-toggle'));
 
       await act(async () => {
@@ -120,11 +157,9 @@ describe('AcceptInvitationPage', () => {
         await Promise.resolve();
       });
 
-      // Soumettre
-      fireEvent.click(screen.getByTestId('consent-toggle')); // uncheck
-      fireEvent.click(screen.getByTestId('consent-toggle')); // recheck — ensure state is true
+      fireEvent.click(screen.getByTestId('consent-toggle'));
+      fireEvent.click(screen.getByTestId('consent-toggle'));
 
-      // Click submit button
       const buttons = screen.getAllByRole('button');
       const submitBtn = buttons.find((b) => /Rejoindre|Join/i.test(b.textContent ?? ''));
       if (submitBtn === undefined) throw new Error('Submit button not found');
@@ -137,9 +172,15 @@ describe('AcceptInvitationPage', () => {
         await Promise.resolve();
       });
 
-      expect(mockAcceptInvitation).toHaveBeenCalledWith('tok-abc', '123456', true);
-      expect(mockSetAuth).toHaveBeenCalledWith('jwt-xyz', '', '');
-      expect(mockPush).toHaveBeenCalledWith('/journal');
+      expect(mockAcceptInvitation).toHaveBeenCalledWith(
+        'tok-abc',
+        '123456',
+        true,
+        expect.stringMatching(/^[0-9a-f]{64}$/u),
+      );
+      expect(mockSetAuth).toHaveBeenCalledWith(expect.any(String), '', 'hh-xyz');
+      // Affichage de l'écran "awaiting seal"
+      expect(screen.getByText(/En attente|Waiting/i)).toBeTruthy();
     } finally {
       jest.clearAllTimers();
       jest.useRealTimers();
@@ -162,7 +203,6 @@ describe('AcceptInvitationPage', () => {
       const pinInput = screen.getByPlaceholderText(/pin/i);
       fireEvent.change(pinInput, { target: { value: '654321' } });
 
-      // Activer le consentement
       fireEvent.click(screen.getByTestId('consent-toggle'));
 
       await act(async () => {
@@ -183,6 +223,48 @@ describe('AcceptInvitationPage', () => {
       });
 
       expect(screen.getByText(/verrouill|locked/i)).toBeTruthy();
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
+  });
+
+  it('après acceptation, poll fetchSealedGroupKey et appelle setGroupKey si OK (KIN-096)', async () => {
+    jest.useFakeTimers();
+    try {
+      renderWithProviders(<AcceptInvitationPage />);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      const pinInput = screen.getByPlaceholderText(/pin/i);
+      fireEvent.change(pinInput, { target: { value: '123456' } });
+      fireEvent.click(screen.getByTestId('consent-toggle'));
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      const buttons = screen.getAllByRole('button');
+      const submitBtn = buttons.find((b) => /Rejoindre|Join/i.test(b.textContent ?? ''));
+      if (submitBtn === undefined) throw new Error('Submit button not found');
+      fireEvent.click(submitBtn);
+
+      // Laisse le polling effectuer 1 cycle complet
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(mockFetchSealedGroupKey).toHaveBeenCalledWith('tok-abc');
+      expect(mockSetGroupKey).toHaveBeenCalledWith('hh-xyz', expect.any(Uint8Array));
+      expect(mockPush).toHaveBeenCalledWith('/journal');
     } finally {
       jest.clearAllTimers();
       jest.useRealTimers();

@@ -76,6 +76,12 @@ export const ROUTE_SCOPE_TABLE: Record<string, RouteScope> = {
   // Lookup par token : public (aidant cible n'a que le token URL + PIN).
   'GET /invitations/:token': 'caregiver_invite',
   'POST /invitations/:token/accept': 'caregiver_invite',
+  // KIN-096 — admin dépose l'envelope X25519 (`sealedGroupKeyHex`) pour
+  // l'invité. Vérification stricte du householdId dans le handler.
+  'POST /invitations/:token/seal': 'household_scoped',
+  // KIN-096 — invité poll cet endpoint avec le token URL pour récupérer
+  // l'envelope X25519. Authentifié par possession du token (256 bits).
+  'GET /invitations/:token/sealed-group-key': 'caregiver_invite',
   // Révocation par l'admin : household-scoped (on vérifie rec.householdId).
   'DELETE /invitations/:token': 'household_scoped',
 

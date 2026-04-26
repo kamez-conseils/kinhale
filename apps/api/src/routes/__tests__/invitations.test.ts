@@ -50,6 +50,9 @@ function makeMockRedis(): RedisClients {
     async expire(_k: string, _ttl: number) {
       return 1;
     },
+    async ttl(k: string) {
+      return kv.has(k) ? 600 : -2;
+    },
     async publish(_channel: string, _msg: string) {
       return 0;
     },
@@ -296,7 +299,7 @@ describe('POST /invitations/:token/accept', () => {
       const res1 = await app.inject({
         method: 'POST',
         url: `/invitations/${token}/accept`,
-        payload: { pin: '000000', consentAccepted: true },
+        payload: { pin: '000000', consentAccepted: true, recipientPublicKeyHex: 'aa'.repeat(32) },
       });
       expect(res1.statusCode).toBe(401);
       expect(res1.json<{ error: string }>().error).toBe('pin_mismatch');
@@ -305,7 +308,7 @@ describe('POST /invitations/:token/accept', () => {
       const res2 = await app.inject({
         method: 'POST',
         url: `/invitations/${token}/accept`,
-        payload: { pin: '000000', consentAccepted: true },
+        payload: { pin: '000000', consentAccepted: true, recipientPublicKeyHex: 'aa'.repeat(32) },
       });
       expect(res2.statusCode).toBe(401);
 
@@ -313,7 +316,7 @@ describe('POST /invitations/:token/accept', () => {
       const res3 = await app.inject({
         method: 'POST',
         url: `/invitations/${token}/accept`,
-        payload: { pin: '000000', consentAccepted: true },
+        payload: { pin: '000000', consentAccepted: true, recipientPublicKeyHex: 'aa'.repeat(32) },
       });
       expect(res3.statusCode).toBe(423);
       expect(res3.json<{ error: string }>().error).toBe('locked');
@@ -346,7 +349,7 @@ describe('POST /invitations/:token/accept', () => {
     const res = await app.inject({
       method: 'POST',
       url: `/invitations/${token}/accept`,
-      payload: { pin, consentAccepted: true },
+      payload: { pin, consentAccepted: true, recipientPublicKeyHex: 'bb'.repeat(32) },
     });
 
     expect(res.statusCode).toBe(200);
@@ -354,6 +357,393 @@ describe('POST /invitations/:token/accept', () => {
     expect(body.sessionToken).toBeDefined();
     expect(body.targetRole).toBe('contributor');
     expect(body.displayName).toBe('Grand-père Paul');
+    await app.close();
+  });
+
+  it('retourne 400 si recipientPublicKeyHex manque (KIN-096)', async () => {
+    const redis = makeMockRedis();
+    const app = buildTestApp(redis);
+    await app.ready();
+
+    const jwt = app.jwt.sign({
+      sub: ACCOUNT_ID,
+      deviceId: 'dev-001',
+      householdId: HOUSEHOLD_ID,
+      type: 'access',
+    });
+
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/invitations',
+      headers: { Authorization: `Bearer ${jwt}` },
+      payload: { targetRole: 'contributor', displayName: 'X' },
+    });
+    const { token, pin } = createRes.json<{ token: string; pin: string }>();
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/invitations/${token}/accept`,
+      payload: { pin, consentAccepted: true },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json<{ error: string }>().error).toMatch(/recipientPublicKeyHex/u);
+    await app.close();
+  });
+
+  it('retourne 400 si recipientPublicKeyHex est invalide (longueur, casse, non hex)', async () => {
+    const redis = makeMockRedis();
+    const app = buildTestApp(redis);
+    await app.ready();
+
+    const jwt = app.jwt.sign({
+      sub: ACCOUNT_ID,
+      deviceId: 'dev-001',
+      householdId: HOUSEHOLD_ID,
+      type: 'access',
+    });
+
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/invitations',
+      headers: { Authorization: `Bearer ${jwt}` },
+      payload: { targetRole: 'contributor', displayName: 'X' },
+    });
+    const { token, pin } = createRes.json<{ token: string; pin: string }>();
+
+    // Trop court
+    const r1 = await app.inject({
+      method: 'POST',
+      url: `/invitations/${token}/accept`,
+      payload: { pin, consentAccepted: true, recipientPublicKeyHex: 'aa'.repeat(31) },
+    });
+    expect(r1.statusCode).toBe(400);
+
+    // Casse mixte (rejette car regex strict [0-9a-f])
+    const r2 = await app.inject({
+      method: 'POST',
+      url: `/invitations/${token}/accept`,
+      payload: { pin, consentAccepted: true, recipientPublicKeyHex: 'AA'.repeat(32) },
+    });
+    expect(r2.statusCode).toBe(400);
+
+    // Caractère non-hex
+    const r3 = await app.inject({
+      method: 'POST',
+      url: `/invitations/${token}/accept`,
+      payload: { pin, consentAccepted: true, recipientPublicKeyHex: 'zz'.repeat(32) },
+    });
+    expect(r3.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it('persiste recipientPublicKeyHex après une acceptation valide', async () => {
+    const redis = makeMockRedis();
+    const app = buildTestApp(redis);
+    await app.ready();
+
+    const jwt = app.jwt.sign({
+      sub: ACCOUNT_ID,
+      deviceId: 'dev-001',
+      householdId: HOUSEHOLD_ID,
+      type: 'access',
+    });
+
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/invitations',
+      headers: { Authorization: `Bearer ${jwt}` },
+      payload: { targetRole: 'contributor', displayName: 'Papy' },
+    });
+    const { token, pin } = createRes.json<{ token: string; pin: string }>();
+    const PUBKEY = 'cd'.repeat(32);
+
+    const accept = await app.inject({
+      method: 'POST',
+      url: `/invitations/${token}/accept`,
+      payload: { pin, consentAccepted: true, recipientPublicKeyHex: PUBKEY },
+    });
+    expect(accept.statusCode).toBe(200);
+
+    // Vérifie que la liste admin reflète l'acceptation
+    const list = await app.inject({
+      method: 'GET',
+      url: '/invitations',
+      headers: { Authorization: `Bearer ${jwt}` },
+    });
+    const body = list.json<{
+      invitations: {
+        token: string;
+        hasRecipientPublicKey: boolean;
+        hasSealedGroupKey: boolean;
+      }[];
+    }>();
+    const inv = body.invitations.find((i) => i.token === token);
+    expect(inv?.hasRecipientPublicKey).toBe(true);
+    expect(inv?.hasSealedGroupKey).toBe(false);
+    await app.close();
+  });
+});
+
+describe('POST /invitations/:token/seal (KIN-096)', () => {
+  const SEALED_HEX = 'aa'.repeat(80); // sealed groupKey (32+48 octets) en hex
+
+  async function setupAccepted(app: ReturnType<typeof buildTestApp>) {
+    const jwt = app.jwt.sign({
+      sub: ACCOUNT_ID,
+      deviceId: 'dev-001',
+      householdId: HOUSEHOLD_ID,
+      type: 'access',
+    });
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/invitations',
+      headers: { Authorization: `Bearer ${jwt}` },
+      payload: { targetRole: 'contributor', displayName: 'Aidant' },
+    });
+    const { token, pin } = createRes.json<{ token: string; pin: string }>();
+    await app.inject({
+      method: 'POST',
+      url: `/invitations/${token}/accept`,
+      payload: { pin, consentAccepted: true, recipientPublicKeyHex: 'bb'.repeat(32) },
+    });
+    return { token, jwt };
+  }
+
+  it('retourne 401 sans authentification', async () => {
+    const redis = makeMockRedis();
+    const app = buildTestApp(redis);
+    await app.ready();
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/invitations/sometoken/seal',
+      payload: { sealedGroupKeyHex: SEALED_HEX },
+    });
+    expect(res.statusCode).toBe(401);
+    await app.close();
+  });
+
+  it('retourne 204 et persiste le sealedGroupKeyHex', async () => {
+    const redis = makeMockRedis();
+    const app = buildTestApp(redis);
+    await app.ready();
+
+    const { token, jwt } = await setupAccepted(app);
+    const res = await app.inject({
+      method: 'POST',
+      url: `/invitations/${token}/seal`,
+      headers: { Authorization: `Bearer ${jwt}` },
+      payload: { sealedGroupKeyHex: SEALED_HEX },
+    });
+    expect(res.statusCode).toBe(204);
+
+    // Vérifie via GET sealed-group-key
+    const getRes = await app.inject({
+      method: 'GET',
+      url: `/invitations/${token}/sealed-group-key`,
+    });
+    expect(getRes.statusCode).toBe(200);
+    const body = getRes.json<{ recipientPublicKeyHex: string; sealedGroupKeyHex: string }>();
+    expect(body.sealedGroupKeyHex).toBe(SEALED_HEX);
+    expect(body.recipientPublicKeyHex).toBe('bb'.repeat(32));
+    await app.close();
+  });
+
+  it("retourne 404 si l'invitation appartient à un autre foyer (anti-IDOR)", async () => {
+    const redis = makeMockRedis();
+    const app = buildTestApp(redis);
+    await app.ready();
+
+    const { token } = await setupAccepted(app);
+    const jwtB = app.jwt.sign({
+      sub: 'acc-other',
+      deviceId: 'dev-002',
+      householdId: 'hh-other',
+      type: 'access',
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/invitations/${token}/seal`,
+      headers: { Authorization: `Bearer ${jwtB}` },
+      payload: { sealedGroupKeyHex: SEALED_HEX },
+    });
+    expect(res.statusCode).toBe(404);
+    expect(res.json<{ error: string }>().error).toBe('not_found_or_expired');
+    await app.close();
+  });
+
+  it("retourne 409 si l'invitation n'a pas encore été acceptée", async () => {
+    const redis = makeMockRedis();
+    const app = buildTestApp(redis);
+    await app.ready();
+
+    const jwt = app.jwt.sign({
+      sub: ACCOUNT_ID,
+      deviceId: 'dev-001',
+      householdId: HOUSEHOLD_ID,
+      type: 'access',
+    });
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/invitations',
+      headers: { Authorization: `Bearer ${jwt}` },
+      payload: { targetRole: 'contributor', displayName: 'Papy' },
+    });
+    const { token } = createRes.json<{ token: string }>();
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/invitations/${token}/seal`,
+      headers: { Authorization: `Bearer ${jwt}` },
+      payload: { sealedGroupKeyHex: SEALED_HEX },
+    });
+    expect(res.statusCode).toBe(409);
+    expect(res.json<{ error: string }>().error).toBe('invitation_not_accepted');
+    await app.close();
+  });
+
+  it('retourne 400 si sealedGroupKeyHex est invalide', async () => {
+    const redis = makeMockRedis();
+    const app = buildTestApp(redis);
+    await app.ready();
+
+    const { token, jwt } = await setupAccepted(app);
+    const res = await app.inject({
+      method: 'POST',
+      url: `/invitations/${token}/seal`,
+      headers: { Authorization: `Bearer ${jwt}` },
+      payload: { sealedGroupKeyHex: 'zz' }, // pas hex, trop court
+    });
+    expect(res.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it("retourne 404 si le token n'existe pas", async () => {
+    const redis = makeMockRedis();
+    const app = buildTestApp(redis);
+    await app.ready();
+
+    const jwt = app.jwt.sign({
+      sub: ACCOUNT_ID,
+      deviceId: 'dev-001',
+      householdId: HOUSEHOLD_ID,
+      type: 'access',
+    });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/invitations/inconnutoken/seal',
+      headers: { Authorization: `Bearer ${jwt}` },
+      payload: { sealedGroupKeyHex: SEALED_HEX },
+    });
+    expect(res.statusCode).toBe(404);
+    await app.close();
+  });
+});
+
+describe('GET /invitations/:token/sealed-group-key (KIN-096)', () => {
+  const SEALED_HEX = 'cc'.repeat(80);
+
+  it("retourne 404 si l'invitation n'existe pas", async () => {
+    const redis = makeMockRedis();
+    const app = buildTestApp(redis);
+    await app.ready();
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/invitations/inconnu/sealed-group-key',
+    });
+    expect(res.statusCode).toBe(404);
+    await app.close();
+  });
+
+  it("retourne 404 si l'admin n'a pas encore scellé", async () => {
+    const redis = makeMockRedis();
+    const app = buildTestApp(redis);
+    await app.ready();
+
+    const jwt = app.jwt.sign({
+      sub: ACCOUNT_ID,
+      deviceId: 'dev-001',
+      householdId: HOUSEHOLD_ID,
+      type: 'access',
+    });
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/invitations',
+      headers: { Authorization: `Bearer ${jwt}` },
+      payload: { targetRole: 'contributor', displayName: 'Papy' },
+    });
+    const { token, pin } = createRes.json<{ token: string; pin: string }>();
+    await app.inject({
+      method: 'POST',
+      url: `/invitations/${token}/accept`,
+      payload: { pin, consentAccepted: true, recipientPublicKeyHex: 'aa'.repeat(32) },
+    });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/invitations/${token}/sealed-group-key`,
+    });
+    expect(res.statusCode).toBe(404);
+    expect(res.json<{ error: string }>().error).toBe('not_sealed_yet');
+    await app.close();
+  });
+
+  it('retourne 200 avec les deux clés une fois scellé', async () => {
+    const redis = makeMockRedis();
+    const app = buildTestApp(redis);
+    await app.ready();
+
+    const jwt = app.jwt.sign({
+      sub: ACCOUNT_ID,
+      deviceId: 'dev-001',
+      householdId: HOUSEHOLD_ID,
+      type: 'access',
+    });
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/invitations',
+      headers: { Authorization: `Bearer ${jwt}` },
+      payload: { targetRole: 'contributor', displayName: 'Papy' },
+    });
+    const { token, pin } = createRes.json<{ token: string; pin: string }>();
+    const PUBKEY = 'aa'.repeat(32);
+
+    await app.inject({
+      method: 'POST',
+      url: `/invitations/${token}/accept`,
+      payload: { pin, consentAccepted: true, recipientPublicKeyHex: PUBKEY },
+    });
+    await app.inject({
+      method: 'POST',
+      url: `/invitations/${token}/seal`,
+      headers: { Authorization: `Bearer ${jwt}` },
+      payload: { sealedGroupKeyHex: SEALED_HEX },
+    });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/invitations/${token}/sealed-group-key`,
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json<{ recipientPublicKeyHex: string; sealedGroupKeyHex: string }>();
+    expect(body.recipientPublicKeyHex).toBe(PUBKEY);
+    expect(body.sealedGroupKeyHex).toBe(SEALED_HEX);
+    await app.close();
+  });
+
+  it('retourne 423 si le token est verrouillé (3 PIN faux)', async () => {
+    const redis = makeMockRedis();
+    const app = buildTestApp(redis);
+    await app.ready();
+
+    await redis.pub.setex('inv:lock:locked-token', 900, '1');
+    const res = await app.inject({
+      method: 'GET',
+      url: '/invitations/locked-token/sealed-group-key',
+    });
+    expect(res.statusCode).toBe(423);
     await app.close();
   });
 });
@@ -514,5 +904,87 @@ describe('GET /invitations (liste Admin)', () => {
 
     expect(res.statusCode).toBe(401);
     await app.close();
+  });
+
+  it('inclut recipientPublicKeyHex après acceptation pour permettre le sealing admin (KIN-096)', async () => {
+    const redis = makeMockRedis();
+    const app = buildTestApp(redis);
+    await app.ready();
+
+    const jwt = app.jwt.sign({
+      sub: ACCOUNT_ID,
+      deviceId: 'dev-001',
+      householdId: HOUSEHOLD_ID,
+      type: 'access',
+    });
+
+    const create = await app.inject({
+      method: 'POST',
+      url: '/invitations',
+      headers: { Authorization: `Bearer ${jwt}` },
+      payload: { targetRole: 'contributor', displayName: 'Aidant' },
+    });
+    const { token, pin } = create.json<{ token: string; pin: string }>();
+    const PUBKEY = 'aa'.repeat(32);
+
+    await app.inject({
+      method: 'POST',
+      url: `/invitations/${token}/accept`,
+      payload: { pin, consentAccepted: true, recipientPublicKeyHex: PUBKEY },
+    });
+
+    const list = await app.inject({
+      method: 'GET',
+      url: '/invitations',
+      headers: { Authorization: `Bearer ${jwt}` },
+    });
+    expect(list.statusCode).toBe(200);
+    const body = list.json<{
+      invitations: { token: string; recipientPublicKeyHex?: string }[];
+    }>();
+    const inv = body.invitations.find((i) => i.token === token);
+    expect(inv?.recipientPublicKeyHex).toBe(PUBKEY);
+  });
+
+  it("n'expose pas recipientPublicKeyHex à un autre foyer (anti-IDOR KIN-096)", async () => {
+    const redis = makeMockRedis();
+    const app = buildTestApp(redis);
+    await app.ready();
+
+    // Foyer A crée + invité accepte
+    const jwtA = app.jwt.sign({
+      sub: ACCOUNT_ID,
+      deviceId: 'dev-001',
+      householdId: HOUSEHOLD_ID,
+      type: 'access',
+    });
+    const create = await app.inject({
+      method: 'POST',
+      url: '/invitations',
+      headers: { Authorization: `Bearer ${jwtA}` },
+      payload: { targetRole: 'contributor', displayName: 'Aidant' },
+    });
+    const { token, pin } = create.json<{ token: string; pin: string }>();
+    await app.inject({
+      method: 'POST',
+      url: `/invitations/${token}/accept`,
+      payload: { pin, consentAccepted: true, recipientPublicKeyHex: 'cd'.repeat(32) },
+    });
+
+    // Foyer B liste : ne doit voir AUCUNE invitation du foyer A
+    const jwtB = app.jwt.sign({
+      sub: 'acc-other',
+      deviceId: 'dev-002',
+      householdId: 'hh-other',
+      type: 'access',
+    });
+    const list = await app.inject({
+      method: 'GET',
+      url: '/invitations',
+      headers: { Authorization: `Bearer ${jwtB}` },
+    });
+    expect(list.statusCode).toBe(200);
+    const body = list.json<{ invitations: { token: string }[] }>();
+    expect(body.invitations.find((i) => i.token === token)).toBeUndefined();
   });
 });

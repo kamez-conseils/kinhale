@@ -8,6 +8,12 @@ export interface InvitationSummary {
   targetRole: 'contributor' | 'restricted_contributor';
   displayName: string;
   createdAtMs: number;
+  /** KIN-096 — vrai si l'invité a déposé sa clé publique X25519. */
+  hasRecipientPublicKey?: boolean;
+  /** KIN-096 — vrai si l'admin a scellé la `groupKey`. */
+  hasSealedGroupKey?: boolean;
+  /** KIN-096 — clé publique X25519 (32 octets en hex) du device invité. */
+  recipientPublicKeyHex?: string;
 }
 
 export interface CreatedInvitation {
@@ -20,6 +26,11 @@ export interface CreatedInvitation {
 export interface InvitationPublicInfo {
   targetRole: 'contributor' | 'restricted_contributor';
   displayName: string;
+}
+
+export interface SealedGroupKeyResponse {
+  recipientPublicKeyHex: string;
+  sealedGroupKeyHex: string;
 }
 
 function getToken(): string | undefined {
@@ -52,6 +63,7 @@ export async function acceptInvitation(
   token: string,
   pin: string,
   consentAccepted: boolean,
+  recipientPublicKeyHex: string,
 ): Promise<{
   sessionToken: string;
   targetRole: 'contributor' | 'restricted_contributor';
@@ -63,7 +75,7 @@ export async function acceptInvitation(
     displayName: string;
   }>(`/invitations/${encodeURIComponent(token)}/accept`, {
     method: 'POST',
-    body: JSON.stringify({ pin, consentAccepted }),
+    body: JSON.stringify({ pin, consentAccepted, recipientPublicKeyHex }),
   });
 }
 
@@ -89,4 +101,41 @@ export async function listInvitations(): Promise<InvitationSummary[]> {
     ...withToken(),
   });
   return data.invitations;
+}
+
+/**
+ * Admin — dépose l'envelope X25519 (sealed groupKey) pour un invité ayant
+ * déjà déposé sa clé publique. KIN-096.
+ */
+export async function sealInvitation(token: string, sealedGroupKeyHex: string): Promise<void> {
+  const authToken = getToken();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (authToken !== undefined) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+  const res = await fetch(`${API_BASE}/invitations/${encodeURIComponent(token)}/seal`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ sealedGroupKeyHex }),
+  });
+  if (!res.ok && res.status !== 204) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new ApiError(res.status, body.error ?? 'invitation_seal_failed');
+  }
+}
+
+/**
+ * Invité — récupère l'envelope X25519 scellée par l'admin. Retourne `null`
+ * si l'admin n'a pas encore scellé.
+ */
+export async function fetchSealedGroupKey(token: string): Promise<SealedGroupKeyResponse | null> {
+  const res = await fetch(`${API_BASE}/invitations/${encodeURIComponent(token)}/sealed-group-key`, {
+    method: 'GET',
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new ApiError(res.status, body.error ?? 'sealed_group_key_fetch_failed');
+  }
+  return (await res.json()) as SealedGroupKeyResponse;
 }

@@ -20,6 +20,17 @@ jest.mock('../../../src/stores/doc-store', () => ({
 jest.mock('../../../src/lib/invitations/client', () => ({
   listInvitations: jest.fn().mockResolvedValue([]),
   revokeInvitation: jest.fn().mockResolvedValue(undefined),
+  sealInvitation: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('../../../src/stores/auth-store', () => ({
+  useAuthStore: jest.fn((selector: (s: { householdId: string | null }) => unknown) =>
+    selector({ householdId: 'hh-xyz' }),
+  ),
+}));
+
+jest.mock('../../../src/lib/device', () => ({
+  getGroupKey: jest.fn(async () => new Uint8Array(32)),
 }));
 
 const mockListInvitations = listInvitations as jest.MockedFunction<typeof listInvitations>;
