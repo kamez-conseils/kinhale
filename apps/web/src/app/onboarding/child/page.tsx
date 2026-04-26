@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { Stack, Text } from 'tamagui';
 import {
+  OnboardingAside,
   OnboardingCTA,
   OnboardingShell,
   WelcomeStep,
@@ -81,6 +82,16 @@ export default function OnboardingChildPage(): React.JSX.Element | null {
       step="welcome"
       copy={shellCopy}
       onSkip={() => router.push('/')}
+      aside={
+        <OnboardingAside
+          step="welcome"
+          copy={{
+            eyebrow: t('onboarding.welcome.asideEyebrow'),
+            title: t('onboarding.welcome.asideTitle'),
+            body: t('onboarding.welcome.asideBody'),
+          }}
+        />
+      }
       primaryCta={
         <OnboardingCTA
           label={t('onboarding.welcome.cta')}

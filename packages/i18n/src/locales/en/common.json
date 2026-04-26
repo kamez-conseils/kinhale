@@ -212,7 +212,10 @@
       "nameLabel": "Your child's first name",
       "namePlaceholder": "Lea",
       "foot": "You can add more children later.",
-      "cta": "Continue"
+      "cta": "Continue",
+      "asideEyebrow": "Step 1 · 6",
+      "asideTitle": "Welcome to Kinhale",
+      "asideBody": "We will set up your child's tracking in under 3 minutes. No jargon, no busywork."
     },
     "done": {
       "title": "Well done {{name}} !",

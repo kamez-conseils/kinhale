@@ -212,7 +212,10 @@
       "nameLabel": "Le prénom de votre enfant",
       "namePlaceholder": "Léa",
       "foot": "Vous pourrez ajouter d'autres enfants plus tard.",
-      "cta": "Continuer"
+      "cta": "Continuer",
+      "asideEyebrow": "Étape 1 · 6",
+      "asideTitle": "Bienvenue chez Kinhale",
+      "asideBody": "On va créer le suivi de votre enfant en moins de 3 minutes. Pas de jargon, pas de questions inutiles."
     },
     "done": {
       "title": "Bravo {{name}} !",

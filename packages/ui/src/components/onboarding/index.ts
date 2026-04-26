@@ -1,4 +1,5 @@
 export { OnboardingShell } from './OnboardingShell';
+export { OnboardingAside } from './OnboardingAside';
 export { OnboardingCTA } from './OnboardingCTA';
 export { ProgressDots } from './ProgressDots';
 export { WelcomeStep } from './WelcomeStep';
