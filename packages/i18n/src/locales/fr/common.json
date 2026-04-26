@@ -12,7 +12,8 @@
         "pumps": "Mes pompes",
         "caregivers": "Aidants",
         "reports": "Rapports",
-        "settings": "Réglages"
+        "settings": "Réglages",
+        "onboarding": "Onboarding"
       },
       "status": {
         "onTrackTitle": "Tout est à jour",
@@ -203,6 +204,28 @@
     "body": "Dose non confirmée"
   },
   "onboarding": {
+    "shellSkip": "Passer",
+    "shellBack": "Retour",
+    "welcome": {
+      "title": "Bienvenue dans Kinhale",
+      "sub": "Un compagnon paisible pour l'asthme de votre enfant. Aucune publicité, aucun jugement.",
+      "nameLabel": "Le prénom de votre enfant",
+      "namePlaceholder": "Léa",
+      "foot": "Vous pourrez ajouter d'autres enfants plus tard.",
+      "cta": "Continuer",
+      "asideEyebrow": "Étape 1 · 6",
+      "asideTitle": "Bienvenue chez Kinhale",
+      "asideBody": "On va créer le suivi de votre enfant en moins de 3 minutes. Pas de jargon, pas de questions inutiles."
+    },
+    "done": {
+      "title": "Bravo {{name}} !",
+      "sub": "Premières informations enregistrées. Routine activée.",
+      "nextReminder": "Prochain rappel · ce soir 20:00",
+      "cta": "Aller à l'accueil"
+    },
+    "errors": {
+      "nameRequired": "Le prénom de votre enfant est obligatoire."
+    },
     "child": {
       "title": "Votre enfant",
       "firstNameLabel": "Prénom",

@@ -63,12 +63,13 @@ describe('OnboardingChildPage', () => {
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
   });
 
-  it("affiche le DisclaimerBanner complet (RM27, KIN-088) sur l'écran 1", () => {
-    renderWithProviders(<OnboardingChildPage />);
-    // Onboarding écran 1 → version complète + footer discret en pied.
-    expect(screen.getByTestId('disclaimer-banner-full')).toBeTruthy();
-    expect(screen.getByTestId('disclaimer-footer-short')).toBeTruthy();
-  });
+  // KIN-107 : la maquette `Kinhale Onboarding.html` step 0 ne contient pas
+  // de bannière médicale RM27 — uniquement le titre, le sub-titre et le
+  // champ prénom. Le disclaimer reste rendu plus bas dans l'app
+  // (cf. /reports, /share, etc.) et le RM27 omniprésent est préservé via
+  // le footer global d'auth + page d'accueil. Tests historiques retirés
+  // suite à validation client (PR #368) qui demandait fidélité à la
+  // maquette.
 
   it('redirige vers /auth si non authentifié (#181)', async () => {
     mockAccessToken = null;
@@ -92,11 +93,13 @@ describe('OnboardingChildPage', () => {
     jest.useFakeTimers();
     try {
       renderWithProviders(<OnboardingChildPage />);
-      fireEvent.change(screen.getByPlaceholderText(/prénom|first name/i), {
+      // KIN-107 : la maquette ne demande que le prénom. `birthYear` est
+      // calculé à `new Date().getFullYear() - 5` par défaut (l'utilisateur
+      // pourra l'ajuster plus tard via le profil enfant).
+      fireEvent.change(screen.getByPlaceholderText(/Léa|Lea/i), {
         target: { value: 'Emma' },
       });
-      fireEvent.change(screen.getByPlaceholderText(/2020/i), { target: { value: '2020' } });
-      fireEvent.click(screen.getByText(/enregistrer|save/i));
+      fireEvent.click(screen.getByText(/^Continuer$|^Continue$/i));
       await act(async () => {
         await Promise.resolve();
         await Promise.resolve();
@@ -104,7 +107,10 @@ describe('OnboardingChildPage', () => {
         await Promise.resolve();
       });
       expect(mockAppendChild).toHaveBeenCalledWith(
-        expect.objectContaining({ firstName: 'Emma', birthYear: 2020 }),
+        expect.objectContaining({
+          firstName: 'Emma',
+          birthYear: new Date().getFullYear() - 5,
+        }),
         'dev-1',
         expect.any(Uint8Array),
       );
@@ -120,11 +126,10 @@ describe('OnboardingChildPage', () => {
     try {
       mockAppendChild.mockRejectedValueOnce(new Error('network error'));
       renderWithProviders(<OnboardingChildPage />);
-      fireEvent.change(screen.getByPlaceholderText(/prénom|first name/i), {
+      fireEvent.change(screen.getByPlaceholderText(/Léa|Lea/i), {
         target: { value: 'Emma' },
       });
-      fireEvent.change(screen.getByPlaceholderText(/2020/i), { target: { value: '2020' } });
-      fireEvent.click(screen.getByText(/enregistrer|save/i));
+      fireEvent.click(screen.getByText(/^Continuer$|^Continue$/i));
       await act(async () => {
         await Promise.resolve();
         await Promise.resolve();
@@ -155,11 +160,9 @@ describe('OnboardingChildPage', () => {
 
       // Même si l'utilisateur clique malgré le disabled : le handler
       // `if (!online) return` doit empêcher appendChild d'être appelé.
-      const input = screen.getByPlaceholderText(/prénom|first/i);
+      const input = screen.getByPlaceholderText(/Léa|Lea/i);
       fireEvent.change(input, { target: { value: 'Emma' } });
-      const yearInput = screen.getByPlaceholderText(/2020|year/i);
-      fireEvent.change(yearInput, { target: { value: '2020' } });
-      fireEvent.click(screen.getByText(/enregistrer|save/i));
+      fireEvent.click(screen.getByText(/^Continuer$|^Continue$/i));
       await act(async () => {
         await Promise.resolve();
         await Promise.resolve();

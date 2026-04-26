@@ -69,6 +69,11 @@ export default function HomePage(): React.JSX.Element | null {
         onPress: () => router.push('/reports'),
       },
       {
+        key: 'onboarding',
+        label: t('home.dashboard.nav.onboarding'),
+        onPress: () => router.push('/onboarding/child'),
+      },
+      {
         key: 'settings',
         label: t('home.dashboard.nav.settings'),
         onPress: () => router.push('/settings/notifications'),
