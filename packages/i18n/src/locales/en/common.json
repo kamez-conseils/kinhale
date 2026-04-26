@@ -2,7 +2,43 @@
   "home": {
     "title": "Kinhale",
     "subtitle": "Coordinate your child's care",
-    "getStarted": "Get started"
+    "getStarted": "Get started",
+    "dashboard": {
+      "childName": "Your child",
+      "roleLabel": "Co-parent",
+      "status": {
+        "onTrackTitle": "All on track",
+        "onTrackSub": "No action needed right now.",
+        "dueTitle": "Controller dose due",
+        "dueSub": "Time for the controller is near.",
+        "overdueTitle": "Controller dose overdue",
+        "overdueSub": "Please confirm the dose as soon as possible."
+      },
+      "scheduleTitle": "Today's schedule",
+      "scheduleStateLabels": {
+        "done": "done",
+        "pending": "upcoming",
+        "overdue": "overdue",
+        "missed": "missed"
+      },
+      "inventoryTitle": "My inhalers",
+      "refillSoonLabel": "Refill soon",
+      "dosesLeft": "{{n}} doses",
+      "expiry": {
+        "expired": "Expired",
+        "soon": "Expires {{date}}",
+        "normal": "Expires {{date}}"
+      },
+      "activityTitle": "Recent activity",
+      "historyLabel": "History",
+      "by": "by {{name}}",
+      "caregiversTitle": "Caregivers",
+      "syncPendingLabel": "Sync pending",
+      "quickActionCaption": "Log a dose",
+      "quickMaint": "Controller",
+      "quickRescue": "Rescue",
+      "notMedicalDevice": "Not a substitute for medical advice."
+    }
   },
   "nav": {
     "home": "Home",

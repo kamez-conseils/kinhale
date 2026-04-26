@@ -11,6 +11,7 @@
     ".": "./src/index.ts",
     "./theme": "./src/theme/index.ts",
     "./auth": "./src/components/auth/index.ts",
+    "./home": "./src/components/home/index.ts",
     "./icons": "./src/icons/index.ts"
   },
   "scripts": {
