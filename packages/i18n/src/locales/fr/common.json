@@ -217,11 +217,46 @@
       "asideTitle": "Bienvenue chez Kinhale",
       "asideBody": "On va créer le suivi de votre enfant en moins de 3 minutes. Pas de jargon, pas de questions inutiles."
     },
+    "pumps": {
+      "title": "Quelles sont ses pompes ?",
+      "sub": "Configurons d'abord la routine. On ajustera tout plus tard.",
+      "maintLabel": "Pompe de fond (matin et soir)",
+      "maintSub": "Fluticasone, Budesonide…",
+      "rescueLabel": "Pompe de secours (au besoin)",
+      "rescueSub": "Salbutamol (Ventolin)…",
+      "cta": "Continuer",
+      "atLeastOne": "Sélectionnez au moins un type de pompe pour continuer.",
+      "asideEyebrow": "Étape 2 · 6",
+      "asideTitle": "Vos pompes",
+      "asideBody": "Une pompe de fond, une pompe de secours, ou les deux. Le suivi s'adapte à ce que votre enfant utilise."
+    },
+    "plan": {
+      "stepTitle": "À quels moments de la journée ?",
+      "stepSub": "On enverra un rappel discret. Pas culpabilisant.",
+      "morningLabel": "Matin",
+      "eveningLabel": "Soir",
+      "plansTitle": "Le plan d'action",
+      "plansSub": "Comme un feu de circulation. Vert, jaune, rouge.",
+      "greenLabel": "Zone verte",
+      "greenSub": "Pas de symptômes · routine de fond seulement",
+      "yellowLabel": "Zone jaune",
+      "yellowSub": "Toux, sifflement · ajouter pompe de secours",
+      "redLabel": "Zone rouge",
+      "redSub": "Détresse · 4 bouffées secours et appelez le 911",
+      "stepCta": "C'est compris",
+      "noMaintenance": "Aucune pompe de fond enregistrée. Activez-la à l'étape précédente pour configurer le rappel.",
+      "asideEyebrow": "Étape 3 · 6",
+      "asideTitle": "Quand ?",
+      "asideBody": "Choisissez les rappels qui collent à la vraie vie. Vous pourrez les modifier plus tard."
+    },
     "done": {
       "title": "Bravo {{name}} !",
       "sub": "Premières informations enregistrées. Routine activée.",
       "nextReminder": "Prochain rappel · ce soir 20:00",
-      "cta": "Aller à l'accueil"
+      "cta": "Aller à l'accueil",
+      "asideEyebrow": "",
+      "asideTitle": "Prêt",
+      "asideBody": "Vous y êtes. Le journal est ouvert, les rappels sont actifs."
     },
     "errors": {
       "nameRequired": "Le prénom de votre enfant est obligatoire."

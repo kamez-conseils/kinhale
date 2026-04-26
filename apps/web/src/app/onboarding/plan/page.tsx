@@ -3,14 +3,33 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { YStack, H1, Button, Text, Input, XStack, Card } from 'tamagui';
+import { Stack, Text } from 'tamagui';
+import {
+  OnboardingAside,
+  OnboardingCTA,
+  OnboardingShell,
+  PlanStep,
+  type OnboardingShellCopy,
+  type PlanStepValue,
+} from '@kinhale/ui/onboarding';
 import { projectPumps } from '@kinhale/sync';
+
 import { useAuthStore } from '../../../stores/auth-store';
 import { useDocStore } from '../../../stores/doc-store';
 import { getOrCreateDevice } from '../../../lib/device';
 import { useRequireAuth } from '../../../lib/useRequireAuth';
 import { useOnlineGuard } from '../../../hooks/useOnlineGuard';
-import { DisclaimerFooter } from '../../../components/DisclaimerFooter';
+
+// Conversion "HH:MM" → heure UTC entière (les minutes ne sont pas gérées
+// par le format actuel `scheduledHoursUtc: number[]` ; KIN-038 prévoit
+// un format plus précis post-v1.0).
+function parseHour(time: string): number | null {
+  const match = /^(\d{2}):(\d{2})$/.exec(time);
+  if (!match) return null;
+  const hour = parseInt(match[1] ?? '', 10);
+  if (Number.isNaN(hour) || hour < 0 || hour > 23) return null;
+  return hour;
+}
 
 export default function OnboardingPlanPage(): React.JSX.Element | null {
   const { t } = useTranslation('common');
@@ -21,30 +40,49 @@ export default function OnboardingPlanPage(): React.JSX.Element | null {
   const appendPlan = useDocStore((s) => s.appendPlan);
   const doc = useDocStore((s) => s.doc);
 
+  const [value, setValue] = useState<PlanStepValue>({
+    morningTime: '08:00',
+    eveningTime: '20:00',
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const maintenancePumps =
     doc !== null
       ? projectPumps(doc).filter((p) => p.pumpType === 'maintenance' && !p.isExpired)
       : [];
+  const targetPumpId = maintenancePumps[0]?.pumpId ?? null;
 
-  const [selectedPumpId, setSelectedPumpId] = useState<string | null>(
-    maintenancePumps.length === 1 ? (maintenancePumps[0]?.pumpId ?? null) : null,
-  );
-  const [hoursStr, setHoursStr] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const shellCopy: OnboardingShellCopy = {
+    skip: t('onboarding.shellSkip'),
+    back: t('onboarding.shellBack'),
+  };
 
-  const handleSave = async (): Promise<void> => {
-    // Défense en profondeur : cf. kz-securite-075-078 §m1.
+  const stepCopy = {
+    title: t('onboarding.plan.stepTitle'),
+    sub: t('onboarding.plan.stepSub'),
+    morningLabel: t('onboarding.plan.morningLabel'),
+    eveningLabel: t('onboarding.plan.eveningLabel'),
+    plansTitle: t('onboarding.plan.plansTitle'),
+    plansSub: t('onboarding.plan.plansSub'),
+    greenLabel: t('onboarding.plan.greenLabel'),
+    greenSub: t('onboarding.plan.greenSub'),
+    yellowLabel: t('onboarding.plan.yellowLabel'),
+    yellowSub: t('onboarding.plan.yellowSub'),
+    redLabel: t('onboarding.plan.redLabel'),
+    redSub: t('onboarding.plan.redSub'),
+  };
+
+  const handleContinue = async (): Promise<void> => {
     if (!online) return;
     setError(null);
-    if (selectedPumpId === null) {
-      setError(t('onboarding.plan.saveError'));
+    if (targetPumpId === null) {
+      setError(t('onboarding.plan.noMaintenance'));
       return;
     }
-    const scheduledHoursUtc = hoursStr
-      .split(',')
-      .map((h) => parseInt(h.trim(), 10))
-      .filter((h) => !isNaN(h));
+    const morningHour = parseHour(value.morningTime);
+    const eveningHour = parseHour(value.eveningTime);
+    const scheduledHoursUtc = [morningHour, eveningHour].filter((h): h is number => h !== null);
     if (scheduledHoursUtc.length === 0) {
       setError(t('onboarding.plan.saveError'));
       return;
@@ -56,7 +94,7 @@ export default function OnboardingPlanPage(): React.JSX.Element | null {
       await appendPlan(
         {
           planId: crypto.randomUUID(),
-          pumpId: selectedPumpId,
+          pumpId: targetPumpId,
           scheduledHoursUtc,
           startAtMs: Date.now(),
           endAtMs: null,
@@ -64,7 +102,7 @@ export default function OnboardingPlanPage(): React.JSX.Element | null {
         deviceId,
         kp.secretKey,
       );
-      router.push('/journal');
+      router.push('/onboarding/done');
     } catch {
       setError(t('onboarding.plan.saveError'));
     } finally {
@@ -74,80 +112,60 @@ export default function OnboardingPlanPage(): React.JSX.Element | null {
 
   if (!authenticated) return null;
 
-  if (maintenancePumps.length === 0) {
-    return (
-      <YStack padding="$4" gap="$4">
-        <H1>{t('onboarding.plan.title')}</H1>
-        <Card padding="$4" gap="$3">
-          <Text fontWeight="bold" fontSize="$5">
-            {t('onboarding.plan.noMaintenancePumpTitle')}
-          </Text>
-          <Text>{t('onboarding.plan.noMaintenancePumpBody')}</Text>
-          <Button
-            onPress={() => router.push('/onboarding/pump')}
-            backgroundColor="$blue9"
-            color="white"
-            borderColor="$blue10"
-            borderWidth={2}
-            accessibilityLabel={t('onboarding.plan.goToPumpCta')}
-          >
-            {t('onboarding.plan.goToPumpCta')}
-          </Button>
-        </Card>
-        {/* Pied E10 : disclaimer discret omniprésent (RM27). */}
-        <DisclaimerFooter />
-      </YStack>
-    );
-  }
-
   return (
-    <YStack padding="$4" gap="$4">
-      <H1>{t('onboarding.plan.title')}</H1>
-
-      {maintenancePumps.length > 1 && (
-        <>
-          <Text fontWeight="600">{t('onboarding.plan.pumpSelectLabel')}</Text>
-          <XStack flexWrap="wrap" gap="$2">
-            {maintenancePumps.map((p) => (
-              <Button
-                key={p.pumpId}
-                onPress={() => setSelectedPumpId(p.pumpId)}
-                backgroundColor={selectedPumpId === p.pumpId ? '$blue9' : '$backgroundStrong'}
-                color={selectedPumpId === p.pumpId ? 'white' : '$color'}
-                borderColor={selectedPumpId === p.pumpId ? '$blue10' : '$borderColor'}
-                borderWidth={2}
-              >
-                {p.name}
-              </Button>
-            ))}
-          </XStack>
-        </>
-      )}
-
-      <Text fontWeight="600">{t('onboarding.plan.hoursLabel')}</Text>
-      <Input
-        value={hoursStr}
-        onChangeText={setHoursStr}
-        placeholder={t('onboarding.plan.hoursPlaceholder')}
-      />
+    <OnboardingShell
+      step="plan"
+      copy={shellCopy}
+      onBack={() => router.push('/onboarding/pump')}
+      onSkip={() => router.push('/')}
+      aside={
+        <OnboardingAside
+          step="plan"
+          copy={{
+            eyebrow: t('onboarding.plan.asideEyebrow'),
+            title: t('onboarding.plan.asideTitle'),
+            body: t('onboarding.plan.asideBody'),
+          }}
+        />
+      }
+      primaryCta={
+        <OnboardingCTA
+          label={t('onboarding.plan.stepCta')}
+          loading={loading}
+          loadingLabel={t('onboarding.plan.saving')}
+          disabled={targetPumpId === null || !online}
+          onPress={() => void handleContinue()}
+          testID="onboarding-plan-cta"
+        />
+      }
+    >
+      <PlanStep copy={stepCopy} value={value} onChange={setValue} />
 
       {error !== null && (
-        <Text role="alert" color="$red10">
+        <Text color="$amberInk" fontSize={12} marginTop={12} role="alert">
           {error}
         </Text>
       )}
 
-      {!online ? (
-        <Text color="$orange10" testID="offline-guard-message" role="status">
-          {t('offlineGuard.message')}
+      {targetPumpId === null && (
+        <Text color="$colorMore" fontSize={12} marginTop={12} fontStyle="italic">
+          {t('onboarding.plan.noMaintenance')}
         </Text>
-      ) : null}
+      )}
 
-      <Button onPress={() => void handleSave()} disabled={loading || !online} marginTop="$2">
-        {loading ? t('onboarding.plan.saving') : t('onboarding.plan.save')}
-      </Button>
-      {/* Pied E10 : disclaimer discret omniprésent (RM27). */}
-      <DisclaimerFooter />
-    </YStack>
+      {!online && (
+        <Stack
+          marginTop={12}
+          paddingHorizontal={14}
+          paddingVertical={10}
+          borderRadius={10}
+          backgroundColor="$amberSoft"
+        >
+          <Text color="$amberInk" fontSize={12} testID="offline-guard-message" role="status">
+            {t('offlineGuard.message')}
+          </Text>
+        </Stack>
+      )}
+    </OnboardingShell>
   );
 }
