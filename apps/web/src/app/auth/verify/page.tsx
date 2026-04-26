@@ -1,12 +1,14 @@
 'use client';
 
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { YStack, Text } from 'tamagui';
+import { AuthShell, SigningBlock } from '@kinhale/ui/auth';
+
 import { apiFetch, ApiError } from '../../../lib/api-client';
 import { useAuthStore } from '../../../stores/auth-store';
 import { getOrCreateDevice, createGroupKey } from '../../../lib/device';
+import { buildAuthCopy } from '../../../lib/auth/copy';
 
 function decodeJwtPayload(token: string): { sub: string; deviceId: string; householdId: string } {
   const part = token.split('.')[1] ?? '';
@@ -23,17 +25,23 @@ function decodeJwtPayload(token: string): { sub: string; deviceId: string; house
   return { sub: claims['sub'], deviceId: claims['deviceId'], householdId: claims['householdId'] };
 }
 
+// Codes d'erreur stockés dans le state — la traduction est dérivée à chaque
+// render via `t()`, ce qui rend les messages réactifs au changement de
+// langue (revue kz-review M4 KIN-098).
+type VerifyErrorCode = 'missing-token' | 'verify-error';
+
 function VerifyInner(): React.JSX.Element {
   const { t } = useTranslation('common');
   const params = useSearchParams();
   const router = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
-  const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = React.useState<VerifyErrorCode | null>(null);
+  const copy = React.useMemo(() => buildAuthCopy(t), [t]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const token = params.get('token');
     if (token === null || token === '') {
-      setError(t('auth.missingToken'));
+      setErrorCode('missing-token');
       return;
     }
     void (async () => {
@@ -65,26 +73,36 @@ function VerifyInner(): React.JSX.Element {
         }
         router.push('/journal');
       } catch {
-        setError(t('auth.verifyError'));
+        setErrorCode('verify-error');
       }
     })();
-    // params, router, setAuth, t sont des refs stables — l'effet ne doit s'exécuter qu'une fois au montage
+    // L'effet ne doit s'exécuter qu'une fois au montage : la vérification
+    // d'un magic link est unique et non-rejouable. Les messages d'erreur
+    // sont dérivés du code via t() à chaque render — réactifs i18n.
   }, []);
 
-  if (error !== null) {
-    return (
-      <YStack padding="$4" flex={1} alignItems="center" justifyContent="center">
-        <Text color="$red10" role="alert">
-          {error}
-        </Text>
-      </YStack>
-    );
-  }
+  const errorMessage =
+    errorCode === 'missing-token'
+      ? copy.missingToken
+      : errorCode === 'verify-error'
+        ? copy.verifyError
+        : null;
 
   return (
-    <YStack padding="$4" flex={1} alignItems="center" justifyContent="center">
-      <Text>{t('auth.verifying')}</Text>
-    </YStack>
+    <AuthShell copy={copy} layout="web">
+      <SigningBlock
+        copy={copy}
+        errorMessage={errorMessage}
+        retryCta={
+          errorCode !== null
+            ? {
+                label: copy.verifyRetryCta,
+                onPress: (): void => router.replace('/auth'),
+              }
+            : null
+        }
+      />
+    </AuthShell>
   );
 }
 
