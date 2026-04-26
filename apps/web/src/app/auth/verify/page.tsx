@@ -71,7 +71,9 @@ function VerifyInner(): React.JSX.Element {
           }
           // 409 = device already registered — expected on repeat visits
         }
-        router.push('/journal');
+        // Redirige vers le dashboard d'accueil — depuis KIN-106, `/` est le
+        // tableau de bord Home et non plus une landing publique.
+        router.push('/');
       } catch {
         setErrorCode('verify-error');
       }
