@@ -57,7 +57,11 @@ export default function HomePage(): React.JSX.Element | null {
         label: t('home.dashboard.nav.history'),
         onPress: () => router.push('/journal'),
       },
-      { key: 'pumps', label: t('home.dashboard.nav.pumps') },
+      {
+        key: 'pumps',
+        label: t('home.dashboard.nav.pumps'),
+        onPress: () => router.push('/pumps'),
+      },
       {
         key: 'caregivers',
         label: t('home.dashboard.nav.caregivers'),
