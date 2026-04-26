@@ -53,6 +53,7 @@ export function AuthShell({
       <Theme name="kinhale_light">
         <YStack
           flex={1}
+          minHeight="100vh"
           backgroundColor="$background"
           paddingHorizontal={24}
           paddingTop={24}
@@ -113,9 +114,10 @@ export function AuthShell({
     <Theme name="kinhale_light">
       <YStack
         flex={1}
+        minHeight="100vh"
         flexDirection="row"
         backgroundColor="$background"
-        $sm={{ flexDirection: 'column' }}
+        $maxSm={{ flexDirection: 'column' }}
       >
         {/* Panneau marque (gauche)
             Gradient diagonal teinté de l'accent — calé sur la maquette
@@ -138,7 +140,7 @@ export function AuthShell({
             background:
               'linear-gradient(155deg, color-mix(in oklch, var(--maint) 12%, var(--surface)), color-mix(in oklch, var(--maint) 4%, var(--surface)) 60%, var(--surface))',
           }}
-          $sm={{
+          $maxSm={{
             flex: 0,
             paddingTop: 24,
             paddingBottom: 16,
@@ -150,7 +152,7 @@ export function AuthShell({
         >
           <BrandMark size="lg" accent="$maint" />
 
-          <YStack gap={28} alignItems="flex-start" $sm={{ display: 'none' }}>
+          <YStack gap={28} alignItems="flex-start" $maxSm={{ display: 'none' }}>
             <BreathOrb size={220} />
             <Text
               fontFamily="$heading"
@@ -186,7 +188,7 @@ export function AuthShell({
             </YStack>
           </YStack>
 
-          <XStack alignItems="center" gap={8} $sm={{ display: 'none' }}>
+          <XStack alignItems="center" gap={8} $maxSm={{ display: 'none' }}>
             <LockIcon size={11} color="var(--colorFaint, currentColor)" />
             <Text fontSize={11} color="$colorFaint">
               {copy.poweredOpen}
@@ -201,7 +203,7 @@ export function AuthShell({
           paddingTop={60}
           justifyContent="center"
           position="relative"
-          $sm={{ paddingHorizontal: 24, paddingTop: 32, paddingBottom: 100 }}
+          $maxSm={{ paddingHorizontal: 24, paddingTop: 32, paddingBottom: 100 }}
         >
           <YStack maxWidth={380} width="100%" alignSelf="center" gap={28}>
             {renderHeader && (
@@ -215,7 +217,7 @@ export function AuthShell({
                   letterSpacing={-0.9}
                   color="$color"
                   lineHeight={40}
-                  $sm={{ fontSize: 28, lineHeight: 32 }}
+                  $maxSm={{ fontSize: 28, lineHeight: 32 }}
                 >
                   {headerCopy.title}
                 </Text>
@@ -237,7 +239,7 @@ export function AuthShell({
             bottom={28}
             left={64}
             right={64}
-            $sm={{ left: 24, right: 24, bottom: 16 }}
+            $maxSm={{ left: 24, right: 24, bottom: 16 }}
           >
             <LegalFooter copy={copy} layout="web" />
           </Stack>
