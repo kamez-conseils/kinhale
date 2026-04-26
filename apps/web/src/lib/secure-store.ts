@@ -74,42 +74,36 @@ function getDb(): Promise<IDBPDatabase> {
 }
 
 /**
- * Copie défensive d'un `Uint8Array` (ou Buffer Node, ou Uint8Array sur
- * ArrayBufferLike arbitraire) vers un **`ArrayBuffer` frais** dans le
- * realm courant.
+ * Copie défensive d'un Uint8Array vers un Uint8Array frais dans le realm
+ * courant.
  *
- * Pourquoi cette copie est cruciale :
- *   1. Après structuredClone IndexedDB (qui passe par v8.serialize/
- *      deserialize en CI Jest), un Uint8Array stocké peut ressortir
- *      comme un `Buffer` Node ou une vue sur un ArrayBuffer d'un realm
- *      tiers. `subtle.encrypt` Node webcrypto vérifie alors
- *      `arg instanceof ArrayBuffer` côté Node — ce check échoue
- *      cross-realm avec jsdom (qui a son propre ArrayBuffer).
- *   2. Le typage TS strict de BufferSource exige `ArrayBuffer` (pas
- *      `ArrayBufferLike`), donc on doit fournir un vrai ArrayBuffer.
+ * Pourquoi : après structuredClone IndexedDB (qui passe par v8.serialize/
+ * deserialize en CI Jest), un Uint8Array stocké peut ressortir comme un
+ * Buffer Node ou une vue sur un ArrayBuffer d'un realm tiers. WebCrypto
+ * Node vérifie ensuite que l'argument est instance de TypedArray du
+ * realm global — un Buffer Node passe ce check, un ArrayBuffer construit
+ * via `new ArrayBuffer(N)` peut échouer cross-realm en jsdom CI.
  *
- * `new ArrayBuffer(N)` crée un buffer dans le realm de la fonction
- * appelante (le module web), qui est aussi le realm de `crypto.subtle`
- * en CI car `globalThis.crypto = webcrypto` est mappé sur le realm
- * global. Le check instanceof passe alors.
+ * On copie donc systématiquement les bytes dans un nouveau Uint8Array.
+ * WebCrypto accepte les TypedArrays directement (cf. WebCrypto spec —
+ * `BufferSource = ArrayBuffer | ArrayBufferView`). Le cast TS contourne
+ * la limitation `Uint8Array<ArrayBufferLike>` ≠ `Uint8Array<ArrayBuffer>`
+ * du typage DOM strict.
  */
-function toFreshArrayBuffer(view: Uint8Array): ArrayBuffer {
-  const buf = new ArrayBuffer(view.byteLength);
-  new Uint8Array(buf).set(view);
-  return buf;
+function freshBytes(view: Uint8Array): BufferSource {
+  const fresh = new Uint8Array(view.byteLength);
+  fresh.set(view);
+  return fresh as unknown as BufferSource;
 }
 
 async function importSeedAsKey(seed: Uint8Array): Promise<CryptoKey> {
   // `extractable: false` : la clé importée vit en RAM uniquement, ne peut
   // PAS être exfiltrée via `subtle.exportKey`. La seed brute reste en
   // IndexedDB, mais la clé chargée est protégée contre l'exfiltration JS.
-  return crypto.subtle.importKey(
-    'raw',
-    toFreshArrayBuffer(seed),
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['encrypt', 'decrypt'],
-  );
+  return crypto.subtle.importKey('raw', freshBytes(seed), { name: 'AES-GCM', length: 256 }, false, [
+    'encrypt',
+    'decrypt',
+  ]);
 }
 
 async function loadOrCreateWrappingKey(): Promise<CryptoKey> {
@@ -135,9 +129,9 @@ export async function secureStorePut(name: string, plaintext: Uint8Array): Promi
   const key = await getWrappingKey();
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ciphertextBuffer = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv: toFreshArrayBuffer(iv) },
+    { name: 'AES-GCM', iv: freshBytes(iv) },
     key,
-    toFreshArrayBuffer(plaintext),
+    freshBytes(plaintext),
   );
   const entry: StoredEntry = {
     iv,
@@ -154,9 +148,9 @@ export async function secureStoreGet(name: string): Promise<Uint8Array | null> {
   const key = await getWrappingKey();
   try {
     const plaintextBuffer = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: toFreshArrayBuffer(entry.iv) },
+      { name: 'AES-GCM', iv: freshBytes(entry.iv) },
       key,
-      toFreshArrayBuffer(entry.ciphertext),
+      freshBytes(entry.ciphertext),
     );
     return new Uint8Array(plaintextBuffer);
   } catch {
