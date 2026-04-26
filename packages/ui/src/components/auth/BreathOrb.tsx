@@ -32,7 +32,7 @@ export function BreathOrb({
           (acceptable, c'est décoratif). */}
       <style>{`
         @keyframes kinhale-breath-${id} {
-          0%, 100% { transform: scale(0.85); opacity: 0.55; }
+          0%, 100% { transform: scale(0.85); opacity: 0.65; }
           50% { transform: scale(1); opacity: 1; }
         }
         @keyframes kinhale-auth-spin {

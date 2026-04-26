@@ -47,27 +47,29 @@ describe('AuthPage — état initial (enter)', () => {
     renderWithProviders(<AuthPage />);
     await flush();
     expect(screen.getByText(/Bienvenue/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/famille\.ca|email/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/famille\.ca|family\.ca/i)).toBeInTheDocument();
   });
 
   it('affiche le disclaimer non-dispositif-médical (RM27)', async () => {
     renderWithProviders(<AuthPage />);
     await flush();
-    // disclaimer.short en FR = "Journal d'aidants, pas un avis médical."
-    // disclaimer.short en EN = "Caregiver journal — not medical advice."
-    expect(screen.getByText(/pas un avis médical|not medical advice/i)).toBeInTheDocument();
+    // auth.notMedical (FR) = "Ne remplace pas un avis médical."
+    // auth.notMedical (EN) = "Not a substitute for medical advice."
+    expect(
+      screen.getByText(/remplace pas un avis médical|substitute for medical advice/i),
+    ).toBeInTheDocument();
   });
 
   it('désactive le bouton tant que le format email est invalide', async () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     renderWithProviders(<AuthPage />);
     await flush();
-    const button = screen.getByRole('button', { name: /Recevoir le lien/i });
+    const button = screen.getByRole('button', { name: /Envoyer le lien/i });
     expect(button).toBeDisabled();
-    await user.type(screen.getByPlaceholderText(/famille\.ca|email/i), 'pasvalide');
+    await user.type(screen.getByPlaceholderText(/famille\.ca|family\.ca/i), 'pasvalide');
     await flush();
     expect(button).toBeDisabled();
-    expect(screen.getByText(/Adresse e-mail invalide/i)).toBeInTheDocument();
+    expect(screen.getByText(/Adresse courriel invalide/i)).toBeInTheDocument();
   });
 
   it('appelle apiFetch /auth/magic-link puis bascule sur l’état sent', async () => {
@@ -76,9 +78,9 @@ describe('AuthPage — état initial (enter)', () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     renderWithProviders(<AuthPage />);
     await flush();
-    await user.type(screen.getByPlaceholderText(/famille\.ca|email/i), 'parent@famille.ca');
+    await user.type(screen.getByPlaceholderText(/famille\.ca|family\.ca/i), 'parent@famille.ca');
     await flush();
-    await user.click(screen.getByRole('button', { name: /Recevoir le lien/i }));
+    await user.click(screen.getByRole('button', { name: /Envoyer le lien/i }));
     await flush();
     expect(apiFetch).toHaveBeenCalledWith(
       '/auth/magic-link',
@@ -107,9 +109,9 @@ describe('AuthPage — état sent', () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     renderWithProviders(<AuthPage />);
     await flush();
-    await user.type(screen.getByPlaceholderText(/famille\.ca|email/i), 'parent@famille.ca');
+    await user.type(screen.getByPlaceholderText(/famille\.ca|family\.ca/i), 'parent@famille.ca');
     await flush();
-    await user.click(screen.getByRole('button', { name: /Recevoir le lien/i }));
+    await user.click(screen.getByRole('button', { name: /Envoyer le lien/i }));
     // Plus de pumps act() pour absorber la cascade : setState submit →
     // apiFetch resolved → setState sent → render SentBlock + démarrage timer.
     for (let i = 0; i < 8; i += 1) {
@@ -125,13 +127,13 @@ describe('AuthPage — état sent', () => {
     expect(resendBtn.textContent).toMatch(/Renvoyer dans/i);
   });
 
-  it('permet de revenir à la saisie via "Modifier l\'e-mail"', async () => {
+  it('permet de revenir à la saisie via "Changer l\'adresse"', async () => {
     await getToSentState();
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     const changeBtn = await waitFor(() => screen.getByTestId('auth-change-email'));
     await user.click(changeBtn);
     await flush();
-    expect(screen.getByPlaceholderText(/famille\.ca|email/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/famille\.ca|family\.ca/i)).toBeInTheDocument();
   });
 });
 
@@ -160,8 +162,12 @@ describe('AuthPage — mode invitation', () => {
 
     renderWithProviders(<AuthPage />);
     await flush();
-    expect(await screen.findByText(/Bienvenue Maman/i)).toBeInTheDocument();
-    expect(screen.getByText(/aidant complet/i)).toBeInTheDocument();
+    // Format maquette : "Invité·e par {who} en tant que {role}"
+    // Le titre h1 contient déjà la déclinaison complète "...Co-parent" donc
+    // on vérifie l'expression entière dans un seul findByText.
+    expect(
+      await screen.findByText(/Invité·e par Maman en tant que Co-parent/i),
+    ).toBeInTheDocument();
   });
 });
 

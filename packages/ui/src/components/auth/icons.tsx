@@ -28,7 +28,8 @@ export function EnvelopeIcon({ size = 18, color = 'currentColor' }: IconProps): 
       strokeWidth="1.6"
     >
       <rect x="3" y="6" width="18" height="13" rx="2.5" />
-      <path d="M3.5 7.5l8.5 6 8.5-6" />
+      {/* Pli central légèrement courbé (cf. maquette Auth.html), pas un V dur */}
+      <path d="M3.5 7.5l8 6.2a1 1 0 001.2 0L20.5 7.5" />
     </svg>
   );
 }
@@ -41,13 +42,33 @@ export function EnvelopeOpenIcon({
     <svg
       width={size}
       height={size}
-      viewBox="0 0 24 24"
+      viewBox="0 0 32 32"
       {...baseStroke}
       stroke={color}
-      strokeWidth="1.6"
+      strokeWidth="1.5"
     >
-      <path d="M3 10.5L12 4l9 6.5V19a2 2 0 01-2 2H5a2 2 0 01-2-2v-8.5z" />
-      <path d="M3 10.5l9 6.5 9-6.5" />
+      {/* Enveloppe ouverte avec contenu visible — 3 paths comme la maquette
+          (corps + pli central courbé + lettre dépliée qui dépasse). */}
+      <path d="M4 14L16 6l12 8v12a2 2 0 01-2 2H6a2 2 0 01-2-2V14z" />
+      <path d="M4 14l11.4 7.6a1 1 0 001.2 0L28 14" />
+      <path d="M11 14V8h10v6" />
+    </svg>
+  );
+}
+
+// Logo Kinhale — œil-pompe stylisé, blanc dans un carré arrondi accentué.
+// Reproduit le `AuthIcon.brand` de la maquette `Kinhale Auth.html`.
+export function BrandIcon({ size = 22, color = 'currentColor' }: IconProps): React.JSX.Element {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M5 12s2.5-6 7-6 7 6 7 6-2.5 6-7 6-7-6-7-6z"
+        stroke={color}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="2.4" fill={color} />
     </svg>
   );
 }

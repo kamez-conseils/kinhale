@@ -88,8 +88,10 @@ function VerifyInner(): React.JSX.Element {
         ? copy.verifyError
         : null;
 
+  // `header="none"` : la SigningBlock porte son propre titre/sub
+  // ("Connexion en cours…") — pas de doublon avec le welcomeTitle (J2).
   return (
-    <AuthShell copy={copy} layout="web">
+    <AuthShell copy={copy} layout="web" header="none">
       <SigningBlock
         copy={copy}
         errorMessage={errorMessage}

@@ -68,7 +68,8 @@ export function EmailForm({
             id="kinhale-auth-email"
             unstyled
             flex={1}
-            paddingHorizontal={10}
+            paddingLeft={10}
+            paddingRight={14}
             paddingVertical={14}
             fontSize={15}
             color="$color"
@@ -114,6 +115,12 @@ export function EmailForm({
         pressStyle={{ opacity: 0.85 }}
         accessibilityRole="button"
         accessibilityState={{ disabled, busy: submitting }}
+        // Halo doux teinté de l'accent — disparaît à l'état désactivé.
+        style={
+          disabled
+            ? undefined
+            : { boxShadow: '0 6px 18px color-mix(in oklch, var(--maint) 28%, transparent)' }
+        }
         icon={
           submitting ? (
             <SpinnerIcon size={18} color="#fff" />

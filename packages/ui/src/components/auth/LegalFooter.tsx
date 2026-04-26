@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, YStack } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
 
 import type { AuthCopy } from './types';
 
@@ -14,7 +14,7 @@ interface LegalFooterProps {
 export function LegalFooter({ copy, layout = 'mobile' }: LegalFooterProps): React.JSX.Element {
   if (layout === 'web') {
     return (
-      <YStack flexDirection="row" justifyContent="space-between" alignItems="center" gap={12}>
+      <XStack justifyContent="space-between" alignItems="center" gap={12}>
         <Text
           fontSize={11}
           color="$colorFaint"
@@ -27,7 +27,7 @@ export function LegalFooter({ copy, layout = 'mobile' }: LegalFooterProps): Reac
         <Text fontSize={11} color="$colorFaint" textAlign="right" maxWidth={320}>
           {copy.legal}
         </Text>
-      </YStack>
+      </XStack>
     );
   }
   return (

@@ -20,5 +20,9 @@ LICENSE
 SECURITY.md
 docs/**/*.md
 
+# Design handoffs — fichiers HTML/JSX de référence livrés par Claude Design.
+# On ne reformate pas pour préserver l'identité bit-à-bit avec le bundle source.
+docs/design/handoffs/
+
 # Tamagui generated cache files
 apps/web/.tamagui/
