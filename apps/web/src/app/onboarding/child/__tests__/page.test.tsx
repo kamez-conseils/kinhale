@@ -92,11 +92,13 @@ describe('OnboardingChildPage', () => {
     jest.useFakeTimers();
     try {
       renderWithProviders(<OnboardingChildPage />);
-      fireEvent.change(screen.getByPlaceholderText(/prénom|first name/i), {
+      // KIN-107 : placeholder devient "Léa"/"Lea", bouton devient
+      // "Continuer"/"Continue" — refonte clinical-calm.
+      fireEvent.change(screen.getByPlaceholderText(/Léa|Lea/i), {
         target: { value: 'Emma' },
       });
       fireEvent.change(screen.getByPlaceholderText(/2020/i), { target: { value: '2020' } });
-      fireEvent.click(screen.getByText(/enregistrer|save/i));
+      fireEvent.click(screen.getByText(/^Continuer$|^Continue$/i));
       await act(async () => {
         await Promise.resolve();
         await Promise.resolve();
@@ -120,11 +122,11 @@ describe('OnboardingChildPage', () => {
     try {
       mockAppendChild.mockRejectedValueOnce(new Error('network error'));
       renderWithProviders(<OnboardingChildPage />);
-      fireEvent.change(screen.getByPlaceholderText(/prénom|first name/i), {
+      fireEvent.change(screen.getByPlaceholderText(/Léa|Lea/i), {
         target: { value: 'Emma' },
       });
       fireEvent.change(screen.getByPlaceholderText(/2020/i), { target: { value: '2020' } });
-      fireEvent.click(screen.getByText(/enregistrer|save/i));
+      fireEvent.click(screen.getByText(/^Continuer$|^Continue$/i));
       await act(async () => {
         await Promise.resolve();
         await Promise.resolve();
@@ -155,11 +157,11 @@ describe('OnboardingChildPage', () => {
 
       // Même si l'utilisateur clique malgré le disabled : le handler
       // `if (!online) return` doit empêcher appendChild d'être appelé.
-      const input = screen.getByPlaceholderText(/prénom|first/i);
+      const input = screen.getByPlaceholderText(/Léa|Lea/i);
       fireEvent.change(input, { target: { value: 'Emma' } });
       const yearInput = screen.getByPlaceholderText(/2020|year/i);
       fireEvent.change(yearInput, { target: { value: '2020' } });
-      fireEvent.click(screen.getByText(/enregistrer|save/i));
+      fireEvent.click(screen.getByText(/^Continuer$|^Continue$/i));
       await act(async () => {
         await Promise.resolve();
         await Promise.resolve();
