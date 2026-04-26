@@ -29,7 +29,8 @@ describe('AuthScreen', () => {
 
   it('renders email input', () => {
     renderWithProviders(<AuthScreen />);
-    expect(screen.getByPlaceholderText(/email/i)).toBeTruthy();
+    // Placeholder peut être "vous@famille.ca" ou "you@family.ca" selon locale.
+    expect(screen.getByPlaceholderText(/famille|family/i)).toBeTruthy();
   });
 
   it('does not call API when email is empty', async () => {
@@ -49,7 +50,7 @@ describe('AuthScreen', () => {
       apiFetch: jest.Mock;
     };
     renderWithProviders(<AuthScreen />);
-    const input = screen.getByPlaceholderText(/email/i);
+    const input = screen.getByPlaceholderText(/famille|family/i);
     fireEvent.changeText(input, 'test@example.com');
     const btn = screen.getByTestId('submit-btn');
     fireEvent.press(btn);
@@ -63,7 +64,7 @@ describe('AuthScreen', () => {
 
   it('shows confirmation text after submission', async () => {
     renderWithProviders(<AuthScreen />);
-    const input = screen.getByPlaceholderText(/email/i);
+    const input = screen.getByPlaceholderText(/famille|family/i);
     fireEvent.changeText(input, 'test@example.com');
     fireEvent.press(screen.getByTestId('submit-btn'));
     await waitFor(() => {

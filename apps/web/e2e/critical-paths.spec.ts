@@ -43,12 +43,12 @@ test.describe('Parcours critiques — rendu réel des pages', () => {
     await page.waitForLoadState('networkidle');
     await page.screenshot({ path: `${SCREENSHOT_DIR}/02-auth.png`, fullPage: true });
     await expectNoNextError(page);
-    // H1 via t('auth.title') = "Connexion"
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Connexion');
-    // Input email via placeholder t('auth.emailPlaceholder') = "votre@email.com"
-    await expect(page.getByPlaceholder('votre@email.com')).toBeVisible();
-    // Bouton via t('auth.submit') = "Recevoir un lien magique"
-    await expect(page.getByRole('button', { name: /recevoir un lien magique/i })).toBeVisible();
+    // H1 via t('auth.welcomeTitle') = "Bienvenue" (refonte clinical-calm KIN-098)
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(/bienvenue/i);
+    // Input email via placeholder t('auth.emailPlaceholder') = "vous@famille.ca"
+    await expect(page.getByPlaceholder('vous@famille.ca')).toBeVisible();
+    // Bouton via t('auth.sendBtn') = "Recevoir le lien"
+    await expect(page.getByRole('button', { name: /recevoir le lien/i })).toBeVisible();
   });
 
   test('03 Journal redirige vers /auth si non authentifié', async ({ page }) => {

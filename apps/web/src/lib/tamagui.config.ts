@@ -1,10 +1,9 @@
-import { defaultConfig } from '@tamagui/config/v4';
-import { createTamagui, type TamaguiInternalConfig } from 'tamagui';
+import { kinhaleConfig, type KinhaleConfig } from '@kinhale/ui/theme';
 
-const config: TamaguiInternalConfig = createTamagui(defaultConfig);
+const config = kinhaleConfig;
 
 export default config;
-export type AppConfig = typeof config;
+export type AppConfig = KinhaleConfig;
 
 declare module 'tamagui' {
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
