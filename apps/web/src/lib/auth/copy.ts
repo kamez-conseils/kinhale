@@ -49,10 +49,7 @@ export function buildAuthCopy(t: TFunction<'common'>): AuthCopy {
     panelLine3: t('auth.panelLine3'),
     poweredOpen: t('auth.poweredOpen'),
     legal: t('auth.legal'),
-    // Source unique du disclaimer non-dispositif-médical (RM27) : on
-    // réutilise la clé `disclaimer.short` déjà publiée à travers l'app pour
-    // garantir la cohérence — pas de copie indépendante.
-    notMedical: t('disclaimer.short'),
+    notMedical: t('auth.notMedical'),
   };
 }
 
