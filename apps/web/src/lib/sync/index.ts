@@ -10,7 +10,6 @@ import {
   useMissedDoseWatcher as useMissedDoseWatcherCore,
   useDuplicateDetectionWatcher as useDuplicateDetectionWatcherCore,
   usePeerDosePing as usePeerDosePingCore,
-  getGroupKey,
   type DecryptFailedEvent,
   type FetchCatchupArgs,
   type CatchupResponse,
@@ -22,10 +21,32 @@ import {
 import type { PeerPingMessage } from '@kinhale/sync';
 import { blake2bHex } from '@kinhale/crypto';
 import { createRelayClient } from '../relay-client';
-import { getOrCreateDevice } from '../device';
+import { getOrCreateDevice, getGroupKey, createGroupKey } from '../device';
 import { useAuthStore } from '../../stores/auth-store';
 import { useDocStore } from '../../stores/doc-store';
 import { useSyncStatusStore } from '../../stores/sync-status-store';
+
+/**
+ * Bootstrap-safe : récupère la groupKey du foyer ou la crée si absente
+ * (cas premier connect après auth/verify ou migration). Idempotent.
+ *
+ * **TODO KIN-025-web** : intégration flux QR invite côté web — pour l'instant
+ * chaque aidant crée sa propre groupKey, sans partage cross-device sur web.
+ * Une fois le flux QR implémenté, remplacer par `getGroupKey` strict (qui
+ * throws) pour forcer le passage par `acceptInvitation()` lors d'un join.
+ *
+ * Refs: KIN-095, ADR-D15.
+ */
+async function deriveGroupKeyForBootstrap(householdId: string): Promise<Uint8Array> {
+  try {
+    return await getGroupKey(householdId);
+  } catch {
+    // Pas de clé locale (premier bootstrap, migration depuis localStorage,
+    // etc.) — création idempotente. À remplacer par un flux QR pour les
+    // aidants invités quand KIN-025-web sera livré.
+    return await createGroupKey(householdId);
+  }
+}
 
 /**
  * Sel applicatif utilisé pour pseudonymiser les `householdId` dans les
@@ -168,7 +189,7 @@ export function useRelaySync(): { connected: boolean; sendPing: (p: PeerPingMess
     getDocSnapshot: () => useDocStore.getState().doc,
     useReceiveChanges: () => useDocStore((s) => s.receiveChanges),
     createRelayClient,
-    deriveGroupKey: getGroupKey,
+    deriveGroupKey: deriveGroupKeyForBootstrap,
     platform: 'web',
     hashHousehold,
     reportDecryptFailed,
@@ -295,7 +316,7 @@ export function usePullDelta(): { pulling: boolean } {
     fetchCatchup,
     loadCursor: loadCursorFactory(() => useAuthStore.getState().householdId),
     saveCursor: saveCursorFactory(() => useAuthStore.getState().householdId),
-    deriveGroupKey: getGroupKey,
+    deriveGroupKey: deriveGroupKeyForBootstrap,
   });
   // Miroir du statut pulling dans le store pour l'UI. Refs: KIN-75 / E7-S05.
   const setPulling = useSyncStatusStore((s) => s.setPulling);
@@ -347,7 +368,7 @@ export function useSyncBatchFallback(): void {
     getDocSnapshot: () => useDocStore.getState().doc,
     useConnected: () => useSyncStatusStore((s) => s.connected),
     fetchBatch,
-    deriveGroupKey: getGroupKey,
+    deriveGroupKey: deriveGroupKeyForBootstrap,
   });
 }
 
