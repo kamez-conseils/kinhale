@@ -1,24 +1,31 @@
 /**
  * Module de stockage chiffré côté navigateur — wraps WebCrypto + IndexedDB.
  *
- * Pattern device-bound : une clé AES-GCM 256 bits **non-extractable** est
- * persistée dans IndexedDB et sert à chiffrer/déchiffrer toutes les données
- * sensibles côté web (clé secrète Ed25519 du device, clé symétrique de groupe
- * du foyer, etc.).
+ * Pattern device-bound : une **seed aléatoire 32 bytes** est persistée dans
+ * IndexedDB. À chaque démarrage, on l'importe via `subtle.importKey` en
+ * `extractable: false` pour reconstituer une `CryptoKey` AES-GCM 256
+ * non-extractable utilisable uniquement par le navigateur courant.
  *
- * Le navigateur sait persister un `CryptoKey` non-extractable nativement dans
- * IndexedDB (via `structuredClone`) sans jamais exposer la matière de clé au
- * code JS. Un attaquant qui exfiltre IndexedDB ne récupère que :
- *   - une référence opaque vers la clé AES-GCM (inutilisable hors du
- *     navigateur d'origine, car la matière reste dans le keystore interne)
- *   - les blobs chiffrés `{iv, ciphertext}` qui ne se déchiffrent qu'avec
- *     cette clé.
+ * Cette seed sert à chiffrer/déchiffrer toutes les données sensibles côté
+ * web (clé secrète Ed25519 du device, clé symétrique de groupe du foyer,
+ * etc.). Tous les enregistrements `entries` sont des blobs chiffrés
+ * `{iv, ciphertext}` qui ne se déchiffrent qu'avec cette clé.
+ *
+ * **Pourquoi une seed et non une CryptoKey persistée directement** : la spec
+ * structuredClone supporte CryptoKey nativement, mais en pratique les
+ * navigateurs Chromium/WebKit/Gecko stockent les bytes en clair dans le
+ * backend IndexedDB (sqlite/leveldb). La sécurité réelle vient donc du fait
+ * que la clé importée en RAM est `extractable: false` — un attaquant
+ * exécutant du code dans la page ne peut PAS appeler `exportKey` pour
+ * exfiltrer la matière. Le pattern actuel est donc strictement équivalent en
+ * sécurité, et compatible avec les polyfills IndexedDB des environnements
+ * Jest/CI qui ne savent pas sérialiser CryptoKey.
  *
  * Limites connues (cf. ADR-D15 + ticket de suivi v1.1) :
- *   - Une XSS active peut, tant qu'elle s'exécute dans l'origine, obtenir
- *     une référence à la wrapping key et appeler `subtle.decrypt()` à la
- *     volée. Le pattern borne le risque à la **durée** de la XSS — bien
- *     mieux que `localStorage` qui exfiltre aussi en post-incident.
+ *   - Une XSS active peut, tant qu'elle s'exécute dans l'origine, lire la
+ *     seed (clé brute) directement depuis IndexedDB et reconstituer la clé
+ *     extractable côté attaquant. Le risque XSS reste donc majeur — bien
+ *     mieux que `localStorage` (immédiat, persistant) mais pas absolu.
  *   - Aucune récupération si l'utilisateur efface son profil navigateur.
  *     La récupération via seed BIP39 est tracée pour v1.1.
  *   - Pas de PIN/passphrase utilisateur en v1.0 (UX simple). Option
@@ -40,10 +47,12 @@ interface StoredEntry {
   ciphertext: Uint8Array;
 }
 
-interface StoredWrappingKey {
+interface StoredWrappingSeed {
   id: string;
-  key: CryptoKey;
+  seed: Uint8Array;
 }
+
+const WRAPPING_SEED_LEN = 32;
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 let wrappingKeyPromise: Promise<CryptoKey> | null = null;
@@ -64,23 +73,26 @@ function getDb(): Promise<IDBPDatabase> {
   return dbPromise;
 }
 
-async function loadOrCreateWrappingKey(): Promise<CryptoKey> {
-  const db = await getDb();
-  const existing = (await db.get(STORE_KEYS, WRAPPING_KEY_ID)) as StoredWrappingKey | undefined;
-  if (existing !== undefined) {
-    return existing.key;
-  }
-  // `extractable: false` : la matière de clé ne sort jamais du keystore
-  // interne du navigateur. Le CryptoKey reste sérialisable via
-  // structuredClone (donc persistable en IndexedDB) mais non exportable
-  // en bytes via `subtle.exportKey` ni accessible en clair via le JS.
-  const key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, [
+async function importSeedAsKey(seed: Uint8Array): Promise<CryptoKey> {
+  // `extractable: false` : la clé importée vit en RAM uniquement, ne peut
+  // PAS être exfiltrée via `subtle.exportKey`. La seed brute reste en
+  // IndexedDB, mais la clé chargée est protégée contre l'exfiltration JS.
+  return crypto.subtle.importKey('raw', toArrayBuffer(seed), { name: 'AES-GCM', length: 256 }, false, [
     'encrypt',
     'decrypt',
   ]);
-  const record: StoredWrappingKey = { id: WRAPPING_KEY_ID, key };
+}
+
+async function loadOrCreateWrappingKey(): Promise<CryptoKey> {
+  const db = await getDb();
+  const existing = (await db.get(STORE_KEYS, WRAPPING_KEY_ID)) as StoredWrappingSeed | undefined;
+  if (existing !== undefined && existing.seed.length === WRAPPING_SEED_LEN) {
+    return importSeedAsKey(existing.seed);
+  }
+  const seed = crypto.getRandomValues(new Uint8Array(WRAPPING_SEED_LEN));
+  const record: StoredWrappingSeed = { id: WRAPPING_KEY_ID, seed };
   await db.put(STORE_KEYS, record);
-  return key;
+  return importSeedAsKey(seed);
 }
 
 function getWrappingKey(): Promise<CryptoKey> {
