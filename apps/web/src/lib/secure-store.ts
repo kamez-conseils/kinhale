@@ -77,13 +77,19 @@ async function importSeedAsKey(seed: Uint8Array): Promise<CryptoKey> {
   // `extractable: false` : la clé importée vit en RAM uniquement, ne peut
   // PAS être exfiltrée via `subtle.exportKey`. La seed brute reste en
   // IndexedDB, mais la clé chargée est protégée contre l'exfiltration JS.
-  return crypto.subtle.importKey(
-    'raw',
-    toArrayBuffer(seed),
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['encrypt', 'decrypt'],
-  );
+  //
+  // On copie systématiquement la seed dans un Uint8Array frais : après
+  // structuredClone IndexedDB (qui passe par v8.serialize/deserialize en
+  // CI), `seed` peut être un `Buffer` Node ou un Uint8Array sur un
+  // ArrayBuffer non-standard (SharedArrayBuffer-like) que certaines
+  // implémentations de SubtleCrypto rejettent. Une copie défensive
+  // garantit un Uint8Array sur ArrayBuffer standard.
+  const fresh = new Uint8Array(seed.length);
+  fresh.set(seed);
+  return crypto.subtle.importKey('raw', fresh, { name: 'AES-GCM', length: 256 }, false, [
+    'encrypt',
+    'decrypt',
+  ]);
 }
 
 async function loadOrCreateWrappingKey(): Promise<CryptoKey> {
