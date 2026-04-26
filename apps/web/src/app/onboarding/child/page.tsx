@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { Input, Stack, Text, YStack } from 'tamagui';
+import { Stack, Text } from 'tamagui';
 import {
   OnboardingCTA,
   OnboardingShell,
@@ -16,7 +16,12 @@ import { useDocStore } from '../../../stores/doc-store';
 import { getOrCreateDevice } from '../../../lib/device';
 import { useRequireAuth } from '../../../lib/useRequireAuth';
 import { useOnlineGuard } from '../../../hooks/useOnlineGuard';
-import { DisclaimerBanner, DisclaimerFooter } from '../../../components/DisclaimerFooter';
+
+// Année de naissance par défaut : âge enfant typique 5 ans (la maquette
+// `Kinhale Onboarding.html` step 0 ne demande que le prénom, donc on
+// donne une valeur métier raisonnable que l'utilisateur pourra ajuster
+// plus tard via le profil enfant).
+const DEFAULT_BIRTH_YEAR_OFFSET = 5;
 
 export default function OnboardingChildPage(): React.JSX.Element | null {
   const { t } = useTranslation('common');
@@ -27,7 +32,6 @@ export default function OnboardingChildPage(): React.JSX.Element | null {
   const appendChild = useDocStore((s) => s.appendChild);
 
   const [firstName, setFirstName] = useState('');
-  const [birthYearStr, setBirthYearStr] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,12 +54,7 @@ export default function OnboardingChildPage(): React.JSX.Element | null {
   const handleContinue = async (): Promise<void> => {
     if (!online || !validName) return;
     setError(null);
-    const birthYearRaw = birthYearStr.trim();
-    const birthYear = birthYearRaw === '' ? new Date().getFullYear() : parseInt(birthYearRaw, 10);
-    if (Number.isNaN(birthYear)) {
-      setError(t('onboarding.child.saveError'));
-      return;
-    }
+    const birthYear = new Date().getFullYear() - DEFAULT_BIRTH_YEAR_OFFSET;
     setLoading(true);
     try {
       const kp = await getOrCreateDevice();
@@ -93,9 +92,6 @@ export default function OnboardingChildPage(): React.JSX.Element | null {
         />
       }
     >
-      {/* Onboarding écran 1 : disclaimer complet RM27 affiché d'entrée. */}
-      <DisclaimerBanner />
-
       <WelcomeStep
         copy={welcomeCopy}
         value={firstName}
@@ -103,45 +99,9 @@ export default function OnboardingChildPage(): React.JSX.Element | null {
         errorMessage={errorMessage}
       />
 
-      {/* Champ année de naissance — gardé pour la couverture métier
-          historique (la maquette ne le demande pas). Affiché plus bas, en
-          option visuelle plus discrète. */}
-      <YStack width="100%" gap={8} marginTop={20}>
-        <Text
-          tag="label"
-          htmlFor="kinhale-onb-birth-year"
-          fontSize={11}
-          color="$colorMore"
-          textTransform="uppercase"
-          letterSpacing={0.88}
-          fontWeight="600"
-        >
-          {t('onboarding.child.birthYearLabel')}
-        </Text>
-        <Input
-          id="kinhale-onb-birth-year"
-          unstyled
-          width="100%"
-          paddingHorizontal={16}
-          paddingVertical={14}
-          backgroundColor="$surface"
-          borderWidth={1.5}
-          borderColor="$borderColor"
-          borderRadius={12}
-          fontSize={16}
-          color="$color"
-          placeholderTextColor="$colorFaint"
-          value={birthYearStr}
-          onChangeText={setBirthYearStr}
-          placeholder={t('onboarding.child.birthYearPlaceholder')}
-          keyboardType="number-pad"
-          aria-label={t('onboarding.child.birthYearLabel')}
-        />
-      </YStack>
-
       {!online && (
         <Stack
-          marginTop={12}
+          marginTop={16}
           paddingHorizontal={14}
           paddingVertical={10}
           borderRadius={10}
@@ -152,11 +112,6 @@ export default function OnboardingChildPage(): React.JSX.Element | null {
           </Text>
         </Stack>
       )}
-
-      {/* Pied E10 : version discrète sur chaque étape onboarding. */}
-      <Stack marginTop={20} alignItems="center">
-        <DisclaimerFooter />
-      </Stack>
     </OnboardingShell>
   );
 }

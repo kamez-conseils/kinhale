@@ -12,7 +12,8 @@
         "pumps": "My inhalers",
         "caregivers": "Caregivers",
         "reports": "Reports",
-        "settings": "Settings"
+        "settings": "Settings",
+        "onboarding": "Onboarding"
       },
       "status": {
         "onTrackTitle": "All on track",
