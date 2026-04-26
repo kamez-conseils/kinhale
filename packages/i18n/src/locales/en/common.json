@@ -191,7 +191,24 @@
     "errorLocked": "Too many attempts. Invitation locked for 15 min.",
     "errorConsent": "Please accept sharing to continue.",
     "cameraPermissionDenied": "Camera permission denied. Enable it in settings.",
-    "backToAuth": "Back to login"
+    "backToAuth": "Back to login",
+    "scanCta": "Scan a QR",
+    "scan": {
+      "title": "Scan invitation",
+      "instruction": "Point the camera at the QR provided by the Admin.",
+      "startCta": "Start scan",
+      "stopCta": "Stop scan",
+      "manualCta": "Enter the code manually",
+      "manualLabel": "Invitation link",
+      "manualPlaceholder": "kinhale://accept/… or https://…",
+      "manualSubmit": "Continue",
+      "cameraPermissionRequired": "Allow camera access to scan.",
+      "cameraPermissionDenied": "Camera denied. Use manual entry.",
+      "cameraUnavailable": "Camera not available in this browser.",
+      "barcodeUnsupported": "Your browser cannot detect QR codes. Use manual entry.",
+      "invalidQr": "This code is not a valid Kinhale invitation.",
+      "errorRetry": "An error occurred. Please retry."
+    }
   },
   "sync": {
     "offline": "Offline",

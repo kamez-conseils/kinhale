@@ -102,6 +102,17 @@ export default function CaregiversPage(): React.JSX.Element | null {
         {t('invitation.createCta')}
       </Button>
 
+      <Button
+        onPress={() => router.push('/caregivers/scan')}
+        backgroundColor="$backgroundStrong"
+        color="$color"
+        borderColor="$borderColor"
+        borderWidth={2}
+        accessibilityLabel={t('invitation.scanCta')}
+      >
+        {t('invitation.scanCta')}
+      </Button>
+
       {error !== null ? <Text color="$red10">{error}</Text> : null}
     </YStack>
   );
