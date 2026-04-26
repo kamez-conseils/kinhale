@@ -7,9 +7,17 @@
  *   un accès en lecture à `deleted_accounts` ET à `accounts` (snapshot
  *   ancien, backup) pourrait précomputer tous les `pseudoId` de la table
  *   `accounts` et corréler.
- * - Avec un pepper secret (JWT_SECRET, jamais en DB), même un dump DB ne
- *   permet pas la corrélation. Seul un attaquant détenant aussi le secret
- *   d'env peut ré-identifier — ce qui équivaut à compromettre l'app entière.
+ * - Avec un pepper secret dédié (`env.PSEUDO_ID_PEPPER`, jamais en DB),
+ *   même un dump DB ne permet pas la corrélation. Seul un attaquant
+ *   détenant aussi le secret d'env peut ré-identifier — ce qui équivaut
+ *   à compromettre l'app entière.
+ *
+ * **Pourquoi un pepper distinct du `JWT_SECRET`** : la rotation du JWT
+ * (procédure normale de sécurité — ex-employé) ne doit pas invalider la
+ * corrélation `audit_events ↔ deleted_accounts` (Loi 25 / RGPD art. 30).
+ * Le `PSEUDO_ID_PEPPER` est une variable dédiée, **jamais rotée** (ou
+ * via migration douce double-pepper). Cf. OWASP ASVS V6.2.1 (key
+ * separation), kz-securite AUDIT-TRANSVERSE M2.
  *
  * **Pourquoi pas un HMAC** : SHA-256(secret || accountId) est suffisant ici
  * pour empêcher la dérivation directe. HMAC-SHA-256 serait équivalent en
@@ -28,8 +36,8 @@ import { sha256HexFromString } from '@kinhale/crypto';
  * post-suppression.
  *
  * @param accountId UUID v4 du compte à pseudonymiser.
- * @param pepper Secret côté serveur — typiquement `env.JWT_SECRET`. **Ne
- *   doit jamais être journalisé**.
+ * @param pepper Secret côté serveur — `env.PSEUDO_ID_PEPPER` (distinct
+ *   du JWT_SECRET, jamais roté). **Ne doit jamais être journalisé**.
  */
 export async function computeDeletedAccountPseudoId(
   accountId: string,

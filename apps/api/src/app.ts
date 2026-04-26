@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import fastifyCors from '@fastify/cors';
+import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyWebsocket from '@fastify/websocket';
 import type { Transporter } from 'nodemailer';
 import type { Env } from './env.js';
@@ -45,12 +46,37 @@ export interface BuildAppOverrides {
 export function buildApp(env: Env, overrides: BuildAppOverrides = {}): FastifyInstance {
   const app = Fastify({
     logger: env.NODE_ENV !== 'test',
+    // 8 MiB pour absorber les batches /sync/batch (plafond Zod = 100 × 64 KiB
+    // = 6,4 MiB). Default Fastify = 1 MiB rejetterait les batches légitimes.
+    // Cf. kz-securite AUDIT-TRANSVERSE M6.
+    bodyLimit: 8 * 1024 * 1024,
   });
 
   app.decorate('env', env);
 
-  // Plugins transversaux
-  void app.register(fastifyCors, { origin: true });
+  // Plugins transversaux. CORS verrouillé sur l'origin officielle
+  // (cf. kz-securite AUDIT-TRANSVERSE M5 : `origin: true` reflétait n'importe
+  // quelle origin). Multi-origin via `ALLOWED_ORIGINS` (csv) si self-hosted.
+  const allowedOriginsEnv = process.env['ALLOWED_ORIGINS'];
+  const allowedOrigins =
+    allowedOriginsEnv !== undefined && allowedOriginsEnv.length > 0
+      ? allowedOriginsEnv.split(',').map((s) => s.trim())
+      : [env.WEB_URL];
+  void app.register(fastifyCors, { origin: allowedOrigins, credentials: true });
+  // Rate-limit global pré-auth (60 req/min/IP) + opt-in plus serré sur les
+  // routes sensibles (auth, audit). Cf. kz-securite AUDIT-TRANSVERSE M4 :
+  // /auth/magic-link était exposé à l'énumération d'e-mails.
+  // `skipOnError: true` : si Redis tombe, on n'effondre pas l'API — on perd
+  // temporairement la protection rate-limit (fail-open conservateur, le risque
+  // est temporaire et borné par la durée de l'incident infra).
+  if (env.NODE_ENV !== 'test') {
+    void app.register(fastifyRateLimit, {
+      global: false,
+      max: 60,
+      timeWindow: '1m',
+      skipOnError: true,
+    });
+  }
   void app.register(fastifyWebsocket);
 
   if (overrides.db !== undefined) {
