@@ -84,6 +84,27 @@ describe('VerifyPage', () => {
       expect(screen.getByText(/Échec de la vérification|Verification failed/i)).toBeInTheDocument();
     });
   });
+
+  it('redirige vers le dashboard d’accueil (/) après vérification réussie', async () => {
+    const { apiFetch } = jest.requireMock('../../../../lib/api-client') as {
+      apiFetch: jest.Mock;
+    };
+    const fakeJwtPayload = Buffer.from(
+      JSON.stringify({ sub: 'u1', deviceId: 'd1', householdId: 'h1' }),
+    ).toString('base64');
+    // Premier appel : /auth/verify renvoie l'accessToken.
+    // Second appel : /auth/register-device renvoie OK.
+    apiFetch
+      .mockResolvedValueOnce({ accessToken: `header.${fakeJwtPayload}.sig` })
+      .mockResolvedValueOnce({});
+    searchParamsGet.mockReturnValue('valid-token');
+
+    renderWithProviders(<VerifyPage />);
+    await flush();
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith('/');
+    });
+  });
 });
 
 jest.setTimeout(15000);

@@ -2,7 +2,51 @@
   "home": {
     "title": "Kinhale",
     "subtitle": "Coordonnez les soins de votre enfant",
-    "getStarted": "Commencer"
+    "getStarted": "Commencer",
+    "dashboard": {
+      "childName": "Votre enfant",
+      "roleLabel": "Co-parent",
+      "nav": {
+        "home": "Accueil",
+        "history": "Historique",
+        "pumps": "Mes pompes",
+        "caregivers": "Aidants",
+        "reports": "Rapports",
+        "settings": "Réglages"
+      },
+      "status": {
+        "onTrackTitle": "Tout est à jour",
+        "onTrackSub": "Aucune action requise pour l'instant.",
+        "dueTitle": "Prise de fond prévue",
+        "dueSub": "C'est bientôt l'heure du contrôleur.",
+        "overdueTitle": "Prise de fond en retard",
+        "overdueSub": "Confirmez la dose dès que possible."
+      },
+      "scheduleTitle": "Programme du jour",
+      "scheduleStateLabels": {
+        "done": "fait",
+        "pending": "à venir",
+        "overdue": "en retard",
+        "missed": "manqué"
+      },
+      "inventoryTitle": "Mes pompes",
+      "refillSoonLabel": "Renouveler bientôt",
+      "dosesLeft": "{{n}} doses",
+      "expiry": {
+        "expired": "Expirée",
+        "soon": "Expire le {{date}}",
+        "normal": "Expire le {{date}}"
+      },
+      "activityTitle": "Activité récente",
+      "historyLabel": "Historique",
+      "by": "par {{name}}",
+      "caregiversTitle": "Aidants",
+      "syncPendingLabel": "Sync en attente",
+      "quickActionCaption": "Enregistrer une prise",
+      "quickMaint": "Fond",
+      "quickRescue": "Secours",
+      "notMedicalDevice": "Ne remplace pas un avis médical."
+    }
   },
   "nav": {
     "home": "Accueil",
