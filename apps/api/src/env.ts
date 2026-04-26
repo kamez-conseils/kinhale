@@ -5,6 +5,14 @@ export const EnvSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(32),
+  /**
+   * Pepper de pseudonymisation pour `deleted_accounts.pseudo_id`. Distinct
+   * du `JWT_SECRET` : la rotation JWT (procédure normale) ne doit pas
+   * invalider la corrélation audit_events ↔ deleted_accounts (Loi 25 / RGPD).
+   * Doit être ≥ 32 chars random, **jamais** roté (ou via migration douce
+   * double-pepper). Refs: kz-securite AUDIT-TRANSVERSE M2.
+   */
+  PSEUDO_ID_PEPPER: z.string().min(32),
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('14d'),
   REDIS_URL: z.string().default('redis://:kinhale_redis_dev@localhost:6379'),
@@ -35,6 +43,7 @@ export function testEnv(overrides: Partial<Env> = {}): Env {
     PORT: 3000,
     DATABASE_URL: 'postgresql://kinhale:kinhale_dev_secret@localhost:5434/kinhale_dev',
     JWT_SECRET: 'test-jwt-secret-minimum-32-characters-long',
+    PSEUDO_ID_PEPPER: 'test-pseudo-id-pepper-minimum-32-chars',
     JWT_ACCESS_TTL: '15m',
     JWT_REFRESH_TTL: '14d',
     REDIS_URL: 'redis://:kinhale_redis_dev@localhost:6379',

@@ -42,6 +42,11 @@ export default function AddDosePage(): React.JSX.Element | null {
 
   useEffect(() => {
     if (householdId !== '') {
+      // KIN-095 — `getGroupKey` throw si aucune clé locale (cas: ce device
+      // n'a pas encore créé/rejoint le foyer). On reste en mode best-effort :
+      // `groupKey` reste `null`, `sendChanges` est skippé silencieusement.
+      // Le bootstrap relais (`createGroupKey`) génère la clé manquante au
+      // prochain connect WS.
       getGroupKey(householdId)
         .then(setGroupKey)
         .catch(() => undefined);

@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { sha256HexFromString, randomBytes } from '@kinhale/crypto';
 import { magicLinks, accounts, devices } from '../db/schema.js';
-import { eq, and, gt } from 'drizzle-orm';
+import { eq, and, gt, isNull } from 'drizzle-orm';
 import { sendMagicLink } from '../mail/send-magic-link.js';
 
 const MagicLinkBodySchema = z.object({
@@ -20,38 +20,46 @@ const RegisterDeviceBodySchema = z.object({
 });
 
 const authRoute: FastifyPluginAsync = async (app) => {
-  app.post<{ Body: z.infer<typeof MagicLinkBodySchema> }>('/magic-link', async (request, reply) => {
-    const result = MagicLinkBodySchema.safeParse(request.body);
-    if (!result.success) {
-      return reply.status(400).send({ error: 'Email invalide' });
-    }
+  app.post<{ Body: z.infer<typeof MagicLinkBodySchema> }>(
+    '/magic-link',
+    {
+      // Rate-limit serré : empêche l'énumération d'e-mails et la pollution
+      // Postmark/DB. 5 requêtes / heure / IP. Cf. kz-securite AUDIT M4.
+      config: { rateLimit: { max: 5, timeWindow: '1h' } },
+    },
+    async (request, reply) => {
+      const result = MagicLinkBodySchema.safeParse(request.body);
+      if (!result.success) {
+        return reply.status(400).send({ error: 'Email invalide' });
+      }
 
-    const { email } = result.data;
-    const emailHash = await sha256HexFromString(email.toLowerCase().trim());
+      const { email } = result.data;
+      const emailHash = await sha256HexFromString(email.toLowerCase().trim());
 
-    const tokenBytes = await randomBytes(32);
-    const token = Buffer.from(tokenBytes).toString('hex');
-    const tokenHash = await sha256HexFromString(token);
+      const tokenBytes = await randomBytes(32);
+      const token = Buffer.from(tokenBytes).toString('hex');
+      const tokenHash = await sha256HexFromString(token);
 
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-    await app.db.insert(magicLinks).values({
-      emailHash,
-      tokenHash,
-      expiresAt,
-    });
+      await app.db.insert(magicLinks).values({
+        emailHash,
+        tokenHash,
+        expiresAt,
+      });
 
-    try {
-      await sendMagicLink(app.mailTransport, app.env, { to: email, token });
-    } catch (err) {
-      // On ne bloque pas la réponse HTTP — logger l'erreur et continuer.
-      // Sécurité : le token est en DB, si l'envoi échoue, l'utilisateur
-      // peut redemander. On évite aussi d'exposer l'existence d'un compte.
-      app.log.error({ err }, 'Échec envoi magic link (email préservé côté DB)');
-    }
+      try {
+        await sendMagicLink(app.mailTransport, app.env, { to: email, token });
+      } catch (err) {
+        // On ne bloque pas la réponse HTTP — logger l'erreur et continuer.
+        // Sécurité : le token est en DB, si l'envoi échoue, l'utilisateur
+        // peut redemander. On évite aussi d'exposer l'existence d'un compte.
+        app.log.error({ err }, 'Échec envoi magic link (email préservé côté DB)');
+      }
 
-    return reply.status(200).send({ message: 'Magic link envoyé' });
-  });
+      return reply.status(200).send({ message: 'Magic link envoyé' });
+    },
+  );
 
   app.get<{ Querystring: z.infer<typeof VerifyQuerySchema> }>('/verify', async (request, reply) => {
     const result = VerifyQuerySchema.safeParse(request.query);
@@ -62,24 +70,25 @@ const authRoute: FastifyPluginAsync = async (app) => {
     const { token } = result.data;
     const tokenHash = await sha256HexFromString(token);
 
-    const rows = await app.db
-      .select()
-      .from(magicLinks)
-      .where(and(eq(magicLinks.tokenHash, tokenHash), gt(magicLinks.expiresAt, new Date())));
-
-    if (rows.length === 0) {
-      return reply.status(401).send({ error: 'Token invalide ou expiré' });
-    }
-
-    const link = rows[0];
+    // UPDATE atomique : marque le lien comme utilisé si et seulement si il
+    // est non-utilisé et non-expiré. Empêche la race condition entre 2
+    // requêtes concurrentes (e.g. attaquant ayant intercepté le mail + victime
+    // qui clique en parallèle). Cf. kz-securite AUDIT-TRANSVERSE M3.
+    const consumed = await app.db
+      .update(magicLinks)
+      .set({ usedAt: new Date() })
+      .where(
+        and(
+          eq(magicLinks.tokenHash, tokenHash),
+          gt(magicLinks.expiresAt, new Date()),
+          isNull(magicLinks.usedAt),
+        ),
+      )
+      .returning();
+    const link = consumed[0];
     if (link === undefined) {
-      return reply.status(401).send({ error: 'Token invalide ou expiré' });
+      return reply.status(401).send({ error: 'Token invalide, expiré ou déjà utilisé' });
     }
-    if (link.usedAt !== null) {
-      return reply.status(401).send({ error: 'Token déjà utilisé' });
-    }
-
-    await app.db.update(magicLinks).set({ usedAt: new Date() }).where(eq(magicLinks.id, link.id));
 
     const accountRows = await app.db
       .select()

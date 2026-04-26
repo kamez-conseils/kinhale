@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { YStack, Text } from 'tamagui';
 import { apiFetch, ApiError } from '../../../lib/api-client';
 import { useAuthStore } from '../../../stores/auth-store';
-import { getOrCreateDevice } from '../../../lib/device';
+import { getOrCreateDevice, createGroupKey } from '../../../lib/device';
 
 function decodeJwtPayload(token: string): { sub: string; deviceId: string; householdId: string } {
   const part = token.split('.')[1] ?? '';
@@ -44,6 +44,13 @@ function VerifyInner(): React.JSX.Element {
         const claims = decodeJwtPayload(accessToken);
         setAuth(accessToken, claims.deviceId, claims.householdId);
         const kp = await getOrCreateDevice();
+        // KIN-095 — Génère la clé de groupe E2EE locale si elle n'existe pas
+        // encore (cas : ce device crée ou ré-attache le foyer). Idempotent.
+        // TODO KIN-025-web : intégration flux QR invite côté web — chaque
+        // aidant crée actuellement sa propre groupKey, pas de partage
+        // cross-device sur web. Suivi via l'issue de suivi
+        // « [Bloquant v1.0 multi-aidant web] flux QR invite côté web ».
+        await createGroupKey(claims.householdId);
         try {
           await apiFetch('/auth/register-device', {
             method: 'POST',

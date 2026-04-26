@@ -85,6 +85,7 @@ services:
       DATABASE_URL: postgresql://kinhale:${POSTGRES_PASSWORD:-kinhale_dev_secret}@postgres:5432/kinhale_dev
       REDIS_URL: redis://:${REDIS_PASSWORD:-kinhale_redis_dev}@redis:6379
       JWT_SECRET: ${JWT_SECRET:-dev-secret-minimum-32-characters-long-for-local-testing}
+      PSEUDO_ID_PEPPER: ${PSEUDO_ID_PEPPER:-dev-pseudo-id-pepper-minimum-32-characters-long}
       JWT_ACCESS_TTL: 15m
       JWT_REFRESH_TTL: 14d
       SMTP_HOST: mailpit

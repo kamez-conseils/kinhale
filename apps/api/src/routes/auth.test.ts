@@ -112,12 +112,18 @@ describe('GET /auth/verify', () => {
   });
 
   it('retourne 401 si token inconnu (hash non trouvé en DB)', async () => {
+    // Le verify utilise désormais un UPDATE atomique avec RETURNING (anti-race
+    // condition, cf. kz-securite AUDIT-TRANSVERSE M3). Le mock doit donc
+    // simuler `db.update().set().where().returning()` qui renvoie [] quand
+    // aucune row ne match (token inconnu / expiré / déjà utilisé).
     const db = makeMockDb();
-    vi.mocked(db.select).mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue([]),
+    vi.mocked(db.update).mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([]),
+        }),
       }),
-    } as ReturnType<typeof db.select>);
+    } as ReturnType<typeof db.update>);
 
     const app = buildApp(testEnv(), { db, mailTransport: makeMockTransport() });
     await app.ready();

@@ -65,7 +65,7 @@ export function startAccountPurgeWorker(
     }
     running = true;
     try {
-      const purged = await runPurge(app.db, now(), app.env.JWT_SECRET, {
+      const purged = await runPurge(app.db, now(), app.env.PSEUDO_ID_PEPPER, {
         info: (obj, msg) => app.log.info(obj, msg),
         error: (obj, msg) => app.log.error(obj, msg),
       });
