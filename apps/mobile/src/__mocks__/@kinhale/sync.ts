@@ -42,3 +42,5 @@ export const projectPumps = jest.fn().mockReturnValue([]);
 export const projectChild = jest.fn().mockReturnValue(null);
 export const projectPlan = jest.fn().mockReturnValue(null);
 export const projectCaregivers = jest.fn().mockReturnValue([]);
+export const VOIDED_REASON_DUPLICATE_RESOLVED = 'duplicate_resolved';
+export const VOIDED_REASON_MAX_LENGTH = 200;

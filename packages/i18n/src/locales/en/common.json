@@ -53,6 +53,60 @@
       "night": "Night",
       "infection": "Infection",
       "stress": "Stress"
+    },
+    "dose": {
+      "actions": {
+        "edit": "Edit",
+        "void": "Cancel",
+        "resolve": "Resolve"
+      },
+      "caregiverLabel": "Caregiver",
+      "unknownCaregiver": "Caregiver {{id}}",
+      "voidedBadge": "Cancelled",
+      "pendingReviewBadge": "Needs review",
+      "voidedReason": {
+        "label": "Reason",
+        "duplicate_resolved": "Duplicate resolved"
+      },
+      "editPermission": {
+        "tooEarly": "Free edits only by the author within 30 minutes.",
+        "adminOnly": "After 30 minutes, only an Admin can edit.",
+        "voided": "This dose has been cancelled and is no longer editable.",
+        "pendingReview": "This dose is awaiting conflict resolution.",
+        "restrictedRole": "Your role does not permit editing a dose."
+      },
+      "editModal": {
+        "title": "Edit dose",
+        "administeredAtLabel": "Time (UTC, ms)",
+        "dosesLabel": "Number of doses",
+        "symptomsLabel": "Symptoms",
+        "reasonLabel": "Reason for the edit",
+        "reasonPlaceholder": "E.g. forgot, wrong inhaler…",
+        "reasonRequired": "A reason is required for this edit.",
+        "reasonTooLong": "Reason is too long (200 characters max).",
+        "submit": "Save",
+        "cancel": "Cancel",
+        "saveError": "Error saving the edit."
+      },
+      "voidModal": {
+        "title": "Cancel dose",
+        "warning": "Cancelling the dose hides it from the journal without deleting it. The inhaler count is restored.",
+        "reasonLabel": "Reason for cancellation",
+        "reasonPlaceholder": "E.g. wrong entry, wrong inhaler…",
+        "reasonRequired": "A reason is required.",
+        "reasonTooLong": "Reason is too long (200 characters max).",
+        "submit": "Cancel dose",
+        "cancel": "Keep",
+        "saveError": "Error during cancellation."
+      },
+      "resolveModal": {
+        "title": "Resolve conflict",
+        "intro": "Two close doses were detected. Keep the one actually administered — the other will be cancelled.",
+        "keepThis": "Keep this one",
+        "missingPair": "Conflict could not be loaded.",
+        "saveError": "Error during resolution.",
+        "back": "Back"
+      }
     }
   },
   "common": {

@@ -5,8 +5,13 @@ import type { ProjectedDose } from '@kinhale/sync';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockProjectDoses = jest.fn<ProjectedDose[], any[]>(() => []);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockProjectCaregivers = jest.fn<Array<{ caregiverId: string; role: string }>, any[]>(
+  () => [],
+);
 jest.mock('@kinhale/sync', () => ({
   projectDoses: (doc: unknown) => mockProjectDoses(doc),
+  projectCaregivers: (doc: unknown) => mockProjectCaregivers(doc),
 }));
 
 jest.mock('next/navigation', () => ({

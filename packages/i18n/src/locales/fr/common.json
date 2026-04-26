@@ -53,6 +53,60 @@
       "night": "Nuit",
       "infection": "Infection",
       "stress": "Stress"
+    },
+    "dose": {
+      "actions": {
+        "edit": "Modifier",
+        "void": "Annuler",
+        "resolve": "Résoudre"
+      },
+      "caregiverLabel": "Aidant",
+      "unknownCaregiver": "Aidant {{id}}",
+      "voidedBadge": "Annulée",
+      "pendingReviewBadge": "À vérifier",
+      "voidedReason": {
+        "label": "Raison",
+        "duplicate_resolved": "Doublon résolu"
+      },
+      "editPermission": {
+        "tooEarly": "Édition libre uniquement par l'auteur dans les 30 minutes.",
+        "adminOnly": "Passé 30 minutes, seul un Admin peut éditer.",
+        "voided": "Cette prise a été annulée et n'est plus modifiable.",
+        "pendingReview": "Cette prise est en attente de résolution de conflit.",
+        "restrictedRole": "Votre rôle ne permet pas l'édition d'une prise."
+      },
+      "editModal": {
+        "title": "Modifier la prise",
+        "administeredAtLabel": "Heure (UTC, ms)",
+        "dosesLabel": "Nombre de doses",
+        "symptomsLabel": "Symptômes",
+        "reasonLabel": "Raison de la modification",
+        "reasonPlaceholder": "Ex : oubli, mauvaise pompe…",
+        "reasonRequired": "Une raison est obligatoire pour cette modification.",
+        "reasonTooLong": "La raison est trop longue (200 caractères max).",
+        "submit": "Enregistrer",
+        "cancel": "Annuler",
+        "saveError": "Erreur lors de la modification."
+      },
+      "voidModal": {
+        "title": "Annuler la prise",
+        "warning": "Annuler la prise la masque dans le journal sans la supprimer. Le décompte de la pompe est restauré.",
+        "reasonLabel": "Raison de l'annulation",
+        "reasonPlaceholder": "Ex : erreur de saisie, mauvaise pompe…",
+        "reasonRequired": "Une raison est obligatoire.",
+        "reasonTooLong": "La raison est trop longue (200 caractères max).",
+        "submit": "Annuler la prise",
+        "cancel": "Conserver",
+        "saveError": "Erreur lors de l'annulation."
+      },
+      "resolveModal": {
+        "title": "Résoudre le conflit",
+        "intro": "Deux prises proches ont été détectées. Conservez celle qui a vraiment été administrée — l'autre sera annulée.",
+        "keepThis": "Conserver celle-ci",
+        "missingPair": "Le conflit n'a pas pu être chargé.",
+        "saveError": "Erreur lors de la résolution.",
+        "back": "Retour"
+      }
     }
   },
   "common": {

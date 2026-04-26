@@ -42,7 +42,7 @@ export interface ReportDose {
   readonly doseType: 'maintenance' | 'rescue';
   readonly symptoms: ReadonlyArray<string>;
   readonly circumstances: ReadonlyArray<string>;
-  readonly status: 'recorded' | 'pending_review';
+  readonly status: 'recorded' | 'pending_review' | 'voided';
 }
 
 export interface WeekBucket {

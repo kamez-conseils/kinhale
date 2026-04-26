@@ -114,6 +114,9 @@ importers:
 
   apps/mobile:
     dependencies:
+      '@kinhale/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@kinhale/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -235,6 +238,9 @@ importers:
       '@kinhale/crypto':
         specifier: workspace:*
         version: link:../../packages/crypto
+      '@kinhale/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@kinhale/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n

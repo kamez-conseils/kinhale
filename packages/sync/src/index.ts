@@ -16,6 +16,8 @@ export type {
   UnsignedEvent,
   DoseAdministeredPayload,
   DoseReviewFlaggedPayload,
+  DoseEditedPayload,
+  DoseVoidedPayload,
   PumpReplacedPayload,
   PlanUpdatedPayload,
   CaregiverInvitedPayload,
@@ -23,6 +25,7 @@ export type {
   CaregiverRevokedPayload,
   ChildRegisteredPayload,
 } from './events/types.js';
+export { VOIDED_REASON_DUPLICATE_RESOLVED, VOIDED_REASON_MAX_LENGTH } from './events/types.js';
 export { canonicalBytes, signEvent, verifySignedEvent } from './events/sign.js';
 export { appendEvent } from './events/append.js';
 
@@ -45,7 +48,7 @@ export type { ProjectedCaregiver } from './projections/caregivers.js';
 export { projectCaregivers } from './projections/caregivers.js';
 export type { ProjectedChild } from './projections/child.js';
 export { projectChild } from './projections/child.js';
-export type { ProjectedDose } from './projections/doses.js';
+export type { ProjectedDose, ProjectedDoseStatus } from './projections/doses.js';
 export { projectDoses } from './projections/doses.js';
 export type { ProjectedPlan } from './projections/plan.js';
 export { projectPlan } from './projections/plan.js';

@@ -125,4 +125,32 @@ describe('projectPumps', () => {
     };
     expect(projectPumps(doc)).toEqual([]);
   });
+
+  it('ré-incrémente dosesRemaining quand une dose est voidée (RM18 / E4-S07)', () => {
+    const doc: KinhaleDoc = {
+      householdId: 'hh-1',
+      events: [
+        makePumpEvent(pump({ totalDoses: 200 })),
+        makeDoseEvent({ pumpId: 'pump-1' }, 'dose-1'),
+        makeDoseEvent({ pumpId: 'pump-1' }, 'dose-2'),
+        {
+          id: 'void-dose-1',
+          type: 'DoseVoided',
+          payloadJson: JSON.stringify({
+            doseId: 'dose-1',
+            voidedByDeviceId: 'dev-1',
+            voidedAtMs: 3_000_000,
+            voidedReason: 'mauvaise pompe',
+          }),
+          signerPublicKeyHex: 'a'.repeat(64),
+          signatureHex: 'b'.repeat(128),
+          deviceId: 'dev-1',
+          occurredAtMs: 3_000_000,
+        },
+      ],
+    };
+    const result = projectPumps(doc);
+    // 1 seule dose comptée (la voidée est exclue) → 199 restantes.
+    expect(result[0]?.dosesRemaining).toBe(199);
+  });
 });

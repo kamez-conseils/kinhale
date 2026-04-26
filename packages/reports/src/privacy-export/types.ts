@@ -36,7 +36,15 @@ export interface SerializedDose {
   readonly symptoms: ReadonlyArray<string>;
   readonly circumstances: ReadonlyArray<string>;
   readonly freeFormTag: string | null;
-  readonly status: 'recorded' | 'pending_review';
+  readonly status: 'recorded' | 'pending_review' | 'voided';
+  /**
+   * Raison d'annulation (présente uniquement si `status === 'voided'`).
+   * Conservée dans l'archive RGPD : c'est une donnée saisie par
+   * l'utilisateur, qui a le droit à sa portabilité (art. 20 RGPD).
+   */
+  readonly voidedReason?: string;
+  readonly voidedByDeviceId?: string;
+  readonly voidedAtMs?: number;
   readonly recordedByDeviceId: string;
   readonly recordedAtMs: number;
 }
