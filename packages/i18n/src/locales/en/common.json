@@ -6,6 +6,14 @@
     "dashboard": {
       "childName": "Your child",
       "roleLabel": "Co-parent",
+      "nav": {
+        "home": "Home",
+        "history": "History",
+        "pumps": "My inhalers",
+        "caregivers": "Caregivers",
+        "reports": "Reports",
+        "settings": "Settings"
+      },
       "status": {
         "onTrackTitle": "All on track",
         "onTrackSub": "No action needed right now.",

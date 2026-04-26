@@ -35,6 +35,9 @@ export function KinhaleHeader({
           {dateLabel}
         </Text>
         <Text
+          tag="h1"
+          margin={0}
+          fontFamily="$heading"
           fontSize={28}
           lineHeight={32}
           marginTop={4}

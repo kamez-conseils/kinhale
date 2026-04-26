@@ -7,7 +7,7 @@ export type {
 } from './HomeDashboard';
 
 export { HomeWebDashboard } from './HomeWebDashboard';
-export type { HomeWebDashboardProps } from './HomeWebDashboard';
+export type { HomeNavItem, HomeWebDashboardProps } from './HomeWebDashboard';
 
 // Sub-components are exported for advanced consumers (Storybook, custom layouts).
 export { Activity } from './Activity';

@@ -42,29 +42,34 @@ import type {
 // d'espacement et d'éléments (avatars sidebar, dock pill flottant, etc.)
 // suffisamment distincts pour justifier un composant dédié.
 
+export interface HomeNavItem {
+  key: string;
+  label: string;
+  active?: boolean;
+  onPress?: (() => void) | undefined;
+}
+
 export interface HomeWebDashboardProps {
   messages: HomeDashboardMessages;
   data: HomeDashboardData;
   handlers?: HomeDashboardHandlers | undefined;
-  navItems?: ReadonlyArray<{ key: string; label: string; active?: boolean }>;
+  /**
+   * Items de navigation de la sidebar. Doivent être déjà localisés (le
+   * composant `@kinhale/ui/home` reste pure-presentational ; l'app
+   * appelante construit les libellés via son hook i18n).
+   * Required pour respecter la règle non-négociable Kinhale FR+EN dès
+   * le commit #1 — pas de fallback hardcodé.
+   */
+  navItems: ReadonlyArray<HomeNavItem>;
   /** Defaults to `kinhale_light`. */
   theme?: 'kinhale_light' | 'kinhale_dark';
 }
-
-const DEFAULT_NAV_ITEMS = [
-  { key: 'home', label: 'Accueil', active: true },
-  { key: 'history', label: 'Historique' },
-  { key: 'pumps', label: 'Mes pompes' },
-  { key: 'caregivers', label: 'Aidants' },
-  { key: 'reports', label: 'Rapports' },
-  { key: 'settings', label: 'Réglages' },
-] as const;
 
 export function HomeWebDashboard({
   messages,
   data,
   handlers,
-  navItems = DEFAULT_NAV_ITEMS,
+  navItems,
   theme = 'kinhale_light',
 }: HomeWebDashboardProps): React.JSX.Element {
   const { time, scheduleSlots, inhalers, activity, caregivers } = data;
@@ -108,7 +113,7 @@ function WebSidebar({
   caregiversTitle,
   caregivers,
 }: {
-  navItems: ReadonlyArray<{ key: string; label: string; active?: boolean }>;
+  navItems: ReadonlyArray<HomeNavItem>;
   caregiversTitle: string;
   caregivers: CaregiverView[];
 }): React.JSX.Element {
@@ -160,6 +165,9 @@ function WebSidebar({
           gap={10}
           borderWidth={0}
           hoverStyle={{ backgroundColor: '$surface2' }}
+          {...(item.onPress ? { onPress: item.onPress } : {})}
+          accessibilityRole="link"
+          accessibilityLabel={item.label}
         >
           <Stack
             width={6}
@@ -279,6 +287,8 @@ function WebMain({
             {messages.dateLabel}
           </Text>
           <Text
+            tag="h1"
+            margin={0}
             fontFamily="$heading"
             fontSize={22}
             fontWeight="500"
@@ -375,10 +385,25 @@ function WebStatusHero({
   const isOverdue = time === 'overdue';
   const isEvening = time === 'evening';
   const tone = isOverdue
-    ? { bg: '$amberSoft' as const, dot: '$amber' as const, ink: '$amberInk' as const }
+    ? {
+        bg: '$amberSoft' as const,
+        dot: '$amber' as const,
+        dotVar: 'var(--amber)',
+        ink: '$amberInk' as const,
+      }
     : isEvening
-      ? { bg: '$maintSoft' as const, dot: '$maint' as const, ink: '$maintInk' as const }
-      : { bg: '$okSoft' as const, dot: '$ok' as const, ink: '$okInk' as const };
+      ? {
+          bg: '$maintSoft' as const,
+          dot: '$maint' as const,
+          dotVar: 'var(--maint)',
+          ink: '$maintInk' as const,
+        }
+      : {
+          bg: '$okSoft' as const,
+          dot: '$ok' as const,
+          dotVar: 'var(--ok)',
+          ink: '$okInk' as const,
+        };
   const title = isOverdue ? status.overdueTitle : isEvening ? status.dueTitle : status.onTrackTitle;
   const sub = isOverdue ? status.overdueSub : isEvening ? status.dueSub : status.onTrackSub;
 
@@ -398,11 +423,24 @@ function WebStatusHero({
         borderRadius={5}
         backgroundColor={tone.dot}
         marginTop={10}
-        // halo doux 5px autour du pastille
-        style={{ boxShadow: 'inset 0 0 0 0 transparent, 0 0 0 5px var(--okSoft)' }}
+        // Halo doux 5 px autour de la pastille — teinté avec la même
+        // couleur que le dot (alpha 18 %) pour respecter la maquette
+        // (kz-design-review J1) : overdue → halo ambre, evening → halo
+        // maint, on-track → halo OK.
+        style={{
+          boxShadow: `0 0 0 5px color-mix(in oklch, ${tone.dotVar} 18%, transparent)`,
+        }}
       />
       <YStack flex={1}>
-        <Text fontFamily="$heading" fontSize={28} lineHeight={32} fontWeight="500" color={tone.ink}>
+        <Text
+          tag="h2"
+          margin={0}
+          fontFamily="$heading"
+          fontSize={28}
+          lineHeight={32}
+          fontWeight="500"
+          color={tone.ink}
+        >
           {title}
         </Text>
         <Text fontSize={14} color="$colorMuted" marginTop={4}>
@@ -433,6 +471,8 @@ function WebScheduleStrip({
       padding={20}
     >
       <Text
+        tag="h2"
+        margin={0}
         fontSize={11}
         color="$colorMore"
         textTransform="uppercase"
@@ -530,6 +570,8 @@ function WebActivity({
     >
       <XStack alignItems="center" justifyContent="space-between" marginBottom={8}>
         <Text
+          tag="h2"
+          margin={0}
           fontSize={11}
           color="$colorMore"
           textTransform="uppercase"
@@ -643,6 +685,8 @@ function WebPumpRail({
       padding={20}
     >
       <Text
+        tag="h2"
+        margin={0}
         fontSize={11}
         color="$colorMore"
         textTransform="uppercase"

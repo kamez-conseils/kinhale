@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { HomeDashboard, HomeWebDashboard } from '@kinhale/ui/home';
+import { HomeDashboard, HomeWebDashboard, type HomeNavItem } from '@kinhale/ui/home';
 import { useAuthStore } from '../stores/auth-store';
 import { buildHomeMessages } from '../lib/home/messages';
 import { mockHomeData } from '../lib/home/mock-data';
@@ -46,6 +46,37 @@ export default function HomePage(): React.JSX.Element | null {
 
   const messages = React.useMemo(() => buildHomeMessages(t), [t]);
 
+  // Sidebar nav (desktop) localisée — clés `home.dashboard.nav.*` côté
+  // i18n FR + EN. La règle non-négociable Kinhale impose i18n dès le
+  // commit #1 — pas de fallback hardcodé côté composant partagé.
+  const navItems = React.useMemo<HomeNavItem[]>(
+    () => [
+      { key: 'home', label: t('home.dashboard.nav.home'), active: true },
+      {
+        key: 'history',
+        label: t('home.dashboard.nav.history'),
+        onPress: () => router.push('/journal'),
+      },
+      { key: 'pumps', label: t('home.dashboard.nav.pumps') },
+      {
+        key: 'caregivers',
+        label: t('home.dashboard.nav.caregivers'),
+        onPress: () => router.push('/caregivers'),
+      },
+      {
+        key: 'reports',
+        label: t('home.dashboard.nav.reports'),
+        onPress: () => router.push('/reports'),
+      },
+      {
+        key: 'settings',
+        label: t('home.dashboard.nav.settings'),
+        onPress: () => router.push('/settings/notifications'),
+      },
+    ],
+    [router, t],
+  );
+
   if (!hydrated || accessToken === null || isDesktop === null) {
     return null;
   }
@@ -57,7 +88,14 @@ export default function HomePage(): React.JSX.Element | null {
   };
 
   if (isDesktop) {
-    return <HomeWebDashboard messages={messages} data={mockHomeData} handlers={handlers} />;
+    return (
+      <HomeWebDashboard
+        messages={messages}
+        data={mockHomeData}
+        handlers={handlers}
+        navItems={navItems}
+      />
+    );
   }
 
   return <HomeDashboard messages={messages} data={mockHomeData} handlers={handlers} />;

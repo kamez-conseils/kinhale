@@ -10,6 +10,8 @@ export function SectionHeader({ label, action }: SectionHeaderProps): React.JSX.
   return (
     <XStack alignItems="center" justifyContent="space-between" marginBottom="$2.5">
       <Text
+        tag="h2"
+        margin={0}
         fontSize={11}
         fontWeight="600"
         color="$colorMore"
