@@ -762,5 +762,68 @@
       "metadataFailed": "Could not retrieve metadata from the server. Check your connection.",
       "generationFailed": "Could not generate the archive. Please try again."
     }
+  },
+  "history": {
+    "title": "History",
+    "subtitle": "All logged doses",
+    "filtersLabel": "Filters",
+    "filterAll": "All",
+    "filterMaint": "Maintenance only",
+    "filterRescue": "Rescue only",
+    "exportLabel": "Export",
+    "addCta": "Add a dose",
+    "statAdherenceLabel": "Adherence this month",
+    "statRescueLabel": "Rescue doses",
+    "statStreakLabel": "Best streak",
+    "daysSuffix": "d",
+    "legendDone": "Given",
+    "legendPartial": "Partial",
+    "legendMissed": "Missed",
+    "legendRescue": "Rescue",
+    "legendFuture": "Upcoming",
+    "weekdays": ["M", "T", "W", "T", "F", "S", "S"],
+    "monthFormat": "{{month}} {{year}}",
+    "months": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ],
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "pillFond": "Maintenance",
+    "pillSecours": "Rescue",
+    "slot": {
+      "morning": "Morning",
+      "afternoon": "Afternoon",
+      "evening": "Evening",
+      "night": "Bedtime",
+      "asNeeded": "As needed"
+    },
+    "marker": {
+      "voided": "Voided",
+      "pendingReview": "Pending review",
+      "backfill": "Backfill",
+      "missed": "Missed"
+    },
+    "by": "by {{who}}",
+    "actor": {
+      "you": "You",
+      "coparent": "Co-parent",
+      "daycare": "Daycare",
+      "grandparent": "Grandma",
+      "unknown": "Caregiver"
+    },
+    "emptyTitle": "No doses logged yet",
+    "emptySub": "Logged doses will appear here, day by day.",
+    "notMedical": "Tracking tool · not medical advice."
   }
 }

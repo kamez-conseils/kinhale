@@ -762,5 +762,68 @@
       "metadataFailed": "Impossible de récupérer les métadonnées du serveur. Vérifiez votre connexion.",
       "generationFailed": "Impossible de générer l'archive. Réessayez."
     }
+  },
+  "history": {
+    "title": "Historique",
+    "subtitle": "Toutes les prises consignées",
+    "filtersLabel": "Filtres",
+    "filterAll": "Tout",
+    "filterMaint": "Fond seulement",
+    "filterRescue": "Secours seulement",
+    "exportLabel": "Exporter",
+    "addCta": "Ajouter une prise",
+    "statAdherenceLabel": "Adhérence ce mois",
+    "statRescueLabel": "Prises de secours",
+    "statStreakLabel": "Meilleure série",
+    "daysSuffix": "j",
+    "legendDone": "Donnée",
+    "legendPartial": "Partielle",
+    "legendMissed": "Manquée",
+    "legendRescue": "Secours",
+    "legendFuture": "À venir",
+    "weekdays": ["L", "M", "M", "J", "V", "S", "D"],
+    "monthFormat": "{{month}} {{year}}",
+    "months": [
+      "janvier",
+      "février",
+      "mars",
+      "avril",
+      "mai",
+      "juin",
+      "juillet",
+      "août",
+      "septembre",
+      "octobre",
+      "novembre",
+      "décembre"
+    ],
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "pillFond": "Fond",
+    "pillSecours": "Secours",
+    "slot": {
+      "morning": "Matin",
+      "afternoon": "Après-midi",
+      "evening": "Soir",
+      "night": "Coucher",
+      "asNeeded": "Au besoin"
+    },
+    "marker": {
+      "voided": "Annulée",
+      "pendingReview": "À vérifier",
+      "backfill": "Rattrapage",
+      "missed": "Manquée"
+    },
+    "by": "par {{who}}",
+    "actor": {
+      "you": "Vous",
+      "coparent": "Co-parent",
+      "daycare": "Garderie",
+      "grandparent": "Mamie",
+      "unknown": "Aidant"
+    },
+    "emptyTitle": "Aucune prise enregistrée",
+    "emptySub": "Les prises consignées apparaîtront ici, jour par jour.",
+    "notMedical": "Outil de suivi · ne remplace pas un avis médical."
   }
 }
