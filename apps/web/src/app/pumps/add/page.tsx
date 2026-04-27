@@ -1,19 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import * as React from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { Stack, Text, Theme, XStack, YStack } from 'tamagui';
-import { PumpForm, type PumpFormValue } from '@kinhale/ui/pumps';
+
+import { AddPumpFlow, type AddPumpFormState, type AddPumpStepIndex } from '@kinhale/ui/pumps';
 
 import { useAuthStore } from '../../../stores/auth-store';
 import { useDocStore } from '../../../stores/doc-store';
 import { getOrCreateDevice } from '../../../lib/device';
 import { useRequireAuth } from '../../../lib/useRequireAuth';
 import { useOnlineGuard } from '../../../hooks/useOnlineGuard';
-import { buildPumpFormCopy } from '../../../lib/pumps/messages';
+import { buildAddPumpMessages, buildDefaultSchedule } from '../../../lib/pumps/messages';
 
-export default function PumpAddPage(): React.JSX.Element | null {
+const DESKTOP_BREAKPOINT_PX = 1024;
+
+export default function AddPumpPage(): React.JSX.Element | null {
   const { t } = useTranslation('common');
   const router = useRouter();
   const authenticated = useRequireAuth();
@@ -21,176 +24,141 @@ export default function PumpAddPage(): React.JSX.Element | null {
   const deviceId = useAuthStore((s) => s.deviceId) ?? '';
   const appendPump = useDocStore((s) => s.appendPump);
 
-  const [value, setValue] = useState<PumpFormValue>({
-    name: '',
-    kind: 'maint',
-    totalDosesStr: '',
-    expiresAtStr: '',
-    location: '',
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isDesktop, setIsDesktop] = useState<boolean | null>(null);
+  const [persistError, setPersistError] = useState<string | null>(null);
 
-  const formCopy = React.useMemo(() => buildPumpFormCopy(t), [t]);
-
-  const trimmedName = value.name.trim();
-  const totalDoses = parseInt(value.totalDosesStr, 10);
-  const validName = trimmedName.length > 0;
-  const validDoses = !Number.isNaN(totalDoses) && totalDoses > 0;
-  const isValid = validName && validDoses;
-
-  const handleSave = async (): Promise<void> => {
-    if (!online || !isValid) return;
-    setError(null);
-    let expiresAtMs: number | null = null;
-    if (value.expiresAtStr.trim() !== '') {
-      const parsed = new Date(value.expiresAtStr.trim()).getTime();
-      if (Number.isNaN(parsed)) {
-        setError(t('pumps.errors.expiryInvalid'));
-        return;
-      }
-      expiresAtMs = parsed;
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const mq = window.matchMedia(`(min-width: ${DESKTOP_BREAKPOINT_PX}px)`);
+      const update = (): void => setIsDesktop(mq.matches);
+      update();
+      mq.addEventListener('change', update);
+      return () => mq.removeEventListener('change', update);
     }
-    setLoading(true);
+    return undefined;
+  }, []);
+
+  const messages = React.useMemo(() => buildAddPumpMessages(t), [t]);
+  const initialSchedule = React.useMemo(() => buildDefaultSchedule(t), [t]);
+
+  const [step, setStep] = useState<AddPumpStepIndex>(0);
+  const [state, setState] = useState<AddPumpFormState>({
+    name: '',
+    substance: '',
+    dose: '',
+    unit: 'µg',
+    colorKey: null,
+    kind: null,
+    puffsPerDose: 1,
+    deviceKey: null,
+    prescriber: '',
+    pharmacy: '',
+    schedule: initialSchedule,
+    escalation: false,
+  });
+
+  // Si la langue change après l'init, on rafraîchit les libellés des
+  // créneaux du `schedule` sans toucher aux toggles `on` ni aux heures.
+  useEffect(() => {
+    setState((s) => {
+      const merged = initialSchedule.map((slot) => {
+        const existing = s.schedule.find((p) => p.key === slot.key);
+        if (!existing) return slot;
+        return { ...existing, label: slot.label };
+      });
+      return { ...s, schedule: merged };
+    });
+  }, [initialSchedule]);
+
+  const handleChange = (patch: Partial<AddPumpFormState>): void => {
+    setState((prev) => ({ ...prev, ...patch }));
+  };
+
+  if (!authenticated || isDesktop === null) {
+    return null;
+  }
+
+  const handleCancel = (): void => router.push('/pumps');
+
+  const handleSubmit = async (s: AddPumpFormState): Promise<void> => {
+    if (!online) {
+      setPersistError(t('offlineGuard.message'));
+      return;
+    }
+    const trimmedName = s.name.trim();
+    if (trimmedName.length === 0) {
+      setPersistError(t('pumps.errors.nameRequired'));
+      return;
+    }
+    if (s.kind === null) {
+      setPersistError(t('pumps.errors.kindRequired'));
+      return;
+    }
+    setPersistError(null);
     try {
       const kp = await getOrCreateDevice();
+      // `totalDoses` n'est pas demandé par le wizard v2 (les bouffées
+      // par prise et la cadence ne suffisent pas à le calculer
+      // automatiquement). On utilise une valeur par défaut conservative
+      // (200 doses, courante pour un Salbutamol/Fluticasone) — le champ
+      // sera ajouté à un prochain wizard étendu.
       await appendPump(
         {
           pumpId: crypto.randomUUID(),
           name: trimmedName,
-          pumpType: value.kind === 'maint' ? 'maintenance' : 'rescue',
-          totalDoses,
-          expiresAtMs,
+          pumpType: s.kind === 'maint' ? 'maintenance' : 'rescue',
+          totalDoses: 200,
+          expiresAtMs: null,
         },
         deviceId,
         kp.secretKey,
       );
-      router.push('/pumps');
     } catch {
-      setError(t('pumps.errors.saveFailed'));
-    } finally {
-      setLoading(false);
+      setPersistError(t('pumps.errors.saveFailed'));
     }
   };
 
-  const errorMessage =
-    !validName && value.name.length > 0
-      ? t('pumps.errors.nameRequired')
-      : !validDoses && value.totalDosesStr.length > 0
-        ? t('pumps.errors.dosesInvalid')
-        : error;
-
-  if (!authenticated) return null;
+  const handleLogFirstDose = (): void => {
+    router.push(state.kind === 'rescue' ? '/journal/add?kind=rescue' : '/journal/add?kind=maint');
+  };
 
   return (
-    <Theme name="kinhale_light">
-      <YStack flex={1} minHeight="100vh" backgroundColor="$background">
-        {/* Header avec back + titre */}
-        <YStack
-          paddingHorizontal={20}
-          paddingTop={20}
-          paddingBottom={16}
-          borderBottomWidth={0.5}
-          borderBottomColor="$borderColor"
+    <>
+      <AddPumpFlow
+        messages={messages}
+        state={state}
+        onChange={handleChange}
+        step={step}
+        onStepChange={setStep}
+        mode={isDesktop ? 'web' : 'mobile'}
+        handlers={{
+          onCancel: handleCancel,
+          onSubmit: (s) => {
+            void handleSubmit(s);
+          },
+          onLogFirstDose: handleLogFirstDose,
+        }}
+      />
+      {persistError !== null && (
+        <div
+          role="status"
+          data-testid="pump-add-error"
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'var(--amberSoft)',
+            color: 'var(--amberInk)',
+            padding: '10px 14px',
+            borderRadius: 10,
+            fontSize: 13,
+            zIndex: 100,
+          }}
         >
-          <XStack alignItems="center" gap={8} marginBottom={8}>
-            <Text
-              tag="button"
-              onPress={() => router.push('/pumps')}
-              color="$colorMore"
-              fontSize={20}
-              fontWeight="500"
-              paddingHorizontal={6}
-              paddingVertical={4}
-              cursor="pointer"
-              backgroundColor="transparent"
-              borderWidth={0}
-              accessibilityRole="button"
-              accessibilityLabel={t('pumps.cancelCta')}
-              hoverStyle={{ opacity: 0.7 }}
-            >
-              ←
-            </Text>
-          </XStack>
-          <Text
-            tag="h1"
-            margin={0}
-            fontFamily="$heading"
-            fontSize={24}
-            fontWeight="500"
-            letterSpacing={-0.48}
-            color="$color"
-          >
-            {t('pumps.addPageTitle')}
-          </Text>
-          <Text fontSize={13} color="$colorMore" marginTop={4}>
-            {t('pumps.addPageSub')}
-          </Text>
-        </YStack>
-
-        {/* Form scrollable */}
-        <YStack flex={1} padding={20} style={{ overflow: 'auto' }}>
-          <YStack maxWidth={520} width="100%" alignSelf="center">
-            <PumpForm
-              copy={formCopy}
-              value={value}
-              onChange={setValue}
-              errorMessage={errorMessage}
-            />
-
-            {!online && (
-              <Stack
-                marginTop={16}
-                paddingHorizontal={14}
-                paddingVertical={10}
-                borderRadius={10}
-                backgroundColor="$amberSoft"
-              >
-                <Text color="$amberInk" fontSize={12} testID="offline-guard-message" role="status">
-                  {t('offlineGuard.message')}
-                </Text>
-              </Stack>
-            )}
-          </YStack>
-        </YStack>
-
-        {/* Footer CTA */}
-        <YStack
-          paddingHorizontal={24}
-          paddingTop={14}
-          paddingBottom={26}
-          borderTopWidth={0.5}
-          borderTopColor="$borderColor"
-          gap={4}
-        >
-          <YStack maxWidth={520} width="100%" alignSelf="center" gap={8}>
-            <XStack
-              tag="button"
-              cursor={isValid && online ? 'pointer' : 'default'}
-              backgroundColor={isValid && online ? '$maint' : '$borderColorStrong'}
-              paddingVertical={14}
-              borderRadius={14}
-              borderWidth={0}
-              alignItems="center"
-              justifyContent="center"
-              onPress={() => void handleSave()}
-              disabled={!isValid || !online || loading}
-              accessibilityRole="button"
-              accessibilityLabel={t('pumps.saveCta')}
-              testID="pump-add-save"
-              style={
-                isValid && online
-                  ? { boxShadow: '0 4px 14px color-mix(in oklch, var(--maint) 30%, transparent)' }
-                  : undefined
-              }
-            >
-              <Text color="white" fontSize={15} fontWeight="600">
-                {loading ? t('pumps.saving') : t('pumps.saveCta')}
-              </Text>
-            </XStack>
-          </YStack>
-        </YStack>
-      </YStack>
-    </Theme>
+          {persistError}
+        </div>
+      )}
+    </>
   );
 }
