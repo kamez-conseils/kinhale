@@ -14,6 +14,7 @@
     "./home": "./src/components/home/index.ts",
     "./onboarding": "./src/components/onboarding/index.ts",
     "./pumps": "./src/components/pumps/index.ts",
+    "./history": "./src/components/history/index.ts",
     "./icons": "./src/icons/index.ts"
   },
   "scripts": {

@@ -1,35 +1,31 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import * as React from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { YStack, H1, Text, Button, XStack } from 'tamagui';
-import { projectDoses, projectCaregivers, type ProjectedDose } from '@kinhale/sync';
-import { canEditDose } from '@kinhale/domain/entities';
-import type { Role } from '@kinhale/domain/entities';
+
+import { projectCaregivers, projectDoses } from '@kinhale/sync';
+import {
+  HistoryListMobile,
+  HistoryListWeb,
+  type HistoryFilter,
+  type HistoryNavItem,
+} from '@kinhale/ui/history';
+
 import { useAuthStore } from '../../stores/auth-store';
 import { useDocStore } from '../../stores/doc-store';
+import {
+  buildCalendarCells,
+  buildFeed,
+  buildHistoryListMessages,
+  buildStats,
+} from '../../lib/journal/messages';
 
-/**
- * Détermine le rôle de l'aidant courant depuis la projection des aidants
- * du foyer. Retombe sur `'contributor'` par défaut tant que l'aidant n'est
- * pas associé à un device dans la projection (cas d'amorçage).
- */
-function deriveCurrentRole(
-  caregivers: ReadonlyArray<{ caregiverId: string; role: string }>,
-  deviceId: string | null,
-): Role {
-  if (deviceId === null) return 'contributor';
-  const me = caregivers.find((c) => c.caregiverId === deviceId);
-  if (me === undefined) return 'contributor';
-  if (me.role === 'admin' || me.role === 'restricted_contributor' || me.role === 'contributor') {
-    return me.role;
-  }
-  return 'contributor';
-}
+const DESKTOP_BREAKPOINT_PX = 1024;
 
-export default function JournalPage(): React.JSX.Element {
-  const { t } = useTranslation('common');
+export default function JournalPage(): React.JSX.Element | null {
+  const { t, i18n } = useTranslation('common');
   const router = useRouter();
   const accessToken = useAuthStore((s) => s.accessToken);
   const householdId = useAuthStore((s) => s.householdId);
@@ -37,176 +33,137 @@ export default function JournalPage(): React.JSX.Element {
   const doc = useDocStore((s) => s.doc);
   const initDoc = useDocStore((s) => s.initDoc);
 
+  const [hydrated, setHydrated] = useState(false);
+  const [isDesktop, setIsDesktop] = useState<boolean | null>(null);
+  const [filter, setFilter] = useState<HistoryFilter>('all');
+  const [reference, setReference] = useState<Date>(() => new Date());
+
   useEffect(() => {
+    setHydrated(true);
+    if (typeof window !== 'undefined') {
+      const mq = window.matchMedia(`(min-width: ${DESKTOP_BREAKPOINT_PX}px)`);
+      const update = (): void => setIsDesktop(mq.matches);
+      update();
+      mq.addEventListener('change', update);
+      return () => mq.removeEventListener('change', update);
+    }
+    return undefined;
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
     if (accessToken === null) {
-      router.push('/auth');
+      router.replace('/auth');
       return;
     }
     if (householdId !== null) {
-      initDoc(householdId);
+      void initDoc(householdId);
     }
-  }, [accessToken, householdId, initDoc, router]);
+  }, [accessToken, householdId, hydrated, initDoc, router]);
 
-  const doses = doc !== null ? projectDoses(doc) : [];
-  const caregivers = doc !== null ? projectCaregivers(doc) : [];
-  const currentRole = deriveCurrentRole(caregivers, deviceId);
-  const nowMs = Date.now();
-
-  return (
-    <YStack padding="$4" gap="$4">
-      <H1>{t('journal.title')}</H1>
-      <XStack gap="$2" flexWrap="wrap" marginBottom="$3">
-        <Button size="$3" onPress={() => router.push('/onboarding/child')}>
-          {t('nav.child')}
-        </Button>
-        <Button size="$3" onPress={() => router.push('/onboarding/pump')}>
-          {t('nav.pumps')}
-        </Button>
-        <Button size="$3" onPress={() => router.push('/onboarding/plan')}>
-          {t('nav.plan')}
-        </Button>
-        <Button size="$3" onPress={() => router.push('/caregivers')}>
-          {t('nav.caregivers')}
-        </Button>
-      </XStack>
-      {doses.length === 0 && <Text color="$color10">{t('journal.empty')}</Text>}
-      {doses.map((dose) => {
-        const isVoided = dose.status === 'voided';
-        const isPendingReview = dose.status === 'pending_review';
-        const editVerdict = canEditDose({
-          dose: {
-            recordedByDeviceId: dose.deviceId,
-            administeredAtMs: dose.administeredAtMs,
-            status: dose.status,
-          },
-          currentDeviceId: deviceId ?? '',
-          currentRole,
-          nowMs,
-        });
-        return (
-          <DoseCard
-            key={dose.eventId}
-            dose={dose}
-            isVoided={isVoided}
-            isPendingReview={isPendingReview}
-            canEdit={editVerdict.allowed}
-            t={t}
-            onEdit={() => router.push(`/journal/edit/${dose.doseId}`)}
-            onVoid={() => router.push(`/journal/void/${dose.doseId}`)}
-            onResolve={() => router.push(`/journal/resolve/${dose.doseId}`)}
-          />
-        );
-      })}
-      <Button onPress={() => router.push('/journal/add')} marginTop="$2">
-        {t('journal.addDose')}
-      </Button>
-    </YStack>
+  const doses = React.useMemo(() => (doc !== null ? projectDoses(doc) : []), [doc]);
+  const caregivers = React.useMemo(
+    () =>
+      doc !== null
+        ? projectCaregivers(doc).map((c) => ({
+            caregiverId: c.caregiverId,
+            alias: c.displayName,
+          }))
+        : [],
+    [doc],
   );
-}
 
-interface DoseCardProps {
-  readonly dose: ProjectedDose;
-  readonly isVoided: boolean;
-  readonly isPendingReview: boolean;
-  readonly canEdit: boolean;
-  readonly t: (key: string) => string;
-  readonly onEdit: () => void;
-  readonly onVoid: () => void;
-  readonly onResolve: () => void;
-}
+  const locale = i18n.language === 'en' ? 'en-CA' : 'fr-CA';
+  const messages = React.useMemo(() => buildHistoryListMessages(t, reference), [t, reference]);
 
-function DoseCard({
-  dose,
-  isVoided,
-  isPendingReview,
-  canEdit,
-  t,
-  onEdit,
-  onVoid,
-  onResolve,
-}: DoseCardProps): React.JSX.Element {
-  const labelKey = dose.doseType === 'rescue' ? 'journal.rescue' : 'journal.maintenance';
-  const reasonLabel =
-    isVoided && dose.voidedReason !== undefined && dose.voidedReason === 'duplicate_resolved'
-      ? t('journal.dose.voidedReason.duplicate_resolved')
-      : (dose.voidedReason ?? '');
+  const cells = React.useMemo(
+    () => buildCalendarCells({ doses, currentDeviceId: deviceId, caregivers, reference, locale }),
+    [doses, deviceId, caregivers, reference, locale],
+  );
+  const stats = React.useMemo(
+    () => buildStats({ doses, currentDeviceId: deviceId, caregivers, reference, locale }),
+    [doses, deviceId, caregivers, reference, locale],
+  );
+  const feed = React.useMemo(
+    () => buildFeed(t, { doses, currentDeviceId: deviceId, caregivers, reference, locale }, filter),
+    [t, doses, deviceId, caregivers, reference, locale, filter],
+  );
+
+  const navItems = React.useMemo<HistoryNavItem[]>(
+    () => [
+      { key: 'home', label: t('pumps.nav.home'), onPress: () => router.push('/') },
+      { key: 'history', label: t('pumps.nav.history'), active: true },
+      {
+        key: 'pumps',
+        label: t('pumps.nav.pumps'),
+        onPress: () => router.push('/pumps'),
+      },
+      {
+        key: 'caregivers',
+        label: t('pumps.nav.caregivers'),
+        onPress: () => router.push('/caregivers'),
+      },
+      {
+        key: 'reports',
+        label: t('pumps.nav.reports'),
+        onPress: () => router.push('/reports'),
+      },
+      {
+        key: 'settings',
+        label: t('pumps.nav.settings'),
+        onPress: () => router.push('/settings/notifications'),
+      },
+    ],
+    [router, t],
+  );
+
+  if (!hydrated || accessToken === null || isDesktop === null) {
+    return null;
+  }
+
+  const handlers = {
+    onPressAdd: (): void => router.push('/journal/add'),
+    onPressExport: (): void => router.push('/reports'),
+    onPressEntry: (id: string): void => router.push(`/journal/edit/${id}`),
+    onPressPrevMonth: (): void => {
+      setReference((prev) => {
+        const next = new Date(prev);
+        next.setMonth(next.getMonth() - 1, 1);
+        return next;
+      });
+    },
+    onPressNextMonth: (): void => {
+      setReference((prev) => {
+        const next = new Date(prev);
+        next.setMonth(next.getMonth() + 1, 1);
+        return next;
+      });
+    },
+    onChangeFilter: (f: HistoryFilter): void => setFilter(f),
+  };
+
+  if (isDesktop) {
+    return (
+      <HistoryListWeb
+        messages={messages}
+        cells={cells}
+        stats={stats}
+        feed={feed}
+        activeFilter={filter}
+        navItems={navItems}
+        handlers={handlers}
+      />
+    );
+  }
+
   return (
-    <YStack
-      data-testid={`dose-card-${dose.doseId}`}
-      padding="$3"
-      borderWidth={1}
-      borderColor={isPendingReview ? '$orange8' : '$borderColor'}
-      borderRadius="$3"
-      gap="$2"
-      opacity={isVoided ? 0.55 : 1}
-      backgroundColor={isPendingReview ? '$orange3' : '$background'}
-    >
-      <XStack justifyContent="space-between" alignItems="center">
-        <Text
-          fontSize="$4"
-          fontWeight="700"
-          textDecorationLine={isVoided ? 'line-through' : 'none'}
-        >
-          {t(labelKey)}
-        </Text>
-        <Text fontSize="$2" color="$color9">
-          {new Date(dose.administeredAtMs).toLocaleString()}
-        </Text>
-      </XStack>
-
-      {isVoided && (
-        <Text fontSize="$2" color="$color10" fontWeight="600">
-          {t('journal.dose.voidedBadge')}
-          {reasonLabel.length > 0 && ` · ${t('journal.dose.voidedReason.label')} : ${reasonLabel}`}
-        </Text>
-      )}
-
-      {isPendingReview && (
-        <Text fontSize="$2" color="$orange11" fontWeight="600">
-          {t('journal.dose.pendingReviewBadge')}
-        </Text>
-      )}
-
-      {dose.symptoms.length > 0 && (
-        <Text fontSize="$3" color="$color10">
-          {dose.symptoms.map((s) => t(`journal.symptom.${s}`)).join(' · ')}
-        </Text>
-      )}
-
-      {dose.circumstances.length > 0 && (
-        <Text fontSize="$3" color="$color10">
-          {dose.circumstances.map((c) => t(`journal.circumstance.${c}`)).join(' · ')}
-        </Text>
-      )}
-
-      {dose.freeFormTag !== null && (
-        <Text fontSize="$3" color="$color9" fontStyle="italic">
-          {dose.freeFormTag}
-        </Text>
-      )}
-
-      {!isVoided && (
-        <XStack gap="$2" flexWrap="wrap" marginTop="$2">
-          {canEdit && (
-            <Button size="$2" onPress={onEdit} testID={`dose-edit-${dose.doseId}`}>
-              {t('journal.dose.actions.edit')}
-            </Button>
-          )}
-          <Button size="$2" onPress={onVoid} theme="red" testID={`dose-void-${dose.doseId}`}>
-            {t('journal.dose.actions.void')}
-          </Button>
-          {isPendingReview && (
-            <Button
-              size="$2"
-              onPress={onResolve}
-              theme="orange"
-              testID={`dose-resolve-${dose.doseId}`}
-            >
-              {t('journal.dose.actions.resolve')}
-            </Button>
-          )}
-        </XStack>
-      )}
-    </YStack>
+    <HistoryListMobile
+      messages={messages}
+      cells={cells}
+      stats={stats}
+      feed={feed}
+      activeFilter={filter}
+      handlers={handlers}
+    />
   );
 }
