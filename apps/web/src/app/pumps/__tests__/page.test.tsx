@@ -89,8 +89,11 @@ describe('PumpsListPage', () => {
     try {
       renderWithProviders(<PumpsListPage />);
       await flush();
+      // v2 layout : h1 « Mes pompes ». jsdom n'a pas matchMedia desktop
+      // par défaut, le composant rend `PumpsListMobile` — un seul h1
+      // avec le titre. Sections « Pompes de fond » et « Pompes de secours »
+      // exposées via SectionTitle (`tag="h2"`).
       expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
-      // Sections fond + secours via h2.
       const sectionTitles = screen.getAllByRole('heading', { level: 2 });
       expect(sectionTitles.length).toBeGreaterThanOrEqual(2);
     } finally {
@@ -114,15 +117,16 @@ describe('PumpsListPage', () => {
     }
   });
 
-  it("affiche un état vide quand aucune pompe n'est enregistrée", async () => {
+  it("affiche l'état vide enrichi quand aucune pompe n'est enregistrée", async () => {
     mockProjectPumps.mockReturnValue([]);
     jest.useFakeTimers();
     try {
       renderWithProviders(<PumpsListPage />);
       await flush();
-      // Le titre vide et le body sont rendus.
+      // v2 : empty state riche avec h2 « Ajoutez la première pompe de … »
+      // + 3 bénéfices + 2 CTA scan / saisie.
       expect(
-        screen.getByText(/Aucune pompe enregistrée|No inhaler registered/i),
+        screen.getByText(/Ajoutez la première pompe|Add .*’s first inhaler/i),
       ).toBeInTheDocument();
     } finally {
       jest.clearAllTimers();
