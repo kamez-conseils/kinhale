@@ -17,6 +17,7 @@
     "./history": "./src/components/history/index.ts",
     "./caregivers": "./src/components/caregivers/index.ts",
     "./settings": "./src/components/settings/index.ts",
+    "./reports": "./src/components/reports/index.ts",
     "./icons": "./src/icons/index.ts"
   },
   "scripts": {

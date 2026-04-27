@@ -7,3 +7,4 @@ export * from './components/pumps';
 export * from './components/history';
 export * from './components/caregivers';
 export * from './components/settings';
+export * from './components/reports';

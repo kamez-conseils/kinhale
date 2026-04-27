@@ -973,5 +973,41 @@
       "openSource": "Open source · GitHub",
       "feedback": "Send feedback"
     }
+  },
+  "reports": {
+    "title": "Reports",
+    "subtitle": "For the pediatrician visit",
+    "rangeLabel": "Period",
+    "preset": {
+      "7d": "7 days",
+      "30d": "30 days",
+      "3m": "3 months",
+      "6m": "6 months",
+      "custom": "Custom"
+    },
+    "selectedRangeFormat": "{{from}} – {{to}} · {{days}} days",
+    "summaryTitle": "Summary",
+    "stat": {
+      "adherence": "Adherence",
+      "adherenceSub_one": "{{count}} missed day out of {{total}}",
+      "adherenceSub_other": "{{count}} missed days out of {{total}}",
+      "rescueUses": "Rescue uses",
+      "rescueUsesSub_one": "{{count}} episode",
+      "rescueUsesSub_other": "{{count}} episodes",
+      "asthmaDays": "Symptom days",
+      "asthmaDaysSub": "Cough, wheeze or wake-ups",
+      "sleepImpact": "Night wakings",
+      "sleepImpactSub_one": "{{count}} disturbed night",
+      "sleepImpactSub_other": "{{count}} disturbed nights"
+    },
+    "rescueLogTitle": "Rescue log",
+    "reliefSuffix": "min",
+    "adherenceChartLabel": "Daily adherence · last 30 days",
+    "rescueChartLabel": "Rescue uses · last 30 days",
+    "exportLabel": "Export as PDF",
+    "shareLabel": "Share with doctor",
+    "notMedical": "For doctor visit · not a diagnosis.",
+    "emptyRescueTitle": "No rescue use over the period",
+    "emptyRescueSub": "Good news — no acute episode logged in this range."
   }
 }
