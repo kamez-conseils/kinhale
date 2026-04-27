@@ -108,7 +108,9 @@ describe('CaregiversPage', () => {
 
       expect(screen.getByText('Maman')).toBeTruthy();
 
-      fireEvent.click(screen.getByText(/révoquer|revoke/i));
+      // v2 : « Retirer » / « Withdraw » remplace l'ancien « Révoquer ».
+      // Le bouton « Renvoyer » apparaît avant — on cible « Retirer » exactement.
+      fireEvent.click(screen.getByText(/^(retirer|withdraw)$/i));
       await act(async () => {
         await Promise.resolve(); // revokeInvitation résout
         await Promise.resolve(); // refresh → listInvitations résout
@@ -134,7 +136,9 @@ describe('CaregiversPage', () => {
         await Promise.resolve();
       });
 
-      fireEvent.click(screen.getByText(/inviter un aidant|invite a caregiver/i));
+      // v2 : sur mobile (jsdom matchMedia=false), le bouton header
+      // utilise `inviteShort` = « Inviter » / « Invite ».
+      fireEvent.click(screen.getByTestId('caregivers-invite-cta'));
       expect(mockPush).toHaveBeenCalledWith('/caregivers/invite');
     } finally {
       jest.clearAllTimers();

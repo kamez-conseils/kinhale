@@ -825,5 +825,73 @@
     "emptyTitle": "Aucune prise enregistrée",
     "emptySub": "Les prises consignées apparaîtront ici, jour par jour.",
     "notMedical": "Outil de suivi · ne remplace pas un avis médical."
+  },
+  "caregivers": {
+    "title": "Aidants",
+    "subtitle_one": "{{count}} personne a accès au profil",
+    "subtitle_other": "{{count}} personnes ont accès au profil",
+    "subtitle_zero": "Aucun aidant invité",
+    "inviteCta": "Inviter un aidant",
+    "inviteShort": "Inviter",
+    "sectionActive": "Actifs",
+    "sectionPending": "Invitations en attente",
+    "youTag": "Vous",
+    "onlineNow": "En ligne",
+    "lastSeen_minutes_one": "Vu·e il y a {{count}} min",
+    "lastSeen_minutes_other": "Vu·e il y a {{count}} min",
+    "lastSeen_hours_one": "Vu·e il y a {{count}} h",
+    "lastSeen_hours_other": "Vu·e il y a {{count}} h",
+    "lastSeen_days_one": "Vu·e il y a {{count}} j",
+    "lastSeen_days_other": "Vu·e il y a {{count}} j",
+    "role": {
+      "admin": "Admin",
+      "contributor": "Co-parent",
+      "restricted": "Garderie · grand-parent"
+    },
+    "roleDescription": {
+      "admin": "Accès complet · ajoute, modifie, invite",
+      "contributor": "Consigne les prises · voit tout",
+      "restricted": "Voit le plan d'aujourd'hui · peut consigner"
+    },
+    "relation": {
+      "parent": "Parent",
+      "grandparent": "Grand-parent",
+      "daycare": "Garderie",
+      "school": "École",
+      "friend": "Ami·e",
+      "other": "Autre"
+    },
+    "stage": {
+      "awaitingRecipient": "Envoyée le {{date}} · en attente de l'invité·e",
+      "awaitingSeal": "Envoyée le {{date}} · à finaliser",
+      "sealedWaiting": "Finalisée · en attente d'acceptation"
+    },
+    "primaryCta": {
+      "awaitingSeal": "Finaliser",
+      "awaitingRecipient": "",
+      "sealedWaiting": ""
+    },
+    "resendCta": "Renvoyer",
+    "withdrawCta": "Retirer",
+    "permissionsTitle": "Aperçu des permissions",
+    "permission1": "Voir le plan du jour",
+    "permission2": "Consigner les prises",
+    "permission3": "Modifier les pompes",
+    "permission4": "Inviter d'autres aidants",
+    "permission5": "Exporter les données",
+    "permYes": "✓",
+    "permNo": "—",
+    "notMedical": "Outil de suivi · ne remplace pas un avis médical.",
+    "invite": {
+      "title": "Inviter un aidant",
+      "subtitle": "On enverra un lien magique. Pas de mot de passe à partager.",
+      "nameLabel": "Prénom",
+      "namePlaceholder": "Mamie Claire",
+      "emailLabel": "Adresse courriel",
+      "emailPlaceholder": "mamie@famille.ca",
+      "chooseRoleLabel": "Choisir le rôle",
+      "cancelCta": "Annuler",
+      "sendCta": "Envoyer l'invitation"
+    }
   }
 }

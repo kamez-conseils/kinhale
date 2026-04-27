@@ -825,5 +825,73 @@
     "emptyTitle": "No doses logged yet",
     "emptySub": "Logged doses will appear here, day by day.",
     "notMedical": "Tracking tool · not medical advice."
+  },
+  "caregivers": {
+    "title": "Caregivers",
+    "subtitle_one": "{{count}} person has access",
+    "subtitle_other": "{{count}} people have access",
+    "subtitle_zero": "No caregivers yet",
+    "inviteCta": "Invite caregiver",
+    "inviteShort": "Invite",
+    "sectionActive": "Active",
+    "sectionPending": "Pending invitations",
+    "youTag": "You",
+    "onlineNow": "Online",
+    "lastSeen_minutes_one": "Seen {{count}} min ago",
+    "lastSeen_minutes_other": "Seen {{count}} min ago",
+    "lastSeen_hours_one": "Seen {{count}} h ago",
+    "lastSeen_hours_other": "Seen {{count}} h ago",
+    "lastSeen_days_one": "Seen {{count}} d ago",
+    "lastSeen_days_other": "Seen {{count}} d ago",
+    "role": {
+      "admin": "Admin",
+      "contributor": "Co-parent",
+      "restricted": "Daycare · grandparent"
+    },
+    "roleDescription": {
+      "admin": "Full access · add, edit, invite",
+      "contributor": "Logs doses · sees everything",
+      "restricted": "Sees today's plan · can log"
+    },
+    "relation": {
+      "parent": "Parent",
+      "grandparent": "Grandparent",
+      "daycare": "Daycare",
+      "school": "School",
+      "friend": "Friend",
+      "other": "Other"
+    },
+    "stage": {
+      "awaitingRecipient": "Sent on {{date}} · awaiting recipient",
+      "awaitingSeal": "Sent on {{date}} · awaiting your action",
+      "sealedWaiting": "Finalized · awaiting acceptance"
+    },
+    "primaryCta": {
+      "awaitingSeal": "Finalize",
+      "awaitingRecipient": "",
+      "sealedWaiting": ""
+    },
+    "resendCta": "Resend",
+    "withdrawCta": "Withdraw",
+    "permissionsTitle": "Permissions at a glance",
+    "permission1": "See today's plan",
+    "permission2": "Log doses",
+    "permission3": "Manage inhalers",
+    "permission4": "Invite others",
+    "permission5": "Export data",
+    "permYes": "✓",
+    "permNo": "—",
+    "notMedical": "Tracking tool · not a substitute for medical advice.",
+    "invite": {
+      "title": "Invite a caregiver",
+      "subtitle": "We'll send a magic link. No password to share.",
+      "nameLabel": "First name",
+      "namePlaceholder": "Grandma Claire",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "grandma@family.ca",
+      "chooseRoleLabel": "Choose a role",
+      "cancelCta": "Cancel",
+      "sendCta": "Send invitation"
+    }
   }
 }

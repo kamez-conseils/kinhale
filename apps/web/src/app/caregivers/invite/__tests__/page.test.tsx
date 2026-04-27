@@ -68,14 +68,14 @@ describe('InviteCaregiverPage', () => {
         await Promise.resolve();
         await Promise.resolve();
       });
-      // Titre du formulaire
-      expect(screen.getByText(/nouvelle invitation|new invitation/i)).toBeTruthy();
-      // Les deux boutons de rôle
-      expect(screen.getByText(/aidant complet|full caregiver/i)).toBeTruthy();
-      expect(screen.getByText(/aidant restreint|restricted caregiver/i)).toBeTruthy();
-      // Bouton générer désactivé quand displayName vide
-      const generateBtn = screen.getByText(/générer|generate/i);
-      expect(generateBtn).toBeTruthy();
+      // v2 : titre du formulaire « Inviter un aidant » via h2 natif.
+      expect(screen.getByRole('heading', { level: 2 })).toBeInTheDocument();
+      // Rôles v2 : « Co-parent » + « Garderie · grand-parent ».
+      expect(screen.getByText(/co-parent/i)).toBeTruthy();
+      expect(screen.getByText(/garderie|daycare/i)).toBeTruthy();
+      // CTA v2 : « Envoyer l'invitation » / « Send invitation ».
+      const sendBtn = screen.getByText(/envoyer.*invitation|send invitation/i);
+      expect(sendBtn).toBeTruthy();
     } finally {
       jest.clearAllTimers();
       jest.useRealTimers();
@@ -94,11 +94,11 @@ describe('InviteCaregiverPage', () => {
       });
 
       // Saisir un nom
-      const input = screen.getByPlaceholderText(/maman|mom|garderie|daycare/i);
+      const input = document.getElementById('invite-name') as HTMLInputElement;
       fireEvent.change(input, { target: { value: 'Maman' } });
 
       // Cliquer sur Générer
-      fireEvent.click(screen.getByText(/générer|generate/i));
+      fireEvent.click(screen.getByText(/envoyer.*invitation|send invitation/i));
       await act(async () => {
         await Promise.resolve(); // createInvitation résout
         await Promise.resolve(); // setCreated
@@ -106,8 +106,11 @@ describe('InviteCaregiverPage', () => {
         await Promise.resolve(); // setQrDataUrl + setState timer
       });
 
+      // v2 : le rôle par défaut est `contributor` (Co-parent), conforme
+      // à la maquette. L'utilisateur peut sélectionner restreint
+      // explicitement avant de soumettre — testé séparément.
       expect(mockCreateInvitation).toHaveBeenCalledWith({
-        targetRole: 'restricted_contributor',
+        targetRole: 'contributor',
         displayName: 'Maman',
       });
       // Le PIN doit apparaître
@@ -147,8 +150,8 @@ describe('InviteCaregiverPage', () => {
         await Promise.resolve();
       });
       // Les deux boutons doivent être présents
-      const contributorBtn = screen.getByText(/aidant complet|full caregiver/i);
-      const restrictedBtn = screen.getByText(/aidant restreint|restricted caregiver/i);
+      const contributorBtn = screen.getByText(/co-parent/i);
+      const restrictedBtn = screen.getByText(/garderie.*grand-parent|daycare.*grandparent/i);
       expect(contributorBtn).toBeTruthy();
       expect(restrictedBtn).toBeTruthy();
     } finally {
@@ -170,10 +173,10 @@ describe('InviteCaregiverPage', () => {
         await Promise.resolve();
       });
 
-      const input = screen.getByPlaceholderText(/maman|mom|garderie|daycare/i);
+      const input = document.getElementById('invite-name') as HTMLInputElement;
       fireEvent.change(input, { target: { value: 'Papie' } });
 
-      fireEvent.click(screen.getByText(/générer|generate/i));
+      fireEvent.click(screen.getByText(/envoyer.*invitation|send invitation/i));
       await act(async () => {
         await Promise.resolve(); // createInvitation rejette
         await Promise.resolve(); // catch → setError
@@ -207,9 +210,9 @@ describe('InviteCaregiverPage', () => {
       // Même si l'utilisateur réussissait à cliquer (ex. réactivation DOM),
       // le handler est protégé par `if (!online) return;` — createInvitation
       // ne doit pas être appelé.
-      const input = screen.getByPlaceholderText(/maman|mom|garderie|daycare/i);
+      const input = document.getElementById('invite-name') as HTMLInputElement;
       fireEvent.change(input, { target: { value: 'Maman' } });
-      fireEvent.click(screen.getByText(/générer|generate/i));
+      fireEvent.click(screen.getByText(/envoyer.*invitation|send invitation/i));
       await act(async () => {
         await Promise.resolve();
         await Promise.resolve();
