@@ -39,6 +39,13 @@ export interface SettingsValueRow {
   value: string;
   /** Si vrai, le `value` est rendu en `font-mono` avec tabular-nums. */
   mono?: boolean | undefined;
+  /**
+   * Si vrai, la rangée n'est jamais pressable même si un `onPress` global est
+   * fourni au parent. Sert à désactiver explicitement l'apparence « bouton »
+   * (curseur, hover, accessibilityRole) pour les rangées d'affichage seul
+   * (ex. « Bientôt disponible », numéro de version).
+   */
+  readOnly?: boolean | undefined;
 }
 
 export interface SettingsDangerRow {

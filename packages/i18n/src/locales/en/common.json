@@ -36,17 +36,60 @@
       "expiry": {
         "expired": "Expired",
         "soon": "Expires {{date}}",
-        "normal": "Expires {{date}}"
+        "normal": "Expires {{date}}",
+        "unknown": "Expiration date unknown"
+      },
+      "context": {
+        "maint": "Controller · morning and evening",
+        "rescue": "Rescue · as needed"
+      },
+      "slot": {
+        "morning": "Morning",
+        "noon": "Noon",
+        "afternoon": "Afternoon",
+        "evening": "Evening",
+        "night": "Night"
       },
       "activityTitle": "Recent activity",
       "historyLabel": "History",
       "by": "by {{name}}",
+      "activity": {
+        "empty": "No doses logged yet.",
+        "maintLabel_one": "Controller — {{count}} dose",
+        "maintLabel_other": "Controller — {{count}} doses",
+        "rescueLabel_one": "Rescue — {{count}} dose",
+        "rescueLabel_other": "Rescue — {{count}} doses"
+      },
+      "actor": {
+        "you": "You",
+        "unknown": "Caregiver"
+      },
+      "ago": {
+        "justNow": "just now",
+        "minutes_one": "{{count}} min ago",
+        "minutes_other": "{{count}} min ago",
+        "hours_one": "{{count}} h ago",
+        "hours_other": "{{count}} h ago",
+        "yesterday": "yesterday",
+        "days_one": "{{count}} d ago",
+        "days_other": "{{count}} d ago"
+      },
+      "inventory": {
+        "empty": "No inhalers added yet."
+      },
       "caregiversTitle": "Caregivers",
       "syncPendingLabel": "Sync pending",
       "quickActionCaption": "Log a dose",
       "quickMaint": "Controller",
       "quickRescue": "Rescue",
-      "notMedicalDevice": "Not a substitute for medical advice."
+      "notMedicalDevice": "Not a substitute for medical advice.",
+      "loading": "Loading…",
+      "empty": {
+        "heading": "Let's set up the household",
+        "subtitle": "Add an inhaler and a schedule to start tracking doses.",
+        "ctaOnboarding": "Start onboarding",
+        "ctaAddPump": "Add an inhaler"
+      }
     }
   },
   "nav": {
@@ -954,7 +997,8 @@
       },
       "anonymize": {
         "label": "Anonymous analytics",
-        "sub": "Helps improve Kinhale · no personal data"
+        "sub": "Helps improve Kinhale · no personal data",
+        "comingSoon": "Coming soon"
       },
       "export": {
         "label": "Export my data",

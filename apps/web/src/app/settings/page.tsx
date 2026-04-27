@@ -24,6 +24,72 @@ const DESKTOP_BREAKPOINT_PX = 1024;
 const APPEARANCE_THEME_DEFAULT = 'auto';
 const APPEARANCE_TEXT_DEFAULT = 'm';
 
+// ──────────────────────────────────────────────────────────────────────────
+// Stratégie de câblage (KIN-115 follow-up — fix/clinical-calm-data-wiring)
+// ──────────────────────────────────────────────────────────────────────────
+// Le hub Réglages clinical-calm v2 a été livré avec des `useState` locaux
+// non persistés (toggles décoratifs). Cette refonte applique une stratégie
+// hybride :
+//
+// - Notifications (morning, evening, missed, lowStock, quiet) → converties
+//   en *liens* qui routent vers `/settings/notifications`. Raison : les
+//   labels du hub ne mappent pas 1-1 sur l'enum `NotificationType` côté
+//   API (il n'existe pas de préférence séparée « morning » / « evening » ;
+//   c'est un seul booléen `reminder`). Dupliquer la logique métier dans
+//   le hub serait risqué et redondant — la sous-page existante est déjà
+//   câblée via TanStack Query + l'endpoint `PUT /me/notification-prefs`.
+//   Le hub devient une « carte de navigation + aperçu » comme le commentaire
+//   d'origine le revendiquait, mais pour de vrai cette fois.
+//
+// - Privacy / anonymize → désactivé visuellement (rendu en `value` row
+//   marquée `readOnly: true` → « Bientôt disponible », non pressable).
+//   Aucun endpoint analytics n'existe en v1.
+//
+// - Privacy / share, export, delete → liens (déjà câblés via `handlePressRow`,
+//   inchangés).
+//
+// - Apparence / theme + textSize → persistés en `localStorage` côté web
+//   uniquement. Ces préférences UI n'ont pas besoin de côté serveur. NOTE
+//   IMPORTANTE : la valeur est sauvegardée et relue, mais TamaguiProvider
+//   (`apps/web/src/providers/index.tsx`) utilise toujours `defaultTheme="light"`.
+//   Le câblage *visuel* (application réelle du thème) est hors périmètre
+//   de ce fix — il est documenté dans un ticket de suivi. L'utilisateur
+//   voit donc ses choix persister (plus de no-op silencieux), mais le
+//   rendu reste light tant que le wiring du provider n'est pas fait.
+
+const APPEARANCE_THEME_STORAGE_KEY = 'kinhale-settings-appearance-theme';
+const APPEARANCE_TEXT_STORAGE_KEY = 'kinhale-settings-appearance-text-size';
+
+const APPEARANCE_THEME_VALUES = ['auto', 'light', 'dark'] as const;
+const APPEARANCE_TEXT_VALUES = ['s', 'm', 'l'] as const;
+
+function readPersistedAppearance<T extends string>(
+  key: string,
+  allowed: ReadonlyArray<T>,
+  fallback: T,
+): T {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (raw !== null && (allowed as ReadonlyArray<string>).includes(raw)) {
+      return raw as T;
+    }
+  } catch {
+    // localStorage peut throw en mode privé Safari ou si quota dépassé —
+    // on retombe sur la valeur par défaut sans casser le rendu.
+  }
+  return fallback;
+}
+
+function writePersistedAppearance(key: string, value: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Idem : on accepte la perte silencieuse plutôt que de casser l'UI.
+  }
+}
+
 export default function SettingsPage(): React.JSX.Element | null {
   const { t } = useTranslation('common');
   const router = useRouter();
@@ -43,17 +109,29 @@ export default function SettingsPage(): React.JSX.Element | null {
     return undefined;
   }, []);
 
-  // États visuels (Réglages affiche les choix utilisateur ; la persistance
-  // réelle est dans des sous-pages dédiées qui restent inchangées dans
-  // cette PR. Le hub sert de carte de navigation + aperçu).
-  const [theme, setTheme] = useState<string>(APPEARANCE_THEME_DEFAULT);
-  const [textSize, setTextSize] = useState<string>(APPEARANCE_TEXT_DEFAULT);
-  const [analytics, setAnalytics] = useState<boolean>(false);
-  const [notifMorning, setNotifMorning] = useState<boolean>(true);
-  const [notifEvening, setNotifEvening] = useState<boolean>(true);
-  const [notifMissed, setNotifMissed] = useState<boolean>(true);
-  const [notifLowStock, setNotifLowStock] = useState<boolean>(true);
-  const [notifQuiet, setNotifQuiet] = useState<boolean>(true);
+  // Apparence : `useState` initialisé au défaut, puis hydraté depuis
+  // localStorage dans un `useEffect` pour préserver la cohérence SSR/CSR.
+  const [theme, setTheme] =
+    useState<(typeof APPEARANCE_THEME_VALUES)[number]>(APPEARANCE_THEME_DEFAULT);
+  const [textSize, setTextSize] =
+    useState<(typeof APPEARANCE_TEXT_VALUES)[number]>(APPEARANCE_TEXT_DEFAULT);
+
+  useEffect(() => {
+    setTheme(
+      readPersistedAppearance(
+        APPEARANCE_THEME_STORAGE_KEY,
+        APPEARANCE_THEME_VALUES,
+        APPEARANCE_THEME_DEFAULT,
+      ),
+    );
+    setTextSize(
+      readPersistedAppearance(
+        APPEARANCE_TEXT_STORAGE_KEY,
+        APPEARANCE_TEXT_VALUES,
+        APPEARANCE_TEXT_DEFAULT,
+      ),
+    );
+  }, []);
 
   const child = React.useMemo<ChildProfileSummary>(() => {
     const projected = doc !== null ? projectChild(doc) : null;
@@ -95,41 +173,39 @@ export default function SettingsPage(): React.JSX.Element | null {
         key: 'notifications',
         icon: 'bell',
         title: t('settings.section.notifications'),
+        // Notifications : aperçu en lecture seule. Chaque rangée renvoie
+        // vers `/settings/notifications` qui porte la logique réelle
+        // (TanStack Query + `PUT /me/notification-preferences`).
         rows: [
           {
             key: 'morning',
-            kind: 'toggle',
+            kind: 'link',
             label: t('settings.notif.morning.label'),
             sub: t('settings.notif.morning.sub'),
-            checked: notifMorning,
           },
           {
             key: 'evening',
-            kind: 'toggle',
+            kind: 'link',
             label: t('settings.notif.evening.label'),
             sub: t('settings.notif.evening.sub'),
-            checked: notifEvening,
           },
           {
             key: 'missed',
-            kind: 'toggle',
+            kind: 'link',
             label: t('settings.notif.missed.label'),
             sub: t('settings.notif.missed.sub'),
-            checked: notifMissed,
           },
           {
             key: 'lowStock',
-            kind: 'toggle',
+            kind: 'link',
             label: t('settings.notif.lowStock.label'),
             sub: t('settings.notif.lowStock.sub'),
-            checked: notifLowStock,
           },
           {
             key: 'quiet',
-            kind: 'toggle',
+            kind: 'link',
             label: t('settings.notif.quiet.label'),
             sub: t('settings.notif.quiet.sub'),
-            checked: notifQuiet,
           },
         ],
       },
@@ -180,12 +256,18 @@ export default function SettingsPage(): React.JSX.Element | null {
             label: t('settings.privacy.share.label'),
             sub: t('settings.privacy.share.sub'),
           },
+          // `analytics` n'a aucun endpoint dédié en v1 — affiché en lecture
+          // seule avec « Bientôt disponible » plutôt qu'un toggle trompeur.
+          // `readOnly: true` est CRITIQUE : sans ce flag, `SettingsRow` rend
+          // la rangée comme un `<button>` pressable (curseur, hover, role
+          // button) alors qu'aucune action n'est câblée — c'est exactement
+          // le bug de confiance que ce fix neutralise.
           {
             key: 'anonymize',
-            kind: 'toggle',
+            kind: 'value',
             label: t('settings.privacy.anonymize.label'),
-            sub: t('settings.privacy.anonymize.sub'),
-            checked: analytics,
+            value: t('settings.privacy.anonymize.comingSoon'),
+            readOnly: true,
           },
           {
             key: 'export',
@@ -206,12 +288,15 @@ export default function SettingsPage(): React.JSX.Element | null {
         icon: 'info',
         title: t('settings.section.about'),
         rows: [
+          // `version` est purement informatif (numéro de build) — `readOnly`
+          // évite le faux bouton (cf. anonymize ci-dessus).
           {
             key: 'version',
             kind: 'value',
             label: t('settings.about.version'),
             value: t('settings.about.versionValue'),
             mono: true,
+            readOnly: true,
           },
           {
             key: 'terms',
@@ -237,17 +322,7 @@ export default function SettingsPage(): React.JSX.Element | null {
         ],
       },
     ],
-    [
-      t,
-      theme,
-      textSize,
-      analytics,
-      notifMorning,
-      notifEvening,
-      notifMissed,
-      notifLowStock,
-      notifQuiet,
-    ],
+    [t, theme, textSize],
   );
 
   const navItems = React.useMemo<SettingsNavItem[]>(
@@ -278,28 +353,37 @@ export default function SettingsPage(): React.JSX.Element | null {
     return null;
   }
 
-  const handleChangeToggle = (sectionKey: string, rowKey: string, checked: boolean): void => {
-    if (sectionKey === 'notifications') {
-      if (rowKey === 'morning') setNotifMorning(checked);
-      else if (rowKey === 'evening') setNotifEvening(checked);
-      else if (rowKey === 'missed') setNotifMissed(checked);
-      else if (rowKey === 'lowStock') setNotifLowStock(checked);
-      else if (rowKey === 'quiet') setNotifQuiet(checked);
-    } else if (sectionKey === 'privacy' && rowKey === 'anonymize') {
-      setAnalytics(checked);
-    }
+  // Plus aucun toggle dans le hub — la propriété est conservée pour la
+  // compatibilité de signature (`SettingsListHandlers`) mais devient un
+  // no-op explicite (toute future row `kind: 'toggle'` ajoutée sans wiring
+  // sera donc visible en revue : pas de risque de régression silencieuse).
+  const handleChangeToggle = (): void => {
+    // intentionnellement vide
   };
 
   const handleChangeSegment = (sectionKey: string, rowKey: string, value: string): void => {
-    if (sectionKey === 'appearance') {
-      if (rowKey === 'theme') setTheme(value);
-      else if (rowKey === 'textSize') setTextSize(value);
+    if (sectionKey !== 'appearance') return;
+    if (rowKey === 'theme') {
+      if ((APPEARANCE_THEME_VALUES as ReadonlyArray<string>).includes(value)) {
+        const next = value as (typeof APPEARANCE_THEME_VALUES)[number];
+        setTheme(next);
+        writePersistedAppearance(APPEARANCE_THEME_STORAGE_KEY, next);
+      }
+      return;
+    }
+    if (rowKey === 'textSize') {
+      if ((APPEARANCE_TEXT_VALUES as ReadonlyArray<string>).includes(value)) {
+        const next = value as (typeof APPEARANCE_TEXT_VALUES)[number];
+        setTextSize(next);
+        writePersistedAppearance(APPEARANCE_TEXT_STORAGE_KEY, next);
+      }
     }
   };
 
   const handlePressRow = (sectionKey: string, rowKey: string): void => {
-    // Navigation vers les sous-pages existantes — préserve la logique
-    // métier (export, suppression, partage médecin, notifications…).
+    // Navigation vers les sous-pages câblées (TanStack Query + API). Le
+    // hub ne fait JAMAIS d'écriture lui-même — c'est le contrat fixé par
+    // ce fix de wiring.
     if (sectionKey === 'notifications') {
       router.push('/settings/notifications');
       return;
@@ -317,6 +401,12 @@ export default function SettingsPage(): React.JSX.Element | null {
         router.push('/reports');
         return;
       }
+      // `anonymize` est désormais une `value` row marquée `readOnly: true` :
+      // `SettingsRow` ne la rend pas pressable (pas de cursor pointer, pas
+      // de hover, pas d'accessibilityRole=button). Aucun handler requis.
+      // Si la row redevenait pressable (changement futur), cette branche
+      // silencieuse évite de router vers une page inexistante.
+      return;
     }
     if (sectionKey === 'about') {
       if (rowKey === 'openSource') {

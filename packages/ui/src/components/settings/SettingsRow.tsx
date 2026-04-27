@@ -27,8 +27,13 @@ export function SettingsRow({
   onChangeToggle,
   onChangeSegment,
 }: SettingsRowProps): React.JSX.Element {
+  // Une rangée `value` n'est pressable que si elle n'a pas explicitement
+  // demandé `readOnly`. Cela évite les faux boutons (curseur pointer + hover
+  // + accessibilityRole="button") sur des rangées d'affichage seul comme
+  // « Bientôt disponible » ou « Version 1.0.0 ».
+  const isPressableValue = row.kind === 'value' && row.readOnly !== true;
   const isPressable =
-    onPress !== undefined && (row.kind === 'link' || row.kind === 'danger' || row.kind === 'value');
+    onPress !== undefined && (row.kind === 'link' || row.kind === 'danger' || isPressableValue);
   const isDanger = row.kind === 'danger';
 
   const labelColor = isDanger ? '$rescueInk' : '$color';
