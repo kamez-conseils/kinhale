@@ -82,7 +82,7 @@ export default function PumpsListPage(): React.JSX.Element | null {
       {
         key: 'settings',
         label: t('pumps.nav.settings'),
-        onPress: () => router.push('/settings/notifications'),
+        onPress: () => router.push('/settings'),
       },
     ],
     [router, t],

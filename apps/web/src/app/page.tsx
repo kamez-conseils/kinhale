@@ -80,7 +80,7 @@ export default function HomePage(): React.JSX.Element | null {
       {
         key: 'settings',
         label: t('home.dashboard.nav.settings'),
-        onPress: () => router.push('/settings/notifications'),
+        onPress: () => router.push('/settings'),
       },
     ],
     [router, t],

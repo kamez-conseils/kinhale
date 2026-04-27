@@ -893,5 +893,85 @@
       "cancelCta": "Cancel",
       "sendCta": "Send invitation"
     }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Household preferences",
+    "signOut": "Sign out",
+    "editProfile": "Edit profile",
+    "notMedical": "Tracking tool · not a substitute for medical advice.",
+    "section": {
+      "notifications": "Notifications",
+      "appearance": "Appearance",
+      "privacy": "Privacy",
+      "about": "About"
+    },
+    "child": {
+      "fallbackName": "Child profile",
+      "fallbackInitial": "L",
+      "ageYearsFormat": "Age {{count}}",
+      "weightKg": "{{value}} kg",
+      "noPhysician": "No prescriber on file"
+    },
+    "notif": {
+      "morning": {
+        "label": "Morning reminder",
+        "sub": "Maintenance · 8:00 AM"
+      },
+      "evening": {
+        "label": "Evening reminder",
+        "sub": "Maintenance · 8:00 PM"
+      },
+      "missed": {
+        "label": "Alert if dose missed",
+        "sub": "Co-parent gets the alert too"
+      },
+      "lowStock": {
+        "label": "Low stock",
+        "sub": "At 14 days of autonomy left"
+      },
+      "quiet": {
+        "label": "Quiet hours",
+        "sub": "10 PM - 7 AM · except emergencies"
+      }
+    },
+    "appearance": {
+      "theme": "Theme",
+      "themeAuto": "Auto",
+      "themeLight": "Light",
+      "themeDark": "Dark",
+      "language": "Language",
+      "languageValue": "English · CA",
+      "textSize": "Text size",
+      "textSm": "A−",
+      "textMd": "A",
+      "textLg": "A+"
+    },
+    "privacy": {
+      "share": {
+        "label": "Doctor share link",
+        "sub": "Read-only · revocable any time"
+      },
+      "anonymize": {
+        "label": "Anonymous analytics",
+        "sub": "Helps improve Kinhale · no personal data"
+      },
+      "export": {
+        "label": "Export my data",
+        "sub": "JSON · use offline"
+      },
+      "delete": {
+        "label": "Delete account",
+        "sub": "Permanent erasure within 30 days"
+      }
+    },
+    "about": {
+      "version": "Version",
+      "versionValue": "1.4.0 (build 2026.04.18)",
+      "terms": "Terms of use",
+      "privacyPolicy": "Privacy policy",
+      "openSource": "Open source · GitHub",
+      "feedback": "Send feedback"
+    }
   }
 }

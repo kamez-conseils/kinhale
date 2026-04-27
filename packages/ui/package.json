@@ -16,6 +16,7 @@
     "./pumps": "./src/components/pumps/index.ts",
     "./history": "./src/components/history/index.ts",
     "./caregivers": "./src/components/caregivers/index.ts",
+    "./settings": "./src/components/settings/index.ts",
     "./icons": "./src/icons/index.ts"
   },
   "scripts": {
