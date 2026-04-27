@@ -973,5 +973,41 @@
       "openSource": "Logiciel libre · GitHub",
       "feedback": "Donner un avis"
     }
+  },
+  "reports": {
+    "title": "Rapports",
+    "subtitle": "Pour la visite chez le pédiatre",
+    "rangeLabel": "Période",
+    "preset": {
+      "7d": "7 jours",
+      "30d": "30 jours",
+      "3m": "3 mois",
+      "6m": "6 mois",
+      "custom": "Personnalisé"
+    },
+    "selectedRangeFormat": "Du {{from}} au {{to}} · {{days}} jours",
+    "summaryTitle": "Synthèse",
+    "stat": {
+      "adherence": "Adhérence",
+      "adherenceSub_one": "{{count}} jour raté sur {{total}}",
+      "adherenceSub_other": "{{count}} jours ratés sur {{total}}",
+      "rescueUses": "Prises de secours",
+      "rescueUsesSub_one": "{{count}} épisode",
+      "rescueUsesSub_other": "{{count}} épisodes",
+      "asthmaDays": "Jours symptomatiques",
+      "asthmaDaysSub": "Toux, sifflements ou réveils",
+      "sleepImpact": "Réveils nocturnes",
+      "sleepImpactSub_one": "{{count}} nuit perturbée",
+      "sleepImpactSub_other": "{{count}} nuits perturbées"
+    },
+    "rescueLogTitle": "Journal des secours",
+    "reliefSuffix": "min",
+    "adherenceChartLabel": "Adhérence quotidienne · 30 derniers jours",
+    "rescueChartLabel": "Prises de secours · 30 derniers jours",
+    "exportLabel": "Exporter en PDF",
+    "shareLabel": "Partager avec le médecin",
+    "notMedical": "Document à présenter au médecin · pas un diagnostic.",
+    "emptyRescueTitle": "Aucune prise de secours sur la période",
+    "emptyRescueSub": "Bonne nouvelle — aucun épisode aigu enregistré sur cette plage."
   }
 }
