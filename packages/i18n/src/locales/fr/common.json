@@ -893,5 +893,85 @@
       "cancelCta": "Annuler",
       "sendCta": "Envoyer l'invitation"
     }
+  },
+  "settings": {
+    "title": "Réglages",
+    "subtitle": "Préférences du foyer",
+    "signOut": "Se déconnecter",
+    "editProfile": "Modifier le profil",
+    "notMedical": "Outil de suivi · ne remplace pas un avis médical.",
+    "section": {
+      "notifications": "Notifications",
+      "appearance": "Apparence",
+      "privacy": "Confidentialité",
+      "about": "À propos"
+    },
+    "child": {
+      "fallbackName": "Profil enfant",
+      "fallbackInitial": "L",
+      "ageYearsFormat": "{{count}} ans",
+      "weightKg": "{{value}} kg",
+      "noPhysician": "Aucun prescripteur enregistré"
+    },
+    "notif": {
+      "morning": {
+        "label": "Rappel du matin",
+        "sub": "Pompe de fond · 8:00"
+      },
+      "evening": {
+        "label": "Rappel du soir",
+        "sub": "Pompe de fond · 20:00"
+      },
+      "missed": {
+        "label": "Alerte si dose manquée",
+        "sub": "Le co-parent reçoit aussi l'alerte"
+      },
+      "lowStock": {
+        "label": "Stock faible",
+        "sub": "À 14 jours d'autonomie restants"
+      },
+      "quiet": {
+        "label": "Heures de silence",
+        "sub": "22:00 - 7:00 · sauf urgences"
+      }
+    },
+    "appearance": {
+      "theme": "Thème",
+      "themeAuto": "Auto",
+      "themeLight": "Clair",
+      "themeDark": "Sombre",
+      "language": "Langue",
+      "languageValue": "Français · CA",
+      "textSize": "Taille du texte",
+      "textSm": "A−",
+      "textMd": "A",
+      "textLg": "A+"
+    },
+    "privacy": {
+      "share": {
+        "label": "Partage avec le médecin",
+        "sub": "Lien lecture seule · révocable"
+      },
+      "anonymize": {
+        "label": "Statistiques anonymes",
+        "sub": "Aide à améliorer Kinhale · aucune donnée personnelle"
+      },
+      "export": {
+        "label": "Exporter mes données",
+        "sub": "JSON · à utiliser hors-ligne"
+      },
+      "delete": {
+        "label": "Supprimer le compte",
+        "sub": "Effacement définitif sous 30 jours"
+      }
+    },
+    "about": {
+      "version": "Version",
+      "versionValue": "1.4.0 (build 2026.04.18)",
+      "terms": "Conditions d'utilisation",
+      "privacyPolicy": "Politique de confidentialité",
+      "openSource": "Logiciel libre · GitHub",
+      "feedback": "Donner un avis"
+    }
   }
 }
